@@ -23,6 +23,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
 import type { AoStatut } from "@/lib/commerceTypes";
+import { useCommerceAuth, userDisplayName } from "@/hooks/useCommerceAuth";
 
 const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean }> = [
   { to: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
@@ -62,6 +63,9 @@ export function AppShell({
   contentClassName?: string;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user, signOut } = useCommerceAuth();
+  const displayName = userDisplayName(user);
+  const initials = displayName.slice(0, 1).toUpperCase() || "?";
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -161,17 +165,24 @@ export function AppShell({
                       {primaryAction.label}
                     </Button>
                   ) : null}
-                  <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1 transition-colors hover:bg-muted/50"
+                    onClick={() => void signOut()}
+                    title="Se déconnecter"
+                  >
                     <Avatar className="h-7 w-7">
                       <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
-                        M
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden text-left sm:block">
-                      <p className="text-xs font-medium leading-none">mathieu</p>
-                      <p className="text-[10px] text-muted-foreground">Compte</p>
+                      <p className="text-xs font-medium leading-none">{displayName}</p>
+                      <p className="max-w-[140px] truncate text-[10px] text-muted-foreground">
+                        {user?.email ?? "Compte"}
+                      </p>
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
             </header>
