@@ -21,7 +21,8 @@ import {
   useSocietes,
   useUpsertAppelOffre,
 } from "@/hooks/useCommerceData";
-import { AO_STATUT_LABELS, type AoStatut } from "@/lib/commerceTypes";
+import { AO_STATUT_LABELS, AO_STATUTS, type AoStatut } from "@/lib/commerceTypes";
+import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Search } from "lucide-react";
@@ -89,6 +90,15 @@ function AppelsOffresPage() {
       (kpiFilter === "gagnes" && ao.statut === "gagne");
     return matchSearch && matchTab && matchKpi;
   });
+
+  const mobileGroups = useMemo(
+    () =>
+      AO_STATUTS.map((statut) => ({
+        statut,
+        items: filtered.filter((ao) => ao.statut === statut),
+      })).filter((g) => g.items.length > 0),
+    [filtered],
+  );
 
   const syncLabel = settings?.last_erp_sync_at
     ? new Date(settings.last_erp_sync_at).toLocaleString("fr-FR", {
@@ -263,10 +273,90 @@ function AppelsOffresPage() {
           </Panel>
         ) : null}
 
+        {/* Mobile : cartes groupées par statut */}
+        <div className="min-h-0 flex-1 space-y-4 px-4 pb-4 pt-2 md:hidden">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Chargement…</p>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+              Aucun appel d&apos;offres pour ce filtre.
+            </div>
+          ) : (
+            mobileGroups.map((group) => (
+              <section key={group.statut} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn("h-2 w-2 rounded-full", AO_STATUT_STYLES[group.statut].dot)}
+                  />
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {AO_STATUT_LABELS[group.statut]}
+                  </h3>
+                  <span className="rounded-full bg-muted px-1.5 text-[10px] font-semibold tabular-nums text-foreground/70">
+                    {group.items.length}
+                  </span>
+                  <span className="ml-auto text-[11px] font-medium tabular-nums text-muted-foreground">
+                    {formatEuro(group.items.reduce((s, a) => s + (a.montant_estime ?? 0), 0))}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {group.items.map((ao) => {
+                    const days = daysUntil(ao.date_limite_depot);
+                    const urgent = days != null && days >= 0 && days <= 7;
+                    return (
+                      <Link
+                        key={ao.id}
+                        to="/appels-offres/$aoId"
+                        params={{ aoId: ao.id }}
+                        className="relative block overflow-hidden rounded-xl border border-border/70 bg-card p-3 pl-4 shadow-sm active:bg-muted/40"
+                      >
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 left-0 w-1",
+                            AO_STATUT_STYLES[group.statut].bar,
+                          )}
+                        />
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold leading-tight">
+                              {ao.clients?.nom_entreprise ?? ao.reference}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">{ao.titre}</p>
+                          </div>
+                          <span className="shrink-0 text-sm font-bold tabular-nums">
+                            {formatEuro(ao.montant_estime)}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground/70">{ao.reference}</span>
+                          {ao.lieu ? <span className="truncate">{ao.lieu}</span> : null}
+                          {ao.date_limite_depot ? (
+                            <span
+                              className={cn(
+                                "ml-auto font-medium tabular-nums",
+                                urgent && "text-amber-600",
+                              )}
+                            >
+                              {new Date(ao.date_limite_depot).toLocaleDateString("fr-FR", {
+                                day: "2-digit",
+                                month: "short",
+                              })}
+                              {days != null && days >= 0 ? ` · J-${days}` : ""}
+                            </span>
+                          ) : null}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            ))
+          )}
+        </div>
+
         <Panel
           title={`${filtered.length} appel(s) d'offres`}
           bodyClassName="p-0"
-          className="mx-4 mt-2 min-h-0 flex-1 sm:mx-6"
+          className="mx-4 mt-2 hidden min-h-0 flex-1 sm:mx-6 md:block"
         >
           {isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Chargement…</p>

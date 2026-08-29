@@ -118,7 +118,7 @@ export function BpuExcelImportPanel({
                     <td className="px-2 py-1">{l.designation.slice(0, 60)}</td>
                     <td className="px-2 py-1">{l.unite ?? "—"}</td>
                     {"quantite" in l && l.quantite != null ? (
-                      <td className="px-2 py-1 text-right tabular-nums">{l.quantite}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{String(l.quantite)}</td>
                     ) : preview.mode === "reponse" ? (
                       <td className="px-2 py-1 text-right">—</td>
                     ) : null}

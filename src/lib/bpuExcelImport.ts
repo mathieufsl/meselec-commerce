@@ -11,7 +11,7 @@ export type BpuExcelFormat =
 export type BpuExcelParseMode = "catalogue" | "reponse";
 
 export type BpuExcelReponseRow = BpuImportRow & {
-  quantite?: number;
+  quantite?: number | undefined;
 };
 
 export type BpuExcelParseResult = {
@@ -22,9 +22,9 @@ export type BpuExcelParseResult = {
   catalogueRows: BpuImportRow[];
   reponseRows: BpuExcelReponseRow[];
   meta: {
-    fileName?: string;
-    titre?: string;
-    client?: string;
+    fileName?: string | undefined;
+    titre?: string | undefined;
+    client?: string | undefined;
   };
 };
 

@@ -33,14 +33,14 @@ export function sumReponseLignes(
 }
 
 export type BpuImportRow = {
-  poste_code?: string;
+  poste_code?: string | undefined;
   numero_prix: string;
   designation: string;
-  unite?: string;
-  pu_ht?: number | null;
-  niveau?: BpuLigne["niveau"];
-  parent_numero?: string;
-  ordre?: number;
+  unite?: string | undefined;
+  pu_ht?: number | null | undefined;
+  niveau?: BpuLigne["niveau"] | undefined;
+  parent_numero?: string | undefined;
+  ordre?: number | undefined;
 };
 
 /** Parse CSV/TSV simple (séparateur ; ou tab) pour import BPU. */

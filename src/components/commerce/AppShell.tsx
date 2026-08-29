@@ -21,6 +21,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
+import type { AoStatut } from "@/lib/commerceTypes";
 
 const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean }> = [
   { to: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
@@ -30,6 +32,15 @@ const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean 
   { to: "/prospection", label: "Prospection", icon: MapPin },
   { to: "/admin", label: "Administration", icon: Settings },
 ];
+
+const MOBILE_LABELS: Record<string, string> = {
+  "/": "Accueil",
+  "/appels-offres": "AO",
+  "/catalogues": "BPU",
+  "/fournisseurs": "Fourn.",
+  "/prospection": "Prospect",
+  "/admin": "Admin",
+};
 
 export function AppShell({
   title,
@@ -128,10 +139,12 @@ export function AppShell({
           </aside>
 
           <main className="ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:ml-14">
-            <header className="z-10 shrink-0 border-b border-border/40 bg-background px-4 py-2.5 sm:px-6">
-              <div className="mx-auto flex w-full max-w-[1920px] flex-wrap items-center justify-between gap-3">
+            <header className="z-10 shrink-0 border-b border-border/60 bg-card/80 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:px-6">
+              <div className="mx-auto flex w-full max-w-[1920px] flex-nowrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h1 className="truncate text-base font-semibold leading-tight">{title}</h1>
+                  <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight sm:text-base">
+                    {title}
+                  </h1>
                   {(subtitle || syncLabel) && (
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
                       {subtitle}
@@ -177,19 +190,25 @@ export function AppShell({
           </main>
         </div>
 
-        <nav className="flex shrink-0 gap-1 overflow-x-auto border-t bg-card p-2 lg:hidden">
+        <nav className="grid shrink-0 grid-cols-6 gap-0.5 border-t border-border/60 bg-card/95 px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+            const Icon = item.icon;
+            const short = MOBILE_LABELS[item.to] ?? item.label;
             return (
               <Link
                 key={item.to}
                 to={item.to}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-semibold",
-                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                  "flex flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[10px] font-medium leading-none transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground active:bg-muted",
                 )}
               >
-                {item.label}
+                <Icon className={cn("h-[18px] w-[18px]", active && "stroke-[2.4]")} />
+                <span className="w-full truncate text-center">{short}</span>
               </Link>
             );
           })}
@@ -215,11 +234,18 @@ export function Panel({
   description?: string;
 }) {
   return (
-    <section className={cn("overflow-hidden rounded-lg border bg-card shadow-sm", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-4 py-2.5">
-        <div>
-          <h2 className="text-sm font-semibold">{title}</h2>
-          {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+    <section
+      className={cn(
+        "overflow-hidden rounded-xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-16px_rgba(16,24,40,0.25)]",
+        className,
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-4 py-2.5">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold tracking-tight">{title}</h2>
+          {description ? (
+            <p className="truncate text-xs text-muted-foreground">{description}</p>
+          ) : null}
         </div>
         {actions}
       </div>
@@ -235,22 +261,15 @@ export function StatusBadge({
   statut: string;
   labels: Record<string, string>;
 }) {
-  const colors: Record<string, string> = {
-    veille: "bg-slate-100 text-slate-700",
-    analyse: "bg-violet-100 text-violet-800",
-    en_cours: "bg-sky-100 text-sky-800",
-    depose: "bg-cyan-100 text-cyan-800",
-    gagne: "bg-emerald-100 text-emerald-800",
-    perdu: "bg-rose-100 text-rose-800",
-    abandonne: "bg-neutral-200 text-neutral-700",
-  };
+  const style = AO_STATUT_STYLES[statut as AoStatut];
   return (
     <span
       className={cn(
-        "inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        colors[statut] ?? "bg-muted text-foreground",
+        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset",
+        style?.badge ?? "bg-muted text-foreground ring-border",
       )}
     >
+      <span className={cn("h-1.5 w-1.5 rounded-full", style?.dot ?? "bg-muted-foreground")} />
       {labels[statut] ?? statut}
     </span>
   );
