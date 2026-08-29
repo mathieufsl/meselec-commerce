@@ -282,3 +282,27 @@ export function useImportBpuLignes() {
     onSuccess: invalidate,
   });
 }
+
+export function useImportAoReponseLignes() {
+  const invalidate = useInvalidateCommerce();
+  return useMutation({
+    mutationFn: async ({
+      reponseId,
+      lignes,
+      replace = true,
+    }: {
+      reponseId: string;
+      lignes: unknown[];
+      replace?: boolean;
+    }) => {
+      const { data, error } = await supabase.rpc("import_ao_reponse_lignes", {
+        p_reponse_id: reponseId,
+        p_lignes: lignes,
+        p_replace: replace,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: invalidate,
+  });
+}

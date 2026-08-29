@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell, Panel, StatusBadge } from "@/components/commerce/AppShell";
 import { CommerceKpiBar, type CommerceKpiKey } from "@/components/commerce/CommerceKpiBar";
 import { CommerceStatusTabs, type AoStatutTab } from "@/components/commerce/CommerceStatusTabs";
@@ -31,6 +31,7 @@ export const Route = createFileRoute("/appels-offres/")({
 });
 
 function AppelsOffresPage() {
+  const navigate = useNavigate();
   const { data: aos = [], isLoading } = useAppelsOffres();
   const { data: clients = [] } = useClients();
   const { data: societes = [] } = useSocietes();
@@ -285,7 +286,11 @@ function AppelsOffresPage() {
                 {filtered.map((ao) => {
                   const days = daysUntil(ao.date_limite_depot);
                   return (
-                    <TableRow key={ao.id} className="cursor-pointer hover:bg-muted/40">
+                    <TableRow
+                      key={ao.id}
+                      className="cursor-pointer hover:bg-muted/40"
+                      onClick={() => navigate({ to: "/appels-offres/$aoId", params: { aoId: ao.id } })}
+                    >
                       <TableCell className="font-medium">
                         {ao.clients?.nom_entreprise ?? "—"}
                       </TableCell>

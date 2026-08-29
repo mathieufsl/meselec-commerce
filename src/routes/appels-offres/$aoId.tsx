@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, Panel, StatusBadge } from "@/components/commerce/AppShell";
+import { BpuExcelImportPanel } from "@/components/commerce/BpuExcelImportPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,21 +23,26 @@ import {
   useBpuCatalogues,
   useBpuLignes,
   useClients,
+  useImportAoReponseLignes,
   useMemoiresTechniques,
   useSocietes,
   useUpsertAppelOffre,
 } from "@/hooks/useCommerceData";
 import { supabase } from "@/integrations/supabase/client";
 import { executeHandoff } from "@/lib/syncErpCache";
-import { AO_STATUT_LABELS, AO_STATUTS } from "@/lib/commerceTypes";
+import { AO_STATUT_LABELS, AO_STATUTS, type AoReponse } from "@/lib/commerceTypes";
 import {
   calcLigneMontant,
   formatEuro,
   isBpuLigneSelectable,
-  roundEuro,
   sumReponseLignes,
 } from "@/lib/bpuEngine";
+import { catalogueRowsOnly } from "@/lib/bpuExcelImport";
 import { useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 export const Route = createFileRoute("/appels-offres/$aoId")({
   component: AoDetailPage,
@@ -54,8 +60,17 @@ function AoDetailPage() {
   const { data: societes = [] } = useSocietes();
   const { data: memoires = [] } = useMemoiresTechniques(aoId);
   const upsertAo = useUpsertAppelOffre();
+  const importReponse = useImportAoReponseLignes();
 
-  const reponse = reponses[0];
+  const [selectedReponseId, setSelectedReponseId] = useState<string | null>(null);
+  const reponse = reponses.find((r) => r.id === selectedReponseId) ?? reponses[0] ?? null;
+
+  useEffect(() => {
+    if (!selectedReponseId && reponses[0]?.id) {
+      setSelectedReponseId(reponses[0].id);
+    }
+  }, [reponses, selectedReponseId]);
+
   const { data: lignes = [] } = useAoReponseLignes(reponse?.id ?? "");
   const { data: catalogueLignes = [] } = useBpuLignes(reponse?.catalogue_id ?? "");
 
@@ -89,21 +104,38 @@ function AoDetailPage() {
     await upsertAo.mutateAsync({ id: ao.id, statut });
   }
 
-  async function ensureReponse(catalogueId?: string) {
-    const existing = reponses[0];
-    if (existing) return existing;
+  async function nextReponseVersion(): Promise<number> {
+    const max = reponses.reduce((m, r) => Math.max(m, r.version ?? 1), 0);
+    return max + 1;
+  }
+
+  async function createReponse(opts?: {
+    libelle?: string;
+    source_fichier?: string;
+    catalogue_id?: string | null;
+  }): Promise<AoReponse> {
+    const version = await nextReponseVersion();
     const { data, error } = await supabase
       .from("ao_reponses")
       .insert({
         ao_id: aoId,
-        catalogue_id: catalogueId ?? catalogues[0]?.id ?? null,
+        catalogue_id: opts?.catalogue_id ?? catalogues[0]?.id ?? null,
         statut: "brouillon",
+        libelle: opts?.libelle ?? `Réponse v${version}`,
+        source_fichier: opts?.source_fichier ?? null,
+        version,
       })
       .select()
       .single();
     if (error) throw error;
     await refresh();
-    return data;
+    setSelectedReponseId(data.id);
+    return data as AoReponse;
+  }
+
+  async function ensureReponse(catalogueId?: string) {
+    if (reponse) return reponse;
+    return createReponse({ catalogue_id: catalogueId ?? null });
   }
 
   async function addLot() {
@@ -130,7 +162,7 @@ function AoDetailPage() {
   }
 
   async function addBpuLigneToReponse(bpuLigneId: string) {
-    const rep = await ensureReponse();
+    const rep = await ensureReponse(reponse?.catalogue_id ?? undefined);
     const src = catalogueLignes.find((l) => l.id === bpuLigneId);
     if (!src || !rep) return;
     await supabase.from("ao_reponse_lignes").insert({
@@ -152,11 +184,47 @@ function AoDetailPage() {
     const ligne = lignes.find((l) => l.id === ligneId);
     if (!ligne || !reponse) return;
     const montant = calcLigneMontant(quantite, ligne.pu_ht);
-    await supabase
-      .from("ao_reponse_lignes")
-      .update({ quantite, montant })
-      .eq("id", ligneId);
+    await supabase.from("ao_reponse_lignes").update({ quantite, montant }).eq("id", ligneId);
     await supabase.rpc("recalc_ao_reponse_montant", { p_reponse_id: reponse.id });
+    await refresh();
+  }
+
+  async function importExcelReponse(result: Awaited<ReturnType<typeof import("@/lib/bpuExcelImport").parseBpuExcelFile>>) {
+    const version = await nextReponseVersion();
+    const libelle =
+      result.meta.titre?.slice(0, 80) ??
+      result.meta.fileName?.replace(/\.xlsx$/i, "") ??
+      `Import v${version}`;
+    const rep = await createReponse({
+      libelle,
+      source_fichier: result.meta.fileName ?? null,
+    });
+
+    const rows =
+      result.mode === "reponse"
+        ? result.reponseRows.map((l, i) => ({
+            numero_prix: l.numero_prix,
+            designation: l.designation,
+            unite: l.unite,
+            quantite: l.quantite ?? 1,
+            pu_ht: l.pu_ht,
+            ordre: i,
+          }))
+        : catalogueRowsOnly(result.catalogueRows).map((l, i) => ({
+            numero_prix: l.numero_prix,
+            designation: l.designation,
+            unite: l.unite,
+            quantite: 1,
+            pu_ht: l.pu_ht,
+            ordre: i,
+          }));
+
+    await importReponse.mutateAsync({ reponseId: rep.id, lignes: rows, replace: true });
+    await supabase
+      .from("ao_reponses")
+      .update({ statut: result.mode === "reponse" ? "finalise" : "brouillon" })
+      .eq("id", rep.id);
+    setMsg(`${rows.length} ligne(s) importée(s) — ${libelle}`);
     await refresh();
   }
 
@@ -174,11 +242,11 @@ function AoDetailPage() {
   }
 
   async function runHandoff() {
-    if (!ao) return;
+    if (!ao || !reponse) return;
     setBusy(true);
     setMsg(null);
     try {
-      const montant = reponse?.montant_retenu ?? sumReponseLignes(lignes);
+      const montant = reponse.montant_retenu ?? sumReponseLignes(lignes);
       const result = await executeHandoff({
         ao_id: ao.id,
         reference: ao.reference,
@@ -217,7 +285,7 @@ function AoDetailPage() {
   if (!ao) {
     return (
       <AppShell title="Appel d'offres">
-        <p className="text-sm text-[var(--commerce-muted)]">Chargement…</p>
+        <p className="text-sm text-muted-foreground">Chargement…</p>
       </AppShell>
     );
   }
@@ -225,16 +293,16 @@ function AoDetailPage() {
   return (
     <AppShell
       title={ao.reference}
-      subtitle={ao.titre}
+      subtitle={[clientNom, ao.lieu, ao.titre].filter(Boolean).join(" · ")}
       actions={
         <div className="flex flex-wrap gap-2">
           <Link to="/appels-offres">
             <Button variant="outline" size="sm">
-              Retour
+              Retour liste
             </Button>
           </Link>
-          {ao.statut !== "gagne" ? (
-            <Button size="sm" onClick={runHandoff} disabled={busy}>
+          {ao.statut !== "gagne" && reponse ? (
+            <Button size="sm" onClick={runHandoff} disabled={busy || lignes.length === 0}>
               {busy ? "Handoff…" : "Attribuer & créer chantier ERP"}
             </Button>
           ) : null}
@@ -242,38 +310,170 @@ function AoDetailPage() {
       }
     >
       {msg ? (
-        <p className="rounded-md bg-[var(--commerce-row)] px-3 py-2 text-sm">{msg}</p>
+        <p className="mb-3 rounded-md border bg-muted/40 px-3 py-2 text-sm">{msg}</p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <StatusBadge statut={ao.statut} labels={AO_STATUT_LABELS} />
-        <select
-          className="h-8 rounded-md border px-2 text-xs"
-          value={ao.statut}
-          onChange={(e) => updateStatut(e.target.value as (typeof AO_STATUTS)[number])}
-        >
-          {AO_STATUTS.map((s) => (
-            <option key={s} value={s}>
-              {AO_STATUT_LABELS[s]}
-            </option>
-          ))}
-        </select>
-        {ao.chantier_erp_id ? (
-          <span className="text-xs text-[var(--commerce-good)]">
-            Chantier ERP : {ao.chantier_erp_id}
-          </span>
-        ) : null}
+      <div className="mb-4 grid gap-3 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-4">
+        <div>
+          <p className="text-xs text-muted-foreground">Statut</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <StatusBadge statut={ao.statut} labels={AO_STATUT_LABELS} />
+            <select
+              className="h-8 rounded-md border px-2 text-xs"
+              value={ao.statut}
+              onChange={(e) => updateStatut(e.target.value as (typeof AO_STATUTS)[number])}
+            >
+              {AO_STATUTS.map((s) => (
+                <option key={s} value={s}>
+                  {AO_STATUT_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Échéance dépôt</p>
+          <p className="mt-1 text-sm font-medium">
+            {ao.date_limite_depot
+              ? format(new Date(ao.date_limite_depot), "d MMM yyyy", { locale: fr })
+              : "—"}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Montant estimé</p>
+          <p className="mt-1 text-sm font-semibold">{formatEuro(ao.montant_estime)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Réponses enregistrées</p>
+          <p className="mt-1 text-sm font-semibold">{reponses.length}</p>
+        </div>
       </div>
 
-      <Tabs defaultValue="chiffrage" className="mt-4">
+      <Tabs defaultValue="historique">
         <TabsList>
+          <TabsTrigger value="historique">Historique réponses</TabsTrigger>
           <TabsTrigger value="chiffrage">Chiffrage</TabsTrigger>
           <TabsTrigger value="lots">Lots</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="memoire">Mémoire technique</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="historique" className="mt-4 space-y-4">
+          <Panel title="Importer une réponse Excel">
+            <p className="mb-3 text-sm text-muted-foreground">
+              Importe un BPU (prix unitaires) ou un chiffrage Meselec (quantités + prix) comme nouvelle version de réponse.
+            </p>
+            <BpuExcelImportPanel onImport={importExcelReponse} />
+          </Panel>
+
+          <Panel title={`${reponses.length} réponse(s) enregistrée(s)`} bodyClassName="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Libellé</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Montant HT</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reponses.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                      Aucune réponse — importez un fichier Excel ou créez un chiffrage.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  reponses.map((r) => (
+                    <TableRow
+                      key={r.id}
+                      className={cn(r.id === reponse?.id && "bg-primary/5")}
+                    >
+                      <TableCell>v{r.version}</TableCell>
+                      <TableCell className="font-medium">{r.libelle}</TableCell>
+                      <TableCell className="max-w-[180px] truncate text-xs text-muted-foreground">
+                        {r.source_fichier ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{r.statut}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {formatEuro(r.montant_retenu)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant={r.id === reponse?.id ? "default" : "outline"}
+                          onClick={() => setSelectedReponseId(r.id)}
+                        >
+                          Voir lignes
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Panel>
+
+          {reponse ? (
+            <Panel
+              title={`Lignes — ${reponse.libelle}`}
+              description={`${lignes.length} ligne(s) · ${formatEuro(reponse.montant_retenu ?? sumReponseLignes(lignes))} HT`}
+              bodyClassName="p-0"
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>N°</TableHead>
+                    <TableHead>Désignation</TableHead>
+                    <TableHead>U</TableHead>
+                    <TableHead className="text-right">Qté</TableHead>
+                    <TableHead className="text-right">PU HT</TableHead>
+                    <TableHead className="text-right">Montant</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lignes.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="whitespace-nowrap">{l.numero_prix}</TableCell>
+                      <TableCell>{l.designation}</TableCell>
+                      <TableCell>{l.unite ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{l.quantite}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatEuro(l.pu_ht)}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {formatEuro(l.montant)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Panel>
+          ) : null}
+        </TabsContent>
+
         <TabsContent value="chiffrage" className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => void createReponse()}>
+              Nouvelle réponse vide
+            </Button>
+            {reponses.length > 0 ? (
+              <select
+                className="h-9 rounded-md border px-2 text-sm"
+                value={reponse?.id ?? ""}
+                onChange={(e) => setSelectedReponseId(e.target.value)}
+              >
+                {reponses.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    v{r.version} — {r.libelle}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
+
           <Panel title="Réponse chiffrée">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <select
@@ -283,7 +483,7 @@ function AoDetailPage() {
                   const rep = await ensureReponse(e.target.value);
                   await supabase
                     .from("ao_reponses")
-                    .update({ catalogue_id: e.target.value })
+                    .update({ catalogue_id: e.target.value || null })
                     .eq("id", rep.id);
                   await refresh();
                 }}
@@ -310,22 +510,30 @@ function AoDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lignes.map((l) => (
-                  <TableRow key={l.id}>
-                    <TableCell>{l.numero_prix}</TableCell>
-                    <TableCell>{l.designation}</TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        className="h-8 w-20"
-                        value={l.quantite}
-                        onChange={(e) => updateLigneQty(l.id, Number(e.target.value) || 0)}
-                      />
+                {lignes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                      Aucune ligne — importez un Excel ou ajoutez depuis le catalogue.
                     </TableCell>
-                    <TableCell>{formatEuro(l.pu_ht)}</TableCell>
-                    <TableCell className="text-right">{formatEuro(l.montant)}</TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  lignes.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell>{l.numero_prix}</TableCell>
+                      <TableCell>{l.designation}</TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          className="h-8 w-20"
+                          value={l.quantite}
+                          onChange={(e) => updateLigneQty(l.id, Number(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>{formatEuro(l.pu_ht)}</TableCell>
+                      <TableCell className="text-right">{formatEuro(l.montant)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </Panel>
@@ -424,7 +632,7 @@ function AoDetailPage() {
                   <span>
                     <strong className="uppercase">{d.type}</strong> — {d.nom_fichier}
                   </span>
-                  <span className="text-[var(--commerce-muted)]">v{d.version}</span>
+                  <span className="text-muted-foreground">v{d.version}</span>
                 </li>
               ))}
             </ul>

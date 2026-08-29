@@ -110,6 +110,8 @@ export interface BpuCatalogue {
   client_id: string | null;
   type: BpuType;
   poste_code: string | null;
+  secteur: "EP" | "Tertiaire" | "Enedis" | null;
+  source_fichier: string | null;
   actif: boolean;
   notes: string | null;
   ligne_count?: number;
@@ -135,7 +137,11 @@ export interface AoReponse {
   catalogue_id: string | null;
   statut: "brouillon" | "finalise" | "depose";
   montant_retenu: number | null;
+  libelle: string;
+  source_fichier: string | null;
+  version: number;
   notes: string | null;
+  created_at?: string;
 }
 
 export interface AoReponseLigne {
