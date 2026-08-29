@@ -65,7 +65,7 @@ export function parseBpuTextImport(text: string): BpuImportRow[] {
     rows.push({
       numero_prix: cols[0] ?? "",
       designation: cols[1] ?? "",
-      unite: cols[2] || undefined,
+      ...(cols[2] ? { unite: cols[2] } : {}),
       pu_ht: pu != null && !Number.isNaN(pu) ? pu : null,
       niveau: "ligne",
       ordre: i,
