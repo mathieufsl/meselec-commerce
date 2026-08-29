@@ -21,7 +21,8 @@ import {
   useSocietes,
   useUpsertAppelOffre,
 } from "@/hooks/useCommerceData";
-import { AO_STATUT_LABELS, type AoStatut } from "@/lib/commerceTypes";
+import { AO_STATUT_LABELS, AO_STATUTS, type AoStatut } from "@/lib/commerceTypes";
+import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Search } from "lucide-react";
@@ -89,6 +90,15 @@ function AppelsOffresPage() {
       (kpiFilter === "gagnes" && ao.statut === "gagne");
     return matchSearch && matchTab && matchKpi;
   });
+
+  const mobileGroups = useMemo(
+    () =>
+      AO_STATUTS.map((statut) => ({
+        statut,
+        items: filtered.filter((ao) => ao.statut === statut),
+      })).filter((g) => g.items.length > 0),
+    [filtered],
+  );
 
   const syncLabel = settings?.last_erp_sync_at
     ? new Date(settings.last_erp_sync_at).toLocaleString("fr-FR", {
