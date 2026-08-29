@@ -1,1 +1,20 @@
 project_id = "tewhgpsuwjlufqbeiwen"
+
+[auth]
+site_url = "https://rms-commerce.lovable.app"
+additional_redirect_urls = [
+  "https://rms-commerce.lovable.app/**",
+  "https://*.lovable.app/**",
+  "https://*.lovableproject.com/**",
+  "https://*-l.177ddc7f-913d-49b7-a146-43ef3deacafe.lovableproject.com/**",
+  "https://*-s.177ddc7f-913d-49b7-a146-43ef3deacafe.lovableproject.com/**",
+  "https://177ddc7f-913d-49b7-a146-43ef3deacafe-thr_*.lovableproject.com/**",
+  "https://177ddc7f-913d-49b7-a146-43ef3deacafe.lovableproject.com/**",
+  "https://id-preview*--177ddc7f-913d-49b7-a146-43ef3deacafe.*.lovable.app/**",
+  "https://id-preview*--177ddc7f-913d-49b7-a146-43ef3deacafe.lovable.app/**",
+  "http://localhost:5173/**",
+  "http://localhost:3000/**",
+]
+
+[auth.email]
+max_frequency = "5s"

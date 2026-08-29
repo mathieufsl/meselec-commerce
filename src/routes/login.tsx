@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,10 +14,29 @@ function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [mode, setMode] = useState<"password" | "magic">("password");
+  const [recoveryMode, setRecoveryMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (window.location.hash.includes("type=recovery")) {
+      setRecoveryMode(true);
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setRecoveryMode(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +65,85 @@ function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function onSetNewPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      setError("Le mot de passe doit contenir au moins 8 caractères.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+      setMessage("Mot de passe mis à jour. Redirection…");
+      window.history.replaceState(null, "", window.location.pathname);
+      void navigate({ to: "/" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mise à jour impossible");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (recoveryMode) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-6 rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-center">
+            <img src="/logo-meselec.svg" alt="Meselec" className="mx-auto h-8" />
+            <h1 className="mt-4 text-lg font-semibold">Nouveau mot de passe</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Choisissez un mot de passe pour votre compte commerce.
+            </p>
+          </div>
+
+          <form className="space-y-4" onSubmit={onSetNewPassword}>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nouveau mot de passe</Label>
+              <Input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirmer</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Enregistrer le mot de passe
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -121,7 +219,9 @@ function LoginPage() {
                       { redirectTo: `${window.location.origin}/login` },
                     );
                     if (resetError) throw resetError;
-                    setMessage("Email de réinitialisation envoyé.");
+                    setMessage(
+                      "Si l'email est configuré sur Supabase, vous recevrez un lien de réinitialisation.",
+                    );
                   } catch (err) {
                     setError(err instanceof Error ? err.message : "Envoi impossible");
                   } finally {
