@@ -274,7 +274,7 @@ export function useImportBpuLignes() {
     }) => {
       const { data, error } = await supabase.rpc("import_bpu_lignes", {
         p_catalogue_id: catalogueId,
-        p_lignes: lignes,
+        p_lignes: lignes as never,
       });
       if (error) throw error;
       return data as number;
