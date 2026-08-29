@@ -128,10 +128,12 @@ export function AppShell({
           </aside>
 
           <main className="ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:ml-14">
-            <header className="z-10 shrink-0 border-b border-border/40 bg-background px-4 py-2.5 sm:px-6">
-              <div className="mx-auto flex w-full max-w-[1920px] flex-wrap items-center justify-between gap-3">
+            <header className="z-10 shrink-0 border-b border-border/60 bg-card/80 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:px-6">
+              <div className="mx-auto flex w-full max-w-[1920px] flex-nowrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h1 className="truncate text-base font-semibold leading-tight">{title}</h1>
+                  <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight sm:text-base">
+                    {title}
+                  </h1>
                   {(subtitle || syncLabel) && (
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
                       {subtitle}
