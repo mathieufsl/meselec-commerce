@@ -197,7 +197,7 @@ function AoDetailPage() {
       `Import v${version}`;
     const rep = await createReponse({
       libelle,
-      source_fichier: result.meta.fileName ?? null,
+      source_fichier: result.meta.fileName ?? undefined,
     });
 
     const rows =

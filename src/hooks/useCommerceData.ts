@@ -297,7 +297,7 @@ export function useImportAoReponseLignes() {
     }) => {
       const { data, error } = await supabase.rpc("import_ao_reponse_lignes", {
         p_reponse_id: reponseId,
-        p_lignes: lignes,
+        p_lignes: lignes as never,
         p_replace: replace,
       });
       if (error) throw error;
