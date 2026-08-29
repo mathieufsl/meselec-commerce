@@ -177,19 +177,25 @@ export function AppShell({
           </main>
         </div>
 
-        <nav className="flex shrink-0 gap-1 overflow-x-auto border-t bg-card p-2 lg:hidden">
+        <nav className="grid shrink-0 grid-cols-6 gap-0.5 border-t border-border/60 bg-card/95 px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+            const Icon = item.icon;
+            const short = MOBILE_LABELS[item.to] ?? item.label;
             return (
               <Link
                 key={item.to}
                 to={item.to}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-semibold",
-                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                  "flex flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[10px] font-medium leading-none transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground active:bg-muted",
                 )}
               >
-                {item.label}
+                <Icon className={cn("h-[18px] w-[18px]", active && "stroke-[2.4]")} />
+                <span className="w-full truncate text-center">{short}</span>
               </Link>
             );
           })}
