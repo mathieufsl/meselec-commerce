@@ -252,7 +252,7 @@ export function useUpsertAppelOffre() {
       const { clients, societes_exploitation, ...insert } = payload;
       const { data, error } = await supabase
         .from("appels_offres")
-        .insert(insert)
+        .insert(insert as never)
         .select()
         .single();
       if (error) throw error;
