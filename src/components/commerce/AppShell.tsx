@@ -1,14 +1,34 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import {
+  LayoutDashboard,
+  Briefcase,
+  BookOpen,
+  Users,
+  MapPin,
+  Settings,
+  RotateCw,
+  Plus,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const NAV = [
-  { to: "/", label: "Accueil", exact: true, hint: "Pipeline AO" },
-  { to: "/appels-offres", label: "Appels d'offres", hint: "Marchés" },
-  { to: "/catalogues", label: "Catalogues", hint: "BPU · DPGF" },
-  { to: "/fournisseurs", label: "Fournisseurs", hint: "Répertoire" },
-  { to: "/prospection", label: "Prospection", hint: "Communes IDF" },
-  { to: "/admin", label: "Admin", hint: "Sync · Params" },
-] as const;
+const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean }> = [
+  { to: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
+  { to: "/appels-offres", label: "Appels d'offres", icon: Briefcase },
+  { to: "/catalogues", label: "Catalogues BPU", icon: BookOpen },
+  { to: "/fournisseurs", label: "Fournisseurs", icon: Users },
+  { to: "/prospection", label: "Prospection", icon: MapPin },
+  { to: "/admin", label: "Administration", icon: Settings },
+];
 
 export function AppShell({
   title,
@@ -17,6 +37,7 @@ export function AppShell({
   actions,
   flush = false,
   syncLabel,
+  primaryAction,
 }: {
   title: string;
   subtitle?: string;
@@ -24,136 +45,138 @@ export function AppShell({
   actions?: React.ReactNode;
   flush?: boolean;
   syncLabel?: string | null;
+  primaryAction?: { label: string; onClick: () => void };
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="commerce-shell flex h-dvh min-h-0 flex-col overflow-hidden text-[var(--commerce-fg)]">
-      <div className="flex min-h-0 flex-1">
-        <aside className="hidden w-[188px] shrink-0 flex-col bg-[var(--commerce-side)] text-[var(--commerce-side-text)] md:flex">
-          <div className="relative overflow-hidden border-b border-white/8 px-4 py-4">
-            <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-[var(--commerce-accent)]/25 blur-2xl" />
-            <Link to="/" className="relative block">
-              <span
-                className="block text-[15px] font-semibold tracking-[-0.02em] text-white"
-                style={{ fontFamily: "var(--commerce-display)" }}
-              >
-                PÔLE COMMERCE
-              </span>
-              <span className="mt-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--commerce-accent)]">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--commerce-accent)] shadow-[0_0_0_3px_var(--commerce-accent-soft)]" />
-                Mutualisé
-              </span>
-            </Link>
-          </div>
-
-          <nav className="flex flex-1 flex-col gap-0.5 p-2.5">
-            {NAV.map((item) => {
-              const active =
-                "exact" in item && item.exact
-                  ? pathname === item.to
-                  : pathname.startsWith(item.to);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "group relative rounded-md px-2.5 py-2 transition-colors duration-150",
-                    active
-                      ? "bg-white/10 text-[var(--commerce-side-active)]"
-                      : "hover:bg-white/5 hover:text-white/90",
-                  )}
-                >
-                  {active ? (
-                    <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full bg-[var(--commerce-accent)]" />
-                  ) : null}
-                  <span
-                    className={cn(
-                      "block text-[12.5px] font-semibold tracking-tight",
-                      active && "text-white",
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                  <span className="block text-[10px] opacity-70">{item.hint}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="border-t border-white/8 bg-[var(--commerce-side-elevated)] px-3.5 py-3">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
-              ERP bridge
-            </p>
-            <p className="mt-1 text-[11px] text-white/70">
-              {syncLabel ?? "Non synchronisé"}
-            </p>
-          </div>
-        </aside>
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="shrink-0 border-b border-[var(--commerce-border)]/80 bg-[var(--commerce-panel)]/90 backdrop-blur-md">
-            <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 md:px-5">
-              <div className="min-w-0 md:hidden">
+    <TooltipProvider delayDuration={200}>
+      <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-background">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-14 border-r border-black/10 bg-gradient-to-b from-[#1e3a8a] via-[#3730a3] to-[#7c3aed] text-white lg:flex">
+            <div className="flex h-full w-full flex-col">
+              <div className="border-b border-white/15 p-2">
                 <Link
                   to="/"
-                  className="text-[13px] font-semibold tracking-tight"
-                  style={{ fontFamily: "var(--commerce-display)" }}
+                  className="flex items-center justify-center rounded-lg p-1.5 transition-colors hover:bg-white/10"
                 >
-                  Commerce
+                  <span className="text-sm font-bold tracking-tight">M</span>
                 </Link>
               </div>
-              <nav className="flex max-w-full flex-wrap gap-1 overflow-x-auto md:hidden">
-                {NAV.map((item) => {
-                  const active =
-                    "exact" in item && item.exact
+              <ScrollArea className="flex-1 px-1.5 py-3">
+                <nav className="flex flex-col items-center space-y-2.5">
+                  {NAV.map((item) => {
+                    const active = item.exact
                       ? pathname === item.to
                       : pathname.startsWith(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={cn(
-                        "whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-semibold",
-                        active
-                          ? "bg-[var(--commerce-ink)] text-white"
-                          : "bg-[var(--commerce-row)] text-[var(--commerce-muted)]",
-                      )}
-                    >
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              <div className="hidden min-w-0 flex-1 md:block">
-                <div className="flex items-baseline gap-3">
-                  <h1
-                    className="text-[20px] font-semibold tracking-[-0.03em] text-[var(--commerce-ink)]"
-                    style={{ fontFamily: "var(--commerce-display)" }}
-                  >
-                    {title}
-                  </h1>
-                  {subtitle ? (
-                    <p className="truncate text-[12px] text-[var(--commerce-muted)]">{subtitle}</p>
-                  ) : null}
+                    const Icon = item.icon;
+                    return (
+                      <Tooltip key={item.to}>
+                        <TooltipTrigger asChild>
+                          <Link
+                            to={item.to}
+                            className={cn(
+                              "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                              active
+                                ? "bg-white/20 text-white shadow-sm"
+                                : "text-white/80 hover:bg-white/15 hover:text-white",
+                            )}
+                          >
+                            <Icon className="h-4 w-4 shrink-0" strokeWidth={2.6} />
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{item.label}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </nav>
+              </ScrollArea>
+              <div className="space-y-1.5 border-t border-white/15 p-1.5">
+                <div className="flex flex-col items-center gap-1 rounded-lg bg-black/20 p-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white/80 hover:bg-white/10 hover:text-white"
+                        onClick={() => window.location.reload()}
+                      >
+                        <RotateCw className="h-3.5 w-3.5" strokeWidth={2.6} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Actualiser</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
-              {actions}
             </div>
-          </header>
+          </aside>
 
-          <main
-            className={cn(
-              "commerce-main-enter min-h-0 flex-1 overflow-auto",
-              flush ? "p-0" : "space-y-4 px-3 py-4 md:px-5 md:py-5",
-            )}
-          >
-            {children}
+          <main className="ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:ml-14">
+            <header className="z-10 shrink-0 border-b border-border/40 bg-background px-4 py-2.5 xl:px-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="truncate text-base font-semibold leading-tight">{title}</h1>
+                  {(subtitle || syncLabel) && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {subtitle}
+                      {subtitle && syncLabel ? " · " : null}
+                      {syncLabel ? `Dernière synchro ERP : ${syncLabel}` : null}
+                    </p>
+                  )}
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {actions}
+                  {primaryAction ? (
+                    <Button size="sm" className="gap-2" onClick={primaryAction.onClick}>
+                      <Plus className="h-4 w-4" />
+                      {primaryAction.label}
+                    </Button>
+                  ) : null}
+                  <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1">
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
+                        M
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden text-left sm:block">
+                      <p className="text-xs font-medium leading-none">mathieu</p>
+                      <p className="text-[10px] text-muted-foreground">Compte</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <div
+              className={cn(
+                "min-h-0 flex-1 overflow-y-auto overscroll-y-none",
+                flush ? "" : "px-4 py-2 xl:px-5",
+              )}
+            >
+              {children}
+            </div>
           </main>
         </div>
+
+        <nav className="flex shrink-0 gap-1 overflow-x-auto border-t bg-card p-2 lg:hidden">
+          {NAV.map((item) => {
+            const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-semibold",
+                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -171,66 +194,13 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section
-      className={cn(
-        "overflow-hidden rounded-xl border border-[var(--commerce-border)] bg-[var(--commerce-panel)] shadow-[var(--commerce-shadow)]",
-        className,
-      )}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--commerce-border)] bg-gradient-to-r from-[var(--commerce-row)] to-[var(--commerce-panel)] px-4 py-2.5">
-        <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--commerce-muted)]">
-          {title}
-        </h2>
+    <section className={cn("overflow-hidden rounded-lg border bg-card shadow-sm", className)}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-4 py-2.5">
+        <h2 className="text-sm font-semibold">{title}</h2>
         {actions}
       </div>
       <div className={cn("p-4", bodyClassName)}>{children}</div>
     </section>
-  );
-}
-
-export function KpiStrip({
-  items,
-  className,
-}: {
-  items: Array<{
-    label: string;
-    value: string;
-    hint?: string;
-    tone?: "default" | "good" | "bad" | "warn";
-  }>;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-xl border border-[var(--commerce-border)] bg-[var(--commerce-panel)] shadow-[var(--commerce-shadow)]",
-        className,
-      )}
-    >
-      <div className="flex min-w-full divide-x divide-[var(--commerce-border)] overflow-x-auto">
-        {items.map((item) => (
-          <div key={item.label} className="min-w-[140px] flex-1 px-4 py-3.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--commerce-muted)]">
-              {item.label}
-            </p>
-            <p
-              className={cn(
-                "mt-1.5 text-[18px] font-semibold tracking-tight",
-                item.tone === "good" && "text-[var(--commerce-good)]",
-                item.tone === "bad" && "text-[var(--commerce-bad)]",
-                item.tone === "warn" && "text-[var(--commerce-warn)]",
-              )}
-              style={{ fontFamily: "var(--commerce-mono)" }}
-            >
-              {item.value}
-            </p>
-            {item.hint ? (
-              <p className="mt-1 text-[10px] text-[var(--commerce-muted)]">{item.hint}</p>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -241,8 +211,22 @@ export function StatusBadge({
   statut: string;
   labels: Record<string, string>;
 }) {
+  const colors: Record<string, string> = {
+    veille: "bg-slate-100 text-slate-700",
+    analyse: "bg-violet-100 text-violet-800",
+    en_cours: "bg-sky-100 text-sky-800",
+    depose: "bg-cyan-100 text-cyan-800",
+    gagne: "bg-emerald-100 text-emerald-800",
+    perdu: "bg-rose-100 text-rose-800",
+    abandonne: "bg-neutral-200 text-neutral-700",
+  };
   return (
-    <span className="inline-flex rounded-full bg-[var(--commerce-row)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--commerce-ink)]">
+    <span
+      className={cn(
+        "inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        colors[statut] ?? "bg-muted text-foreground",
+      )}
+    >
       {labels[statut] ?? statut}
     </span>
   );

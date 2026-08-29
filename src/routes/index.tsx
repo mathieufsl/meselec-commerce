@@ -1,18 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AppShell, KpiStrip, Panel, StatusBadge } from "@/components/commerce/AppShell";
+import { AppShell, Panel } from "@/components/commerce/AppShell";
+import { CommerceKpiBar } from "@/components/commerce/CommerceKpiBar";
 import {
   useAppelsOffres,
   useCommerceSettings,
-  useSocietes,
 } from "@/hooks/useCommerceData";
-import {
-  AO_PIPELINE_COLUMNS,
-  AO_STATUT_LABELS,
-  type AoStatut,
-} from "@/lib/commerceTypes";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
-import { cn } from "@/lib/utils";
-import { ArrowUpRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Briefcase, BookOpen, MapPin, Settings, ChevronRight, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -21,7 +18,6 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { data: aos = [] } = useAppelsOffres();
   const { data: settings } = useCommerceSettings();
-  const { data: societes = [] } = useSocietes();
 
   const actifs = aos.filter((a) => !["gagne", "perdu", "abandonne"].includes(a.statut));
   const urgents = actifs.filter((a) => {
@@ -29,6 +25,8 @@ function HomePage() {
     return d != null && d >= 0 && d <= 14;
   });
   const montantPipeline = actifs.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
+  const gagnes = aos.filter((a) => a.statut === "gagne");
+  const montantGagne = gagnes.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
 
   const syncLabel = settings?.last_erp_sync_at
     ? new Date(settings.last_erp_sync_at).toLocaleString("fr-FR", {
@@ -39,108 +37,143 @@ function HomePage() {
       })
     : null;
 
+  const quickLinks = [
+    { to: "/appels-offres", label: "Nouvel AO", icon: Plus, primary: true },
+    { to: "/catalogues", label: "Catalogues", icon: BookOpen },
+    { to: "/prospection", label: "Prospection", icon: MapPin },
+    { to: "/admin", label: "Paramètres", icon: Settings, dashed: true },
+  ] as const;
+
   return (
-    <AppShell title="Pipeline commercial" subtitle="Appels d'offres mutualisés" syncLabel={syncLabel}>
-      <section className="relative overflow-hidden rounded-2xl border border-[var(--commerce-border)] bg-[var(--commerce-ink)] text-white shadow-[var(--commerce-shadow)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_280px_at_10%_-20%,rgba(234,88,12,0.35),transparent_55%),radial-gradient(600px_240px_at_90%_0%,rgba(30,64,175,0.45),transparent_50%)]" />
-        <div className="relative flex flex-wrap items-end justify-between gap-4 px-5 py-6 md:px-7 md:py-7">
-          <div className="max-w-xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--commerce-accent)]">
-              Pôle commerce
-            </p>
-            <h2
-              className="mt-2 text-[28px] font-semibold leading-[1.1] tracking-[-0.035em] md:text-[34px]"
-              style={{ fontFamily: "var(--commerce-display)" }}
-            >
-              Suivi des marchés
-            </h2>
-            <p className="mt-2 max-w-md text-[13px] leading-relaxed text-white/65">
-              AO, catalogues BPU/DPGF, mémoires techniques — attribution vers{" "}
-              {societes.map((s) => s.code).join(", ") || "les sociétés d'exploitation"}.
-            </p>
-          </div>
-          <Link
-            to="/appels-offres"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3.5 py-2 text-[12px] font-semibold text-white ring-1 ring-white/15 transition hover:bg-white/15"
-          >
-            Voir tous les AO
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      </section>
+    <AppShell title="Vue d'ensemble" subtitle="Pôle commerce mutualisé" syncLabel={syncLabel}>
+      <div className="grid gap-3 pt-1 lg:grid-cols-3">
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Bonjour</CardTitle>
+            <p className="text-xs text-muted-foreground">Vos accès rapides commerce.</p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-2">
+            {quickLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Button
+                  key={link.to}
+                  variant={link.primary ? "default" : "outline"}
+                  className={link.dashed ? "border-dashed" : ""}
+                  asChild
+                >
+                  <Link to={link.to} className="gap-2">
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </Link>
+                </Button>
+              );
+            })}
+          </CardContent>
+        </Card>
 
-      <KpiStrip
-        className="mt-4"
-        items={[
-          { label: "AO actifs", value: String(actifs.length) },
-          { label: "Échéance < 14j", value: String(urgents.length), tone: urgents.length ? "warn" : "default" },
-          { label: "Montant pipeline", value: formatEuro(montantPipeline, 0) },
-          { label: "Gagnés", value: String(aos.filter((a) => a.statut === "gagne").length), tone: "good" },
-        ]}
-      />
+        <Card className="shadow-sm lg:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Indicateurs clés</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+              <span className="text-xs text-muted-foreground">Pipeline actif</span>
+              <span className="text-sm font-bold tabular-nums text-emerald-600">
+                {actifs.length} AO
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+              <span className="text-xs text-muted-foreground">Montant estimé</span>
+              <span className="text-sm font-bold tabular-nums text-sky-600">
+                {formatEuro(montantPipeline, 0)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+              <span className="text-xs text-muted-foreground">Échéances &lt; 14j</span>
+              <span className="text-sm font-bold tabular-nums text-amber-600">{urgents.length}</span>
+            </div>
+          </CardContent>
+        </Card>
 
-      <Panel title="Pipeline kanban" className="mt-4" bodyClassName="p-3">
-        <div className="grid gap-3 lg:grid-cols-5">
-          {AO_PIPELINE_COLUMNS.map((statut) => {
-            const column = aos.filter((a) => a.statut === statut);
-            return (
-              <div key={statut} className="min-w-0 rounded-lg bg-[var(--commerce-row)] p-2">
-                <div className="mb-2 flex items-center justify-between px-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--commerce-muted)]">
-                    {AO_STATUT_LABELS[statut]}
-                  </p>
-                  <span className="text-[10px] font-semibold text-[var(--commerce-muted)]">
-                    {column.length}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {column.slice(0, 8).map((ao) => (
-                    <Link
-                      key={ao.id}
-                      to="/appels-offres/$aoId"
-                      params={{ aoId: ao.id }}
-                      className="block rounded-md border border-[var(--commerce-border)] bg-[var(--commerce-panel)] p-2.5 text-[11px] shadow-sm transition hover:border-[var(--commerce-accent)]/40"
-                    >
-                      <p className="font-semibold text-[var(--commerce-ink)]">{ao.reference}</p>
-                      <p className="mt-0.5 line-clamp-2 text-[var(--commerce-muted)]">{ao.titre}</p>
-                      {ao.date_limite_depot ? (
-                        <p
-                          className={cn(
-                            "mt-1.5 text-[10px]",
-                            (daysUntil(ao.date_limite_depot) ?? 99) <= 7 && "text-[var(--commerce-warn)]",
-                          )}
-                        >
-                          Limite {new Date(ao.date_limite_depot).toLocaleDateString("fr-FR")}
-                        </p>
-                      ) : null}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Panel>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">À faire</CardTitle>
+            <p className="text-xs text-muted-foreground">Points d&apos;attention du jour</p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>AO à déposer bientôt</span>
+              <Badge variant="secondary">{urgents.length}</Badge>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span>En analyse / en cours</span>
+              <Badge variant="secondary">
+                {aos.filter((a) => ["analyse", "en_cours"].includes(a.statut)).length}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span>Marchés gagnés</span>
+              <Badge variant="secondary">{gagnes.length}</Badge>
+            </div>
+            <Button variant="link" className="h-auto p-0 text-xs" asChild>
+              <Link to="/appels-offres">
+                Voir tout <ChevronRight className="ml-0.5 h-3 w-3" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
-      {urgents.length > 0 ? (
-        <Panel title="Échéances proches" className="mt-4">
+      <div className="mt-3">
+        <CommerceKpiBar
+          pipelineCount={actifs.length}
+          montantPipeline={montantPipeline}
+          gagnesCount={gagnes.length}
+          montantGagne={montantGagne}
+          active={null}
+          onToggle={() => undefined}
+        />
+      </div>
+
+      <Panel title="Échéances de la semaine" className="mt-3">
+        {urgents.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aucune échéance proche.</p>
+        ) : (
           <div className="space-y-2">
-            {urgents.map((ao) => (
+            {urgents.slice(0, 8).map((ao) => (
               <Link
                 key={ao.id}
                 to="/appels-offres/$aoId"
                 params={{ aoId: ao.id }}
-                className="flex items-center justify-between rounded-md border border-[var(--commerce-border)] px-3 py-2 text-sm hover:bg-[var(--commerce-row)]"
+                className="flex items-center justify-between rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted/50"
               >
-                <span>
-                  <strong>{ao.reference}</strong> — {ao.titre}
-                </span>
-                <StatusBadge statut={ao.statut} labels={AO_STATUT_LABELS as Record<string, string>} />
+                <div className="min-w-0">
+                  <p className="font-semibold">{ao.reference}</p>
+                  <p className="truncate text-xs text-muted-foreground">{ao.titre}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-amber-600">
+                    {ao.date_limite_depot
+                      ? new Date(ao.date_limite_depot).toLocaleDateString("fr-FR")
+                      : "—"}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </Link>
             ))}
           </div>
-        </Panel>
-      ) : null}
+        )}
+      </Panel>
+
+      <div className="mt-3 flex justify-end">
+        <Button variant="outline" size="sm" className="gap-2" asChild>
+          <Link to="/appels-offres">
+            <Briefcase className="h-4 w-4" />
+            Ouvrir les appels d&apos;offres
+          </Link>
+        </Button>
+      </div>
     </AppShell>
   );
 }

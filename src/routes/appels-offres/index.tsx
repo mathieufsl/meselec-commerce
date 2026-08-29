@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, Panel, StatusBadge } from "@/components/commerce/AppShell";
+import { CommerceKpiBar, type CommerceKpiKey } from "@/components/commerce/CommerceKpiBar";
+import { CommerceStatusTabs, type AoStatutTab } from "@/components/commerce/CommerceStatusTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -14,12 +17,14 @@ import {
 import {
   useAppelsOffres,
   useClients,
+  useCommerceSettings,
   useSocietes,
   useUpsertAppelOffre,
 } from "@/hooks/useCommerceData";
-import { AO_STATUT_LABELS, AO_STATUTS } from "@/lib/commerceTypes";
+import { AO_STATUT_LABELS, type AoStatut } from "@/lib/commerceTypes";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
 import { cn } from "@/lib/utils";
+import { AlertTriangle, Search } from "lucide-react";
 
 export const Route = createFileRoute("/appels-offres/")({
   component: AppelsOffresPage,
@@ -29,8 +34,11 @@ function AppelsOffresPage() {
   const { data: aos = [], isLoading } = useAppelsOffres();
   const { data: clients = [] } = useClients();
   const { data: societes = [] } = useSocietes();
+  const { data: settings } = useCommerceSettings();
   const upsert = useUpsertAppelOffre();
   const [filter, setFilter] = useState("");
+  const [statutTab, setStatutTab] = useState<AoStatutTab>("all");
+  const [kpiFilter, setKpiFilter] = useState<CommerceKpiKey | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     reference: "",
@@ -41,15 +49,54 @@ function AppelsOffresPage() {
     societe_attribuee_id: societes[0]?.id ?? "",
   });
 
+  const actifs = aos.filter((a) => !["gagne", "perdu", "abandonne"].includes(a.statut));
+  const urgents = actifs.filter((a) => {
+    const d = daysUntil(a.date_limite_depot);
+    return d != null && d >= 0 && d <= 14;
+  });
+  const montantPipeline = actifs.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
+  const gagnes = aos.filter((a) => a.statut === "gagne");
+  const montantGagne = gagnes.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<AoStatutTab, number> = {
+      all: aos.length,
+      veille: 0,
+      analyse: 0,
+      en_cours: 0,
+      depose: 0,
+      gagne: 0,
+      perdu: 0,
+      abandonne: 0,
+    };
+    for (const ao of aos) counts[ao.statut as AoStatut]++;
+    return counts;
+  }, [aos]);
+
   const filtered = aos.filter((ao) => {
     const q = filter.toLowerCase();
-    return (
+    const matchSearch =
       !q ||
       ao.reference.toLowerCase().includes(q) ||
       ao.titre.toLowerCase().includes(q) ||
-      (ao.clients?.nom_entreprise ?? "").toLowerCase().includes(q)
-    );
+      (ao.clients?.nom_entreprise ?? "").toLowerCase().includes(q);
+    const matchTab = statutTab === "all" || ao.statut === statutTab;
+    const matchKpi =
+      !kpiFilter ||
+      (kpiFilter === "pipeline" && !["gagne", "perdu", "abandonne"].includes(ao.statut)) ||
+      (kpiFilter === "montant" && !["gagne", "perdu", "abandonne"].includes(ao.statut)) ||
+      (kpiFilter === "gagnes" && ao.statut === "gagne");
+    return matchSearch && matchTab && matchKpi;
   });
+
+  const syncLabel = settings?.last_erp_sync_at
+    ? new Date(settings.last_erp_sync_at).toLocaleString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   async function createAo() {
     await upsert.mutateAsync({
@@ -76,141 +123,198 @@ function AppelsOffresPage() {
     <AppShell
       title="Appels d'offres"
       subtitle={`${aos.length} marché(s)`}
+      syncLabel={syncLabel}
+      primaryAction={
+        showForm
+          ? undefined
+          : { label: "Créer un AO", onClick: () => setShowForm(true) }
+      }
       actions={
-        <Button size="sm" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? "Annuler" : "Nouvel AO"}
-        </Button>
+        showForm ? (
+          <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>
+            Annuler
+          </Button>
+        ) : null
       }
     >
-      <div className="flex flex-wrap gap-2">
-        <Input
-          placeholder="Rechercher référence, titre, client…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="max-w-sm"
+      <div className="space-y-2 pt-1">
+        {urgents.length > 0 ? (
+          <Alert className="border-amber-500/30 bg-amber-500/5">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle>Échéances proches</AlertTitle>
+            <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+              <span>
+                {urgents.length} appel(s) d&apos;offres avec dépôt dans les 14 prochains jours.
+              </span>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        <CommerceKpiBar
+          pipelineCount={actifs.length}
+          montantPipeline={montantPipeline}
+          gagnesCount={gagnes.length}
+          montantGagne={montantGagne}
+          active={kpiFilter}
+          onToggle={(k) => setKpiFilter((prev) => (prev === k ? null : k))}
         />
-      </div>
 
-      {showForm ? (
-        <Panel title="Créer un appel d'offres" className="mt-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-sm">
-              <span className="text-[var(--commerce-muted)]">Référence</span>
+        <div className="sticky top-0 z-10 -mx-4 border-b border-border/70 bg-background px-4 pb-2 pt-1 shadow-[0_1px_0_0_hsl(var(--border))] xl:-mx-5 xl:px-5">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[200px] flex-1 max-w-md">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                value={form.reference}
-                onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
+                placeholder="Rechercher référence, titre, client…"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="h-9 pl-9"
               />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-[var(--commerce-muted)]">Titre</span>
-              <Input
-                value={form.titre}
-                onChange={(e) => setForm((f) => ({ ...f, titre: e.target.value }))}
-              />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-[var(--commerce-muted)]">Donneur d'ordre</span>
-              <select
-                className="h-9 w-full rounded-md border px-2 text-sm"
-                value={form.donneur_ordre_id}
-                onChange={(e) => setForm((f) => ({ ...f, donneur_ordre_id: e.target.value }))}
-              >
-                <option value="">—</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nom_entreprise}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-[var(--commerce-muted)]">Date limite dépôt</span>
-              <Input
-                type="date"
-                value={form.date_limite_depot}
-                onChange={(e) => setForm((f) => ({ ...f, date_limite_depot: e.target.value }))}
-              />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-[var(--commerce-muted)]">Montant estimé (€)</span>
-              <Input
-                type="number"
-                value={form.montant_estime}
-                onChange={(e) => setForm((f) => ({ ...f, montant_estime: e.target.value }))}
-              />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-[var(--commerce-muted)]">Société d'exploitation</span>
-              <select
-                className="h-9 w-full rounded-md border px-2 text-sm"
-                value={form.societe_attribuee_id}
-                onChange={(e) => setForm((f) => ({ ...f, societe_attribuee_id: e.target.value }))}
-              >
-                {societes.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nom}
-                  </option>
-                ))}
-              </select>
-            </label>
+            </div>
           </div>
-          <Button className="mt-4" onClick={createAo} disabled={!form.reference || !form.titre}>
-            Enregistrer
-          </Button>
-        </Panel>
-      ) : null}
+          <CommerceStatusTabs active={statutTab} counts={statusCounts} onChange={setStatutTab} />
+        </div>
 
-      <Panel title="Liste" className="mt-4" bodyClassName="p-0">
-        {isLoading ? (
-          <p className="p-4 text-sm text-[var(--commerce-muted)]">Chargement…</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Référence</TableHead>
-                <TableHead>Titre</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Limite</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((ao) => {
-                const days = daysUntil(ao.date_limite_depot);
-                return (
-                  <TableRow key={ao.id}>
-                    <TableCell>
-                      <Link
-                        to="/appels-offres/$aoId"
-                        params={{ aoId: ao.id }}
-                        className="font-semibold text-[var(--commerce-ink)] hover:underline"
+        {showForm ? (
+          <Panel title="Créer un appel d'offres">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Référence</span>
+                <Input
+                  value={form.reference}
+                  onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Titre</span>
+                <Input
+                  value={form.titre}
+                  onChange={(e) => setForm((f) => ({ ...f, titre: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Donneur d&apos;ordre</span>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  value={form.donneur_ordre_id}
+                  onChange={(e) => setForm((f) => ({ ...f, donneur_ordre_id: e.target.value }))}
+                >
+                  <option value="">—</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nom_entreprise}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Date limite dépôt</span>
+                <Input
+                  type="date"
+                  value={form.date_limite_depot}
+                  onChange={(e) => setForm((f) => ({ ...f, date_limite_depot: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Montant estimé (€)</span>
+                <Input
+                  type="number"
+                  value={form.montant_estime}
+                  onChange={(e) => setForm((f) => ({ ...f, montant_estime: e.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Société d&apos;exploitation</span>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  value={form.societe_attribuee_id}
+                  onChange={(e) => setForm((f) => ({ ...f, societe_attribuee_id: e.target.value }))}
+                >
+                  {societes.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nom}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <Button className="mt-4" onClick={createAo} disabled={!form.reference || !form.titre}>
+              Enregistrer
+            </Button>
+          </Panel>
+        ) : null}
+
+        <Panel title={`${filtered.length} appel(s) d'offres`} bodyClassName="p-0">
+          {isLoading ? (
+            <p className="p-4 text-sm text-muted-foreground">Chargement…</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Client</TableHead>
+                  <TableHead>Réf.</TableHead>
+                  <TableHead>Lieu / Objet</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Date limite</TableHead>
+                  <TableHead className="text-right">Montant</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((ao) => {
+                  const days = daysUntil(ao.date_limite_depot);
+                  return (
+                    <TableRow key={ao.id} className="cursor-pointer hover:bg-muted/40">
+                      <TableCell className="font-medium">
+                        {ao.clients?.nom_entreprise ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          to="/appels-offres/$aoId"
+                          params={{ aoId: ao.id }}
+                          className="font-semibold text-primary hover:underline"
+                        >
+                          {ao.reference}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="max-w-[280px]">
+                        <p className="truncate font-medium">{ao.titre}</p>
+                        {ao.lieu ? (
+                          <p className="truncate text-xs text-muted-foreground">{ao.lieu}</p>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge statut={ao.statut} labels={AO_STATUT_LABELS} />
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          days != null && days <= 7 && ao.statut !== "gagne" && "text-amber-600 font-medium",
+                        )}
                       >
-                        {ao.reference}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="max-w-[240px] truncate">{ao.titre}</TableCell>
-                    <TableCell>{ao.clients?.nom_entreprise ?? "—"}</TableCell>
-                    <TableCell>
-                      <StatusBadge statut={ao.statut} labels={AO_STATUT_LABELS} />
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        days != null && days <= 7 && ao.statut !== "gagne" && "text-[var(--commerce-warn)]",
-                      )}
-                    >
-                      {ao.date_limite_depot
-                        ? new Date(ao.date_limite_depot).toLocaleDateString("fr-FR")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">{formatEuro(ao.montant_estime)}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </Panel>
+                        {ao.date_limite_depot
+                          ? new Date(ao.date_limite_depot).toLocaleDateString("fr-FR", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {formatEuro(ao.montant_estime)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </Panel>
+
+        <div className="flex items-center justify-between border-t py-2 text-xs text-muted-foreground">
+          <span>
+            {filtered.length} élément(s) affiché(s)
+            {syncLabel ? ` · Sync ERP ${syncLabel}` : ""}
+          </span>
+        </div>
+      </div>
     </AppShell>
   );
 }

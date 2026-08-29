@@ -151,20 +151,11 @@
   }
 
   body {
-    background-color: var(--commerce-bg);
-    color: var(--commerce-fg);
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: var(--commerce-sans);
-    font-feature-settings: "tnum" 1, "ss01" 1;
     -webkit-font-smoothing: antialiased;
   }
-}
-
-.commerce-shell {
-  font-family: var(--commerce-sans);
-  background:
-    radial-gradient(1200px 600px at 0% -10%, rgba(234, 88, 12, 0.08), transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, rgba(30, 64, 175, 0.06), transparent 50%),
-    linear-gradient(180deg, #f0ebe6 0%, var(--commerce-bg) 40%, #e8e2dc 100%);
 }
 
 .daf-shell .tabular-nums,
