@@ -1,15 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AppShell, Panel } from "@/components/commerce/AppShell";
-import { CommerceKpiBar } from "@/components/commerce/CommerceKpiBar";
-import {
-  useAppelsOffres,
-  useCommerceSettings,
-} from "@/hooks/useCommerceData";
+import { AppShell } from "@/components/commerce/AppShell";
+import { CommerceKpiBrick } from "@/components/commerce/CommerceKpiBrick";
+import { CommerceQuickAction } from "@/components/commerce/CommerceQuickAction";
+import { useAppelsOffres, useCommerceSettings } from "@/hooks/useCommerceData";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Briefcase, BookOpen, MapPin, Settings, ChevronRight, Plus } from "lucide-react";
+import {
+  addDays,
+  format,
+  parseISO,
+  startOfWeek,
+} from "date-fns";
+import { fr } from "date-fns/locale";
+import {
+  Briefcase,
+  BookOpen,
+  MapPin,
+  Settings,
+  ChevronRight,
+  CalendarDays,
+  Target,
+  TrendingUp,
+  AlertTriangle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -24,9 +38,9 @@ function HomePage() {
     const d = daysUntil(a.date_limite_depot);
     return d != null && d >= 0 && d <= 14;
   });
+  const enCours = aos.filter((a) => ["analyse", "en_cours"].includes(a.statut));
   const montantPipeline = actifs.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
   const gagnes = aos.filter((a) => a.statut === "gagne");
-  const montantGagne = gagnes.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
 
   const syncLabel = settings?.last_erp_sync_at
     ? new Date(settings.last_erp_sync_at).toLocaleString("fr-FR", {
@@ -37,142 +51,183 @@ function HomePage() {
       })
     : null;
 
-  const quickLinks = [
-    { to: "/appels-offres", label: "Nouvel AO", icon: Plus, primary: true },
-    { to: "/catalogues", label: "Catalogues", icon: BookOpen },
-    { to: "/prospection", label: "Prospection", icon: MapPin },
-    { to: "/admin", label: "Paramètres", icon: Settings, dashed: true },
-  ] as const;
+  const todoItems = [
+    urgents.length > 0
+      ? { label: "AO à déposer bientôt", value: urgents.length, href: "/appels-offres" }
+      : null,
+    enCours.length > 0
+      ? { label: "En analyse / en cours", value: enCours.length, href: "/appels-offres" }
+      : null,
+    gagnes.length > 0
+      ? { label: "Marchés gagnés", value: gagnes.length, href: "/appels-offres" }
+      : null,
+  ].filter(Boolean) as Array<{ label: string; value: number; href: string }>;
+
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const planningDates = [0, 1, 2].map((offset) =>
+    format(addDays(weekStart, offset), "yyyy-MM-dd"),
+  );
+
+  const echeancesByDate = planningDates.reduce<Record<string, typeof urgents>>((acc, dateKey) => {
+    acc[dateKey] = urgents.filter((ao) => {
+      if (!ao.date_limite_depot) return false;
+      return ao.date_limite_depot.slice(0, 10) === dateKey;
+    });
+    return acc;
+  }, {});
+
+  const echeancesSemaine = urgents.filter((ao) => {
+    if (!ao.date_limite_depot) return false;
+    const d = ao.date_limite_depot.slice(0, 10);
+    return planningDates.includes(d);
+  });
 
   return (
     <AppShell title="Vue d'ensemble" subtitle="Pôle commerce mutualisé" syncLabel={syncLabel}>
-      <div className="grid gap-3 pt-1 lg:grid-cols-3">
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Bonjour</CardTitle>
-            <p className="text-xs text-muted-foreground">Vos accès rapides commerce.</p>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2">
-            {quickLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Button
-                  key={link.to}
-                  variant={link.primary ? "default" : "outline"}
-                  className={link.dashed ? "border-dashed" : ""}
-                  asChild
-                >
-                  <Link to={link.to} className="gap-2">
-                    <Icon className="h-4 w-4" />
-                    {link.label}
-                  </Link>
-                </Button>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Indicateurs clés</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center justify-between rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
-              <span className="text-xs text-muted-foreground">Pipeline actif</span>
-              <span className="text-sm font-bold tabular-nums text-emerald-600">
-                {actifs.length} AO
-              </span>
+      <div className="space-y-8 pb-12">
+        <div className="grid items-stretch gap-4 lg:grid-cols-[1.25fr_0.9fr_320px]">
+          <div className="min-h-[170px] space-y-3 rounded-2xl border bg-card p-4 shadow-sm">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold tracking-tight">Bonjour</h2>
+              <p className="text-sm text-muted-foreground">Votre semaine et vos accès rapides.</p>
             </div>
-            <div className="flex items-center justify-between rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
-              <span className="text-xs text-muted-foreground">Montant estimé</span>
-              <span className="text-sm font-bold tabular-nums text-sky-600">
-                {formatEuro(montantPipeline, 0)}
-              </span>
+            <div className="flex flex-wrap gap-2">
+              <CommerceQuickAction to="/appels-offres" label="Nouvel AO" icon={Briefcase} />
+              <CommerceQuickAction to="/catalogues" label="Catalogues" icon={BookOpen} />
+              <CommerceQuickAction to="/prospection" label="Prospection" icon={MapPin} />
+              <CommerceQuickAction to="/admin" label="Paramètres" icon={Settings} dashed />
             </div>
-            <div className="flex items-center justify-between rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2">
-              <span className="text-xs text-muted-foreground">Échéances &lt; 14j</span>
-              <span className="text-sm font-bold tabular-nums text-amber-600">{urgents.length}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">À faire</CardTitle>
-            <p className="text-xs text-muted-foreground">Points d&apos;attention du jour</p>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>AO à déposer bientôt</span>
-              <Badge variant="secondary">{urgents.length}</Badge>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>En analyse / en cours</span>
-              <Badge variant="secondary">
-                {aos.filter((a) => ["analyse", "en_cours"].includes(a.statut)).length}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>Marchés gagnés</span>
-              <Badge variant="secondary">{gagnes.length}</Badge>
-            </div>
-            <Button variant="link" className="h-auto p-0 text-xs" asChild>
-              <Link to="/appels-offres">
-                Voir tout <ChevronRight className="ml-0.5 h-3 w-3" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-3">
-        <CommerceKpiBar
-          pipelineCount={actifs.length}
-          montantPipeline={montantPipeline}
-          gagnesCount={gagnes.length}
-          montantGagne={montantGagne}
-          active={null}
-          onToggle={() => undefined}
-        />
-      </div>
-
-      <Panel title="Échéances de la semaine" className="mt-3">
-        {urgents.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucune échéance proche.</p>
-        ) : (
-          <div className="space-y-2">
-            {urgents.slice(0, 8).map((ao) => (
-              <Link
-                key={ao.id}
-                to="/appels-offres/$aoId"
-                params={{ aoId: ao.id }}
-                className="flex items-center justify-between rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted/50"
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold">{ao.reference}</p>
-                  <p className="truncate text-xs text-muted-foreground">{ao.titre}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-amber-600">
-                    {ao.date_limite_depot
-                      ? new Date(ao.date_limite_depot).toLocaleDateString("fr-FR")
-                      : "—"}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </Link>
-            ))}
           </div>
-        )}
-      </Panel>
 
-      <div className="mt-3 flex justify-end">
-        <Button variant="outline" size="sm" className="gap-2" asChild>
-          <Link to="/appels-offres">
-            <Briefcase className="h-4 w-4" />
-            Ouvrir les appels d&apos;offres
-          </Link>
-        </Button>
+          <Card className="flex h-full min-h-[170px] w-full min-w-0 flex-col border shadow-sm">
+            <CardHeader className="shrink-0 pb-1.5 pt-4">
+              <CardTitle className="text-base font-semibold">Indicateurs clés</CardTitle>
+            </CardHeader>
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-2 pb-4 pt-0">
+              <div className="flex min-h-0 flex-1 flex-col justify-center">
+                <CommerceKpiBrick
+                  title="Pipeline actif"
+                  value={`${actifs.length} AO`}
+                  icon={Target}
+                  href="/appels-offres"
+                  variant="positive"
+                />
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col justify-center">
+                <CommerceKpiBrick
+                  title="Montant estimé"
+                  value={`${formatEuro(montantPipeline, 0)} HT`}
+                  icon={TrendingUp}
+                  href="/appels-offres"
+                  variant="neutral"
+                />
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col justify-center">
+                <CommerceKpiBrick
+                  title="Échéances < 14j"
+                  value={String(urgents.length)}
+                  icon={AlertTriangle}
+                  href="/appels-offres"
+                  variant="alert"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="h-full min-h-[170px] border shadow-sm">
+            <CardHeader className="pb-1.5 pt-4">
+              <CardTitle className="text-base font-semibold">À faire</CardTitle>
+              <p className="text-sm text-muted-foreground">Points d&apos;attention du jour</p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {todoItems.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                  Vous êtes à jour.
+                </div>
+              ) : (
+                todoItems.slice(0, 3).map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.href}
+                    className="flex items-center justify-between rounded-lg border px-3 py-2 transition-colors hover:bg-muted/40"
+                  >
+                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-primary/10 px-1.5 text-xs font-semibold text-primary">
+                      {item.value}
+                    </span>
+                  </Link>
+                ))
+              )}
+              <Button variant="ghost" size="sm" className="w-full justify-between" asChild>
+                <Link to="/appels-offres">
+                  Voir tout
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="overflow-hidden border bg-gradient-to-br from-card to-muted/20 shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <CalendarDays className="h-4 w-4 text-primary" />
+                  Échéances de la semaine
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Dépôts AO à venir</p>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/appels-offres">
+                  Ouvrir
+                  <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {echeancesSemaine.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune échéance proche.</p>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-3">
+                {planningDates.map((dateKey) => (
+                  <div key={dateKey} className="space-y-2 rounded-xl border bg-background/70 p-2.5">
+                    <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {format(parseISO(dateKey), "EEE d MMM", { locale: fr })}
+                    </p>
+                    <div className="space-y-2">
+                      {(echeancesByDate[dateKey] ?? []).slice(0, 4).map((ao) => (
+                        <Link
+                          key={ao.id}
+                          to="/appels-offres/$aoId"
+                          params={{ aoId: ao.id }}
+                          className="flex items-center justify-between rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-muted/40"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">
+                              {ao.clients?.nom_entreprise ?? ao.reference}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {[ao.reference, ao.titre].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </Link>
+                      ))}
+                      {(echeancesByDate[dateKey] ?? []).length === 0 && (
+                        <div className="rounded-lg border border-dashed bg-card px-3 py-4 text-center text-xs text-muted-foreground">
+                          Aucun dépôt prévu
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
     </AppShell>
   );

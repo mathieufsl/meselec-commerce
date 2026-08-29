@@ -8,6 +8,7 @@ import {
   Settings,
   RotateCw,
   Plus,
+  Sun,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ export function AppShell({
   flush = false,
   syncLabel,
   primaryAction,
+  contentClassName,
 }: {
   title: string;
   subtitle?: string;
@@ -46,12 +48,13 @@ export function AppShell({
   flush?: boolean;
   syncLabel?: string | null;
   primaryAction?: { label: string; onClick: () => void };
+  contentClassName?: string;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-background">
+      <div className="commerce-shell flex h-dvh max-h-dvh flex-col overflow-hidden bg-background">
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-14 border-r border-black/10 bg-gradient-to-b from-[#1e3a8a] via-[#3730a3] to-[#7c3aed] text-white lg:flex">
             <div className="flex h-full w-full flex-col">
@@ -60,7 +63,7 @@ export function AppShell({
                   to="/"
                   className="flex items-center justify-center rounded-lg p-1.5 transition-colors hover:bg-white/10"
                 >
-                  <span className="text-sm font-bold tracking-tight">M</span>
+                  <img src="/logo-meselec.svg" alt="Meselec" className="h-7" />
                 </Link>
               </div>
               <ScrollArea className="flex-1 px-1.5 py-3">
@@ -99,6 +102,19 @@ export function AppShell({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-white/80 hover:bg-white/10 hover:text-white"
+                        onClick={() => document.documentElement.classList.toggle("dark")}
+                      >
+                        <Sun className="h-3.5 w-3.5" strokeWidth={2.6} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Thème</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white/80 hover:bg-white/10 hover:text-white"
                         onClick={() => window.location.reload()}
                       >
                         <RotateCw className="h-3.5 w-3.5" strokeWidth={2.6} />
@@ -112,8 +128,8 @@ export function AppShell({
           </aside>
 
           <main className="ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:ml-14">
-            <header className="z-10 shrink-0 border-b border-border/40 bg-background px-4 py-2.5 xl:px-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <header className="z-10 shrink-0 border-b border-border/40 bg-background px-4 py-2.5 sm:px-6">
+              <div className="mx-auto flex w-full max-w-[1920px] flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <h1 className="truncate text-base font-semibold leading-tight">{title}</h1>
                   {(subtitle || syncLabel) && (
@@ -149,8 +165,11 @@ export function AppShell({
 
             <div
               className={cn(
-                "min-h-0 flex-1 overflow-y-auto overscroll-y-none",
-                flush ? "" : "px-4 py-2 xl:px-5",
+                "commerce-main-enter min-h-0 flex-1 overflow-y-auto overscroll-y-none",
+                flush
+                  ? ""
+                  : "mx-auto w-full max-w-[1920px] px-4 py-6 sm:px-6",
+                contentClassName,
               )}
             >
               {children}
@@ -186,17 +205,22 @@ export function Panel({
   actions,
   className,
   bodyClassName,
+  description,
 }: {
   title: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
   bodyClassName?: string;
+  description?: string;
 }) {
   return (
     <section className={cn("overflow-hidden rounded-lg border bg-card shadow-sm", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-4 py-2.5">
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <div>
+          <h2 className="text-sm font-semibold">{title}</h2>
+          {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+        </div>
         {actions}
       </div>
       <div className={cn("p-4", bodyClassName)}>{children}</div>

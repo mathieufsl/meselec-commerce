@@ -119,11 +119,14 @@ function AppelsOffresPage() {
     });
   }
 
+  const enCours = aos.filter((a) => ["analyse", "en_cours"].includes(a.statut));
+
   return (
     <AppShell
       title="Appels d'offres"
       subtitle={`${aos.length} marché(s)`}
       syncLabel={syncLabel}
+      flush
       primaryAction={
         showForm
           ? undefined
@@ -136,30 +139,47 @@ function AppelsOffresPage() {
           </Button>
         ) : null
       }
+      contentClassName="flex min-h-0 flex-col"
     >
-      <div className="space-y-2 pt-1">
-        {urgents.length > 0 ? (
-          <Alert className="border-amber-500/30 bg-amber-500/5">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle>Échéances proches</AlertTitle>
-            <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-              <span>
-                {urgents.length} appel(s) d&apos;offres avec dépôt dans les 14 prochains jours.
-              </span>
-            </AlertDescription>
-          </Alert>
-        ) : null}
+      <div className="flex min-h-0 flex-1 flex-col space-y-0">
+        <div className="shrink-0 space-y-2 px-4 pb-2 pt-2 sm:px-6">
+          {urgents.length > 0 ? (
+            <Alert className="border-sky-500/30 bg-sky-500/5">
+              <AlertTriangle className="h-4 w-4 text-sky-600" />
+              <AlertTitle>Échéances proches</AlertTitle>
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  {urgents.length} appel(s) d&apos;offres avec dépôt dans les 14 prochains jours.
+                </span>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/appels-offres">Ouvrir la liste</Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {enCours.length > 0 ? (
+            <Alert className="border-amber-500/30 bg-amber-500/5">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertTitle>Réponses en cours</AlertTitle>
+              <AlertDescription>
+                {enCours.length} AO en analyse ou en cours de chiffrage.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+        </div>
 
-        <CommerceKpiBar
+        <div className="shrink-0 px-4 sm:px-6">
+          <CommerceKpiBar
           pipelineCount={actifs.length}
           montantPipeline={montantPipeline}
           gagnesCount={gagnes.length}
           montantGagne={montantGagne}
           active={kpiFilter}
           onToggle={(k) => setKpiFilter((prev) => (prev === k ? null : k))}
-        />
+          />
+        </div>
 
-        <div className="sticky top-0 z-10 -mx-4 border-b border-border/70 bg-background px-4 pb-2 pt-1 shadow-[0_1px_0_0_hsl(var(--border))] xl:-mx-5 xl:px-5">
+        <div className="sticky top-0 z-10 shrink-0 border-b border-border/70 bg-background px-4 pb-2 pt-1 shadow-[0_1px_0_0_hsl(var(--border))] sm:px-6">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <div className="relative min-w-[200px] flex-1 max-w-md">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -175,7 +195,7 @@ function AppelsOffresPage() {
         </div>
 
         {showForm ? (
-          <Panel title="Créer un appel d'offres">
+          <Panel title="Créer un appel d'offres" className="mx-4 mt-2 sm:mx-6">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="text-muted-foreground">Référence</span>
@@ -243,7 +263,11 @@ function AppelsOffresPage() {
           </Panel>
         ) : null}
 
-        <Panel title={`${filtered.length} appel(s) d'offres`} bodyClassName="p-0">
+        <Panel
+          title={`${filtered.length} appel(s) d'offres`}
+          bodyClassName="p-0"
+          className="mx-4 mt-2 min-h-0 flex-1 sm:mx-6"
+        >
           {isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Chargement…</p>
           ) : (
@@ -308,7 +332,7 @@ function AppelsOffresPage() {
           )}
         </Panel>
 
-        <div className="flex items-center justify-between border-t py-2 text-xs text-muted-foreground">
+        <div className="flex shrink-0 items-center justify-between border-t px-4 py-2 text-xs text-muted-foreground sm:px-6">
           <span>
             {filtered.length} élément(s) affiché(s)
             {syncLabel ? ` · Sync ERP ${syncLabel}` : ""}

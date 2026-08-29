@@ -158,6 +158,23 @@
   }
 }
 
+.commerce-shell .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.commerce-main-enter {
+  animation: commerce-fade 380ms ease-out both;
+}
+
+@keyframes commerce-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .daf-shell .tabular-nums,
 .daf-shell [class*="font-[family-name:var(--daf-mono)]"] {
   font-variant-numeric: tabular-nums;
