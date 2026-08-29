@@ -1,5 +1,5 @@
-const ERP_BRIDGE_URL = import.meta.env.VITE_ERP_BRIDGE_URL as string | undefined;
-const ERP_BRIDGE_KEY = import.meta.env.VITE_ERP_BRIDGE_KEY as string | undefined;
+const ERP_BRIDGE_URL = import.meta.env['VITE_ERP_BRIDGE_URL'] as string | undefined;
+const ERP_BRIDGE_KEY = import.meta.env['VITE_ERP_BRIDGE_KEY'] as string | undefined;
 
 export type CommerceBridgeGetEndpoint = "employes" | "clients" | "fournisseurs";
 

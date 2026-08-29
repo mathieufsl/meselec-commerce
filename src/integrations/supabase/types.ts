@@ -1,40 +1,857 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
+      ao_documents: {
+        Row: {
+          ao_id: string
+          created_at: string
+          fichier_url: string | null
+          id: string
+          nom_fichier: string
+          notes: string | null
+          type: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          ao_id: string
+          created_at?: string
+          fichier_url?: string | null
+          id?: string
+          nom_fichier: string
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          ao_id?: string
+          created_at?: string
+          fichier_url?: string | null
+          id?: string
+          nom_fichier?: string
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ao_documents_ao_id_fkey"
+            columns: ["ao_id"]
+            isOneToOne: false
+            referencedRelation: "appels_offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ao_lots: {
+        Row: {
+          ao_id: string
+          created_at: string
+          designation: string
+          id: string
+          montant_estime: number | null
+          numero_lot: string
+          ordre: number
+          updated_at: string
+        }
+        Insert: {
+          ao_id: string
+          created_at?: string
+          designation?: string
+          id?: string
+          montant_estime?: number | null
+          numero_lot: string
+          ordre?: number
+          updated_at?: string
+        }
+        Update: {
+          ao_id?: string
+          created_at?: string
+          designation?: string
+          id?: string
+          montant_estime?: number | null
+          numero_lot?: string
+          ordre?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ao_lots_ao_id_fkey"
+            columns: ["ao_id"]
+            isOneToOne: false
+            referencedRelation: "appels_offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ao_reponse_lignes: {
+        Row: {
+          bpu_ligne_id: string | null
+          created_at: string
+          designation: string
+          id: string
+          montant: number
+          numero_prix: string
+          ordre: number
+          pu_ht: number
+          quantite: number
+          reponse_id: string
+          unite: string | null
+          updated_at: string
+        }
+        Insert: {
+          bpu_ligne_id?: string | null
+          created_at?: string
+          designation?: string
+          id?: string
+          montant?: number
+          numero_prix?: string
+          ordre?: number
+          pu_ht?: number
+          quantite?: number
+          reponse_id: string
+          unite?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bpu_ligne_id?: string | null
+          created_at?: string
+          designation?: string
+          id?: string
+          montant?: number
+          numero_prix?: string
+          ordre?: number
+          pu_ht?: number
+          quantite?: number
+          reponse_id?: string
+          unite?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ao_reponse_lignes_bpu_ligne_id_fkey"
+            columns: ["bpu_ligne_id"]
+            isOneToOne: false
+            referencedRelation: "bpu_lignes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ao_reponse_lignes_reponse_id_fkey"
+            columns: ["reponse_id"]
+            isOneToOne: false
+            referencedRelation: "ao_reponses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ao_reponses: {
+        Row: {
+          ao_id: string
+          catalogue_id: string | null
+          created_at: string
+          id: string
+          lot_id: string | null
+          montant_retenu: number | null
+          notes: string | null
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          ao_id: string
+          catalogue_id?: string | null
+          created_at?: string
+          id?: string
+          lot_id?: string | null
+          montant_retenu?: number | null
+          notes?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          ao_id?: string
+          catalogue_id?: string | null
+          created_at?: string
+          id?: string
+          lot_id?: string | null
+          montant_retenu?: number | null
+          notes?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ao_reponses_ao_id_fkey"
+            columns: ["ao_id"]
+            isOneToOne: false
+            referencedRelation: "appels_offres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ao_reponses_catalogue_id_fkey"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "bpu_catalogues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ao_reponses_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "ao_lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appels_offres: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-      };
-      ao_lots: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      ao_documents: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      ao_reponses: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      ao_reponse_lignes: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      bpu_catalogues: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      bpu_lignes: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      clients: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      commerce_settings: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      erp_cache_employes: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      erp_cache_clients: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      erp_cache_fournisseurs: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      erp_cache_sync_runs: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      fournisseurs_commerciaux: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      memoires_techniques: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      prospection_suivi: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-      societes_exploitation: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
-    };
+        Row: {
+          chantier_erp_id: string | null
+          created_at: string
+          created_by: string | null
+          date_limite_depot: string | null
+          date_publication: string | null
+          donneur_ordre_id: string | null
+          handoff_at: string | null
+          id: string
+          lieu: string | null
+          montant_estime: number | null
+          notes: string | null
+          reference: string
+          societe_attribuee_id: string | null
+          statut: string
+          titre: string
+          type_marche: string | null
+          updated_at: string
+        }
+        Insert: {
+          chantier_erp_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_limite_depot?: string | null
+          date_publication?: string | null
+          donneur_ordre_id?: string | null
+          handoff_at?: string | null
+          id?: string
+          lieu?: string | null
+          montant_estime?: number | null
+          notes?: string | null
+          reference: string
+          societe_attribuee_id?: string | null
+          statut?: string
+          titre: string
+          type_marche?: string | null
+          updated_at?: string
+        }
+        Update: {
+          chantier_erp_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_limite_depot?: string | null
+          date_publication?: string | null
+          donneur_ordre_id?: string | null
+          handoff_at?: string | null
+          id?: string
+          lieu?: string | null
+          montant_estime?: number | null
+          notes?: string | null
+          reference?: string
+          societe_attribuee_id?: string | null
+          statut?: string
+          titre?: string
+          type_marche?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appels_offres_donneur_ordre_id_fkey"
+            columns: ["donneur_ordre_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appels_offres_societe_attribuee_id_fkey"
+            columns: ["societe_attribuee_id"]
+            isOneToOne: false
+            referencedRelation: "societes_exploitation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bpu_catalogues: {
+        Row: {
+          actif: boolean
+          client_id: string | null
+          created_at: string
+          id: string
+          nom: string
+          notes: string | null
+          poste_code: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          nom: string
+          notes?: string | null
+          poste_code?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          nom?: string
+          notes?: string | null
+          poste_code?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bpu_catalogues_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bpu_lignes: {
+        Row: {
+          catalogue_id: string
+          created_at: string
+          designation: string
+          id: string
+          niveau: string
+          numero_prix: string
+          ordre: number
+          parent_numero: string | null
+          poste_code: string | null
+          pu_ht: number | null
+          unite: string | null
+          updated_at: string
+        }
+        Insert: {
+          catalogue_id: string
+          created_at?: string
+          designation: string
+          id?: string
+          niveau?: string
+          numero_prix: string
+          ordre?: number
+          parent_numero?: string | null
+          poste_code?: string | null
+          pu_ht?: number | null
+          unite?: string | null
+          updated_at?: string
+        }
+        Update: {
+          catalogue_id?: string
+          created_at?: string
+          designation?: string
+          id?: string
+          niveau?: string
+          numero_prix?: string
+          ordre?: number
+          parent_numero?: string | null
+          poste_code?: string | null
+          pu_ht?: number | null
+          unite?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bpu_lignes_catalogue_id_fkey"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "bpu_catalogues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          adresse: string | null
+          agence: string | null
+          code_entreprise: string | null
+          contact: string | null
+          created_at: string
+          email: string | null
+          erp_client_id: string | null
+          fonction: string | null
+          id: string
+          nom_entreprise: string
+          secteur: string | null
+          telephone: string | null
+          updated_at: string
+        }
+        Insert: {
+          adresse?: string | null
+          agence?: string | null
+          code_entreprise?: string | null
+          contact?: string | null
+          created_at?: string
+          email?: string | null
+          erp_client_id?: string | null
+          fonction?: string | null
+          id?: string
+          nom_entreprise: string
+          secteur?: string | null
+          telephone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          adresse?: string | null
+          agence?: string | null
+          code_entreprise?: string | null
+          contact?: string | null
+          created_at?: string
+          email?: string | null
+          erp_client_id?: string | null
+          fonction?: string | null
+          id?: string
+          nom_entreprise?: string
+          secteur?: string | null
+          telephone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commerce_allowed_emails: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
+      commerce_settings: {
+        Row: {
+          id: number
+          last_erp_sync_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          last_erp_sync_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          last_erp_sync_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      erp_cache_clients: {
+        Row: {
+          id: number
+          refreshed_at: string | null
+          rows: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          refreshed_at?: string | null
+          rows?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          refreshed_at?: string | null
+          rows?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      erp_cache_employes: {
+        Row: {
+          id: number
+          refreshed_at: string | null
+          rows: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          refreshed_at?: string | null
+          rows?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          refreshed_at?: string | null
+          rows?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      erp_cache_fournisseurs: {
+        Row: {
+          id: number
+          refreshed_at: string | null
+          rows: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          refreshed_at?: string | null
+          rows?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          refreshed_at?: string | null
+          rows?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      erp_cache_sync_runs: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          source: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          source: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      fournisseurs_commerciaux: {
+        Row: {
+          actif: boolean
+          contacts_json: Json
+          created_at: string
+          erp_fournisseur_id: string | null
+          id: string
+          nom: string
+          notes: string | null
+          siret: string | null
+          specialites: string[]
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          contacts_json?: Json
+          created_at?: string
+          erp_fournisseur_id?: string | null
+          id?: string
+          nom: string
+          notes?: string | null
+          siret?: string | null
+          specialites?: string[]
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          contacts_json?: Json
+          created_at?: string
+          erp_fournisseur_id?: string | null
+          id?: string
+          nom?: string
+          notes?: string | null
+          siret?: string | null
+          specialites?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      memoires_techniques: {
+        Row: {
+          ao_id: string
+          contenu_json: Json
+          created_at: string
+          id: string
+          statut: string
+          titre: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          ao_id: string
+          contenu_json?: Json
+          created_at?: string
+          id?: string
+          statut?: string
+          titre?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          ao_id?: string
+          contenu_json?: Json
+          created_at?: string
+          id?: string
+          statut?: string
+          titre?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memoires_techniques_ao_id_fkey"
+            columns: ["ao_id"]
+            isOneToOne: false
+            referencedRelation: "appels_offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospection_suivi: {
+        Row: {
+          commune_key: string
+          created_at: string
+          departement: string | null
+          id: string
+          notes: string
+          prochaine_action: string | null
+          qui_cible: string
+          statut: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          commune_key: string
+          created_at?: string
+          departement?: string | null
+          id?: string
+          notes?: string
+          prochaine_action?: string | null
+          qui_cible?: string
+          statut?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          commune_key?: string
+          created_at?: string
+          departement?: string | null
+          id?: string
+          notes?: string
+          prochaine_action?: string | null
+          qui_cible?: string
+          statut?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      societes_exploitation: {
+        Row: {
+          actif: boolean
+          code: string
+          created_at: string
+          erp_bridge_key_env: string | null
+          erp_bridge_url: string | null
+          id: string
+          nom: string
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          code: string
+          created_at?: string
+          erp_bridge_key_env?: string | null
+          erp_bridge_url?: string | null
+          id?: string
+          nom: string
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          code?: string
+          created_at?: string
+          erp_bridge_key_env?: string | null
+          erp_bridge_url?: string | null
+          id?: string
+          nom?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
     Functions: {
+      commerce_has_access: { Args: never; Returns: boolean }
       import_bpu_lignes: {
-        Args: { p_catalogue_id: string; p_lignes: Json };
-        Returns: number;
-      };
+        Args: { p_catalogue_id: string; p_lignes: Json }
+        Returns: number
+      }
       recalc_ao_reponse_montant: {
-        Args: { p_reponse_id: string };
-        Returns: number;
-      };
-      commerce_has_access: { Args: Record<string, never>; Returns: boolean };
-    };
-  };
-};
+        Args: { p_reponse_id: string }
+        Returns: number
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

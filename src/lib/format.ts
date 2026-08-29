@@ -16,7 +16,7 @@ export function currentMonthKey(d = new Date()): string {
 }
 
 export function addMonthsKey(monthKey: string, delta: number): string {
-  const [y, m] = monthKey.split("-").map(Number);
+  const [y = 0, m = 1] = monthKey.split("-").map(Number) as number[];
   const dt = new Date(y, m - 1 + delta, 1);
   return currentMonthKey(dt);
 }
@@ -26,7 +26,7 @@ export function monthKeysFrom(start: string, count: number): string[] {
 }
 
 export function labelMonth(monthKey: string): string {
-  const [y, m] = monthKey.split("-").map(Number);
+  const [y = 0, m = 1] = monthKey.split("-").map(Number) as number[];
   const label = new Date(y, m - 1, 1).toLocaleDateString("fr-FR", {
     month: "short",
     year: "2-digit",

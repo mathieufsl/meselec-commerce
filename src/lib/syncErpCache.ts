@@ -18,13 +18,13 @@ export async function syncErpCache(): Promise<void> {
   await Promise.all([
     supabase
       .from("erp_cache_employes")
-      .upsert({ id: 1, rows: employes, refreshed_at: now }),
+      .upsert({ id: 1, rows: employes as never, refreshed_at: now }),
     supabase
       .from("erp_cache_clients")
-      .upsert({ id: 1, rows: clients, refreshed_at: now }),
+      .upsert({ id: 1, rows: clients as never, refreshed_at: now }),
     supabase
       .from("erp_cache_fournisseurs")
-      .upsert({ id: 1, rows: fournisseurs, refreshed_at: now }),
+      .upsert({ id: 1, rows: fournisseurs as never, refreshed_at: now }),
     supabase.from("commerce_settings").upsert({ id: 1, last_erp_sync_at: now }),
     supabase.from("erp_cache_sync_runs").insert({
       source: "commerce-bridge",

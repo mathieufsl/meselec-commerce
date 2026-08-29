@@ -127,11 +127,10 @@ function AppelsOffresPage() {
       subtitle={`${aos.length} marché(s)`}
       syncLabel={syncLabel}
       flush
-      primaryAction={
-        showForm
-          ? undefined
-          : { label: "Créer un AO", onClick: () => setShowForm(true) }
-      }
+      {...(showForm
+        ? {}
+        : { primaryAction: { label: "Créer un AO", onClick: () => setShowForm(true) } })}
+
       actions={
         showForm ? (
           <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>
