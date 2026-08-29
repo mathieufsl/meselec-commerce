@@ -232,11 +232,18 @@ export function Panel({
   description?: string;
 }) {
   return (
-    <section className={cn("overflow-hidden rounded-lg border bg-card shadow-sm", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-4 py-2.5">
-        <div>
-          <h2 className="text-sm font-semibold">{title}</h2>
-          {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+    <section
+      className={cn(
+        "overflow-hidden rounded-xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-16px_rgba(16,24,40,0.25)]",
+        className,
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-4 py-2.5">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold tracking-tight">{title}</h2>
+          {description ? (
+            <p className="truncate text-xs text-muted-foreground">{description}</p>
+          ) : null}
         </div>
         {actions}
       </div>
