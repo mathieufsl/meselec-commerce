@@ -9,7 +9,17 @@ export type AoStatut =
 
 export type BpuType = "bpu" | "dpgf";
 export type BpuNiveau = "section" | "sous_section" | "ligne";
-export type AoDocumentType = "dce" | "rc" | "cctp" | "ae" | "dpgf" | "bpu" | "memoire" | "annexe" | "autre";
+export type AoDocumentType =
+  | "dce"
+  | "rc"
+  | "cctp"
+  | "ae"
+  | "dpgf"
+  | "bpu"
+  | "memoire"
+  | "reponse"
+  | "annexe"
+  | "autre";
 export type ProspectionStatut =
   | "a_contacter"
   | "en_cours"
@@ -100,8 +110,14 @@ export interface AoDocument {
   type: AoDocumentType;
   nom_fichier: string;
   fichier_url: string | null;
+  storage_path: string | null;
+  taille_octets: number | null;
+  mime_type: string | null;
   version: number;
   notes: string | null;
+  uploaded_by: string | null;
+  uploaded_by_email: string | null;
+  created_at: string;
 }
 
 export interface BpuCatalogue {

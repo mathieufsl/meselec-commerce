@@ -121,6 +121,21 @@ export function useAoDocuments(aoId: string) {
   });
 }
 
+export function useAoDocumentCounts() {
+  return useQuery({
+    queryKey: ["ao-document-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("ao_documents").select("ao_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      for (const row of data ?? []) {
+        counts[row.ao_id] = (counts[row.ao_id] ?? 0) + 1;
+      }
+      return counts;
+    },
+  });
+}
+
 export function useBpuCatalogues() {
   return useQuery({
     queryKey: ["bpu-catalogues"],

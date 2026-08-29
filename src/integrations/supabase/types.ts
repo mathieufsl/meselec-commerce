@@ -20,10 +20,15 @@ export type Database = {
           created_at: string
           fichier_url: string | null
           id: string
+          mime_type: string | null
           nom_fichier: string
           notes: string | null
+          storage_path: string | null
+          taille_octets: number | null
           type: string
           updated_at: string
+          uploaded_by: string | null
+          uploaded_by_email: string | null
           version: number
         }
         Insert: {
@@ -31,10 +36,15 @@ export type Database = {
           created_at?: string
           fichier_url?: string | null
           id?: string
+          mime_type?: string | null
           nom_fichier: string
           notes?: string | null
+          storage_path?: string | null
+          taille_octets?: number | null
           type?: string
           updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_email?: string | null
           version?: number
         }
         Update: {
@@ -42,10 +52,15 @@ export type Database = {
           created_at?: string
           fichier_url?: string | null
           id?: string
+          mime_type?: string | null
           nom_fichier?: string
           notes?: string | null
+          storage_path?: string | null
+          taille_octets?: number | null
           type?: string
           updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_email?: string | null
           version?: number
         }
         Relationships: [

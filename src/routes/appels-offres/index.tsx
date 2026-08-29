@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import {
   useAppelsOffres,
+  useAoDocumentCounts,
   useClients,
   useCommerceSettings,
   useSocietes,
@@ -25,7 +26,7 @@ import { AO_STATUT_LABELS, AO_STATUTS, type AoStatut } from "@/lib/commerceTypes
 import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Search } from "lucide-react";
+import { AlertTriangle, Paperclip, Search } from "lucide-react";
 
 export const Route = createFileRoute("/appels-offres/")({
   component: AppelsOffresPage,
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/appels-offres/")({
 function AppelsOffresPage() {
   const navigate = useNavigate();
   const { data: aos = [], isLoading } = useAppelsOffres();
+  const { data: docCounts = {} } = useAoDocumentCounts();
   const { data: clients = [] } = useClients();
   const { data: societes = [] } = useSocietes();
   const { data: settings } = useCommerceSettings();
@@ -368,6 +370,7 @@ function AppelsOffresPage() {
                   <TableHead>Réf.</TableHead>
                   <TableHead>Lieu / Objet</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead className="text-center">Docs</TableHead>
                   <TableHead>Date limite</TableHead>
                   <TableHead className="text-right">Montant</TableHead>
                 </TableRow>
@@ -401,6 +404,16 @@ function AppelsOffresPage() {
                       </TableCell>
                       <TableCell>
                         <StatusBadge statut={ao.statut} labels={AO_STATUT_LABELS} />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {docCounts[ao.id] ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <Paperclip className="h-3.5 w-3.5" />
+                            {docCounts[ao.id]}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell
                         className={cn(

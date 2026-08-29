@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, Panel, StatusBadge } from "@/components/commerce/AppShell";
+import { AoDocumentsPanel } from "@/components/commerce/AoDocumentsPanel";
 import { BpuExcelImportPanel } from "@/components/commerce/BpuExcelImportPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +78,6 @@ function AoDetailPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [lotForm, setLotForm] = useState({ numero_lot: "", designation: "" });
-  const [docForm, setDocForm] = useState({ type: "dce", nom_fichier: "" });
   const [memoireContenu, setMemoireContenu] = useState("");
   const [searchBpu, setSearchBpu] = useState("");
 
@@ -147,17 +147,6 @@ function AoDetailPage() {
       ordre: lots.length,
     });
     setLotForm({ numero_lot: "", designation: "" });
-    await refresh();
-  }
-
-  async function addDocument() {
-    if (!docForm.nom_fichier) return;
-    await supabase.from("ao_documents").insert({
-      ao_id: aoId,
-      type: docForm.type,
-      nom_fichier: docForm.nom_fichier,
-    });
-    setDocForm({ type: "dce", nom_fichier: "" });
     await refresh();
   }
 
@@ -354,7 +343,14 @@ function AoDetailPage() {
           <TabsTrigger value="historique">Historique réponses</TabsTrigger>
           <TabsTrigger value="chiffrage">Chiffrage</TabsTrigger>
           <TabsTrigger value="lots">Lots</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="documents">
+            Documents
+            {documents.length > 0 ? (
+              <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
+                {documents.length}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
           <TabsTrigger value="memoire">Mémoire technique</TabsTrigger>
         </TabsList>
 
@@ -602,41 +598,7 @@ function AoDetailPage() {
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">
-          <Panel title="Pièces DCE">
-            <div className="mb-3 flex flex-wrap gap-2">
-              <select
-                className="h-9 rounded-md border px-2 text-sm"
-                value={docForm.type}
-                onChange={(e) => setDocForm((f) => ({ ...f, type: e.target.value }))}
-              >
-                <option value="dce">DCE</option>
-                <option value="rc">RC</option>
-                <option value="cctp">CCTP</option>
-                <option value="dpgf">DPGF</option>
-                <option value="bpu">BPU</option>
-                <option value="annexe">Annexe</option>
-              </select>
-              <Input
-                placeholder="Nom du fichier"
-                value={docForm.nom_fichier}
-                onChange={(e) => setDocForm((f) => ({ ...f, nom_fichier: e.target.value }))}
-                className="max-w-md flex-1"
-              />
-              <Button size="sm" onClick={addDocument}>
-                Ajouter
-              </Button>
-            </div>
-            <ul className="space-y-1 text-sm">
-              {documents.map((d) => (
-                <li key={d.id} className="flex justify-between rounded border px-3 py-2">
-                  <span>
-                    <strong className="uppercase">{d.type}</strong> — {d.nom_fichier}
-                  </span>
-                  <span className="text-muted-foreground">v{d.version}</span>
-                </li>
-              ))}
-            </ul>
-          </Panel>
+          <AoDocumentsPanel aoId={aoId} />
         </TabsContent>
 
         <TabsContent value="memoire" className="mt-4 space-y-4">
