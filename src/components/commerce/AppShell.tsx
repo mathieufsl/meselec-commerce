@@ -31,6 +31,15 @@ const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean 
   { to: "/admin", label: "Administration", icon: Settings },
 ];
 
+const MOBILE_LABELS: Record<string, string> = {
+  "/": "Accueil",
+  "/appels-offres": "AO",
+  "/catalogues": "BPU",
+  "/fournisseurs": "Fourn.",
+  "/prospection": "Prospect",
+  "/admin": "Admin",
+};
+
 export function AppShell({
   title,
   subtitle,
