@@ -165,33 +165,42 @@ export type Database = {
           catalogue_id: string | null
           created_at: string
           id: string
+          libelle: string
           lot_id: string | null
           montant_retenu: number | null
           notes: string | null
+          source_fichier: string | null
           statut: string
           updated_at: string
+          version: number
         }
         Insert: {
           ao_id: string
           catalogue_id?: string | null
           created_at?: string
           id?: string
+          libelle?: string
           lot_id?: string | null
           montant_retenu?: number | null
           notes?: string | null
+          source_fichier?: string | null
           statut?: string
           updated_at?: string
+          version?: number
         }
         Update: {
           ao_id?: string
           catalogue_id?: string | null
           created_at?: string
           id?: string
+          libelle?: string
           lot_id?: string | null
           montant_retenu?: number | null
           notes?: string | null
+          source_fichier?: string | null
           statut?: string
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -301,6 +310,8 @@ export type Database = {
           nom: string
           notes: string | null
           poste_code: string | null
+          secteur: string | null
+          source_fichier: string | null
           type: string
           updated_at: string
         }
@@ -312,6 +323,8 @@ export type Database = {
           nom: string
           notes?: string | null
           poste_code?: string | null
+          secteur?: string | null
+          source_fichier?: string | null
           type?: string
           updated_at?: string
         }
@@ -323,6 +336,8 @@ export type Database = {
           nom?: string
           notes?: string | null
           poste_code?: string | null
+          secteur?: string | null
+          source_fichier?: string | null
           type?: string
           updated_at?: string
         }
@@ -715,6 +730,10 @@ export type Database = {
     }
     Functions: {
       commerce_has_access: { Args: never; Returns: boolean }
+      import_ao_reponse_lignes: {
+        Args: { p_lignes: Json; p_replace?: boolean; p_reponse_id: string }
+        Returns: number
+      }
       import_bpu_lignes: {
         Args: { p_catalogue_id: string; p_lignes: Json }
         Returns: number
