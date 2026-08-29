@@ -259,22 +259,15 @@ export function StatusBadge({
   statut: string;
   labels: Record<string, string>;
 }) {
-  const colors: Record<string, string> = {
-    veille: "bg-slate-100 text-slate-700",
-    analyse: "bg-violet-100 text-violet-800",
-    en_cours: "bg-sky-100 text-sky-800",
-    depose: "bg-cyan-100 text-cyan-800",
-    gagne: "bg-emerald-100 text-emerald-800",
-    perdu: "bg-rose-100 text-rose-800",
-    abandonne: "bg-neutral-200 text-neutral-700",
-  };
+  const style = AO_STATUT_STYLES[statut as AoStatut];
   return (
     <span
       className={cn(
-        "inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        colors[statut] ?? "bg-muted text-foreground",
+        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset",
+        style?.badge ?? "bg-muted text-foreground ring-border",
       )}
     >
+      <span className={cn("h-1.5 w-1.5 rounded-full", style?.dot ?? "bg-muted-foreground")} />
       {labels[statut] ?? statut}
     </span>
   );
