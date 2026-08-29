@@ -21,6 +21,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
+import type { AoStatut } from "@/lib/commerceTypes";
 
 const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean }> = [
   { to: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
