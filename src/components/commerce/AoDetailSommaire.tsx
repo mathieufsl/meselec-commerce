@@ -141,7 +141,7 @@ export function useAoSectionObserver(sectionIds: string[]) {
       }
     }
 
-    setActiveId(current);
+    if (current) setActiveId(current);
   }, [sectionIds]);
 
   useEffect(() => {
