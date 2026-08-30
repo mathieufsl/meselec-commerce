@@ -7,15 +7,15 @@ import type { LucideIcon } from "lucide-react";
 type KpiVariant = "alert" | "neutral" | "positive";
 
 const variantStyles: Record<KpiVariant, string> = {
-  alert: "border-amber-200/80 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/5",
+  alert: "border-warning/30 bg-warning-subtle/60",
   neutral: "border-border/80 bg-card",
-  positive: "border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-500/5",
+  positive: "border-success/30 bg-success-subtle/60",
 };
 
 const iconStyles: Record<KpiVariant, string> = {
-  alert: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  alert: "bg-warning/15 text-warning",
   neutral: "bg-primary/10 text-primary",
-  positive: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  positive: "bg-success/15 text-success",
 };
 
 export function CommerceKpiBrick({

@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "seed:ep": "vite-node scripts/generate-ep-seed.ts"
+    "seed:ep": "vite-node scripts/generate-ep-seed.ts",
+    "import:ao-zip": "python3 scripts/import-ao-zip.py"
   },
   "overrides": {
     "rolldown": "1.2.1"

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as FournisseursRouteImport } from './routes/fournisseurs'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as ProspectionRouteImport } from './routes/prospection'
 import { Route as AppelsOffresIndexRouteImport } from './routes/appels-offres/index'
 import { Route as AppelsOffresAoIdRouteImport } from './routes/appels-offres/$aoId'
@@ -37,6 +38,11 @@ const FournisseursRoute = FournisseursRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfilRoute = ProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProspectionRoute = ProspectionRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/fournisseurs': typeof FournisseursRoute
   '/login': typeof LoginRoute
+  '/profil': typeof ProfilRoute
   '/prospection': typeof ProspectionRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/fournisseurs': typeof FournisseursRoute
   '/login': typeof LoginRoute
+  '/profil': typeof ProfilRoute
   '/prospection': typeof ProspectionRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/fournisseurs': typeof FournisseursRoute
   '/login': typeof LoginRoute
+  '/profil': typeof ProfilRoute
   '/prospection': typeof ProspectionRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/fournisseurs'
     | '/login'
+    | '/profil'
     | '/prospection'
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/fournisseurs'
     | '/login'
+    | '/profil'
     | '/prospection'
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/fournisseurs'
     | '/login'
+    | '/profil'
     | '/prospection'
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   FournisseursRoute: typeof FournisseursRoute
   LoginRoute: typeof LoginRoute
+  ProfilRoute: typeof ProfilRoute
   ProspectionRoute: typeof ProspectionRoute
   AppelsOffresAoIdRoute: typeof AppelsOffresAoIdRoute
   CataloguesCatalogueIdRoute: typeof CataloguesCatalogueIdRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profil': {
+      id: '/profil'
+      path: '/profil'
+      fullPath: '/profil'
+      preLoaderRoute: typeof ProfilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prospection': {
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   FournisseursRoute: FournisseursRoute,
   LoginRoute: LoginRoute,
+  ProfilRoute: ProfilRoute,
   ProspectionRoute: ProspectionRoute,
   AppelsOffresAoIdRoute: AppelsOffresAoIdRoute,
   CataloguesCatalogueIdRoute: CataloguesCatalogueIdRoute,

@@ -118,16 +118,91 @@ export async function uploadAoDocument(params: {
   return data as AoDocument;
 }
 
-export async function downloadAoDocument(doc: AoDocument): Promise<void> {
+export type AoDocumentPreviewKind = "pdf" | "image" | "none";
+
+const EXTENSION_MIME: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".bmp": "image/bmp",
+  ".svg": "image/svg+xml",
+};
+
+/** Les imports OneDrive stockent souvent application/octet-stream — on déduit le vrai type. */
+export function inferAoDocumentMime(doc: AoDocument): string | null {
+  const stored = doc.mime_type?.trim().toLowerCase() ?? "";
+  if (stored && stored !== "application/octet-stream") return stored;
+
+  const match = doc.nom_fichier.toLowerCase().match(/\.[a-z0-9]+$/);
+  const ext = match?.[0];
+  if (ext && EXTENSION_MIME[ext]) return EXTENSION_MIME[ext];
+
+  return stored || null;
+}
+
+export function getAoDocumentPreviewKind(doc: AoDocument): AoDocumentPreviewKind {
+  if (!doc.storage_path) return "none";
+  const mime = inferAoDocumentMime(doc) ?? "";
+  const name = doc.nom_fichier.toLowerCase();
+  if (mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name)) {
+    return "image";
+  }
+  if (mime === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+  return "none";
+}
+
+export async function getAoDocumentSignedUrl(
+  doc: AoDocument,
+  ttlSeconds = 300,
+  options?: { download?: string | boolean },
+): Promise<string> {
   if (!doc.storage_path) {
     throw new Error("Ce document n'a pas de fichier associé.");
   }
   const { data, error } = await supabase.storage
     .from(AO_DOCUMENTS_BUCKET)
-    .createSignedUrl(doc.storage_path, 120);
+    .createSignedUrl(doc.storage_path, ttlSeconds, {
+      download: options?.download ?? false,
+    });
   if (error) throw error;
   if (!data?.signedUrl) throw new Error("Lien de téléchargement indisponible.");
-  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  return data.signedUrl;
+}
+
+/** Télécharge le blob via le client authentifié (évite les soucis CORS / iframe). */
+export async function downloadAoDocumentBlob(doc: AoDocument): Promise<Blob> {
+  if (!doc.storage_path) {
+    throw new Error("Ce document n'a pas de fichier associé.");
+  }
+  const { data, error } = await supabase.storage
+    .from(AO_DOCUMENTS_BUCKET)
+    .download(doc.storage_path);
+  if (error) throw error;
+  if (!data) throw new Error("Fichier introuvable dans le stockage.");
+  return data;
+}
+
+export function blobWithMime(blob: Blob, doc: AoDocument): Blob {
+  const mime = inferAoDocumentMime(doc);
+  if (!mime) return blob;
+  if (blob.type === mime) return blob;
+  return new Blob([blob], { type: mime });
+}
+
+export async function downloadAoDocument(doc: AoDocument): Promise<void> {
+  const blob = blobWithMime(await downloadAoDocumentBlob(doc), doc);
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = doc.nom_fichier || "document";
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export async function deleteAoDocument(doc: AoDocument): Promise<void> {

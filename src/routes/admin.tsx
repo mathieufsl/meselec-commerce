@@ -42,7 +42,6 @@ function AdminPage() {
   return (
     <AppShell
       title="Administration"
-      subtitle="Sync ERP & sociétés d'exploitation"
       actions={
         <Button onClick={handleSync} disabled={busy}>
           {busy ? "Sync…" : "Synchroniser depuis ERP"}

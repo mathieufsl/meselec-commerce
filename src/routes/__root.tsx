@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { CommerceAuthGate } from "../components/commerce/CommerceAuthGate";
+import { Toaster } from "../components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -78,13 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Meselec Commerce" },
+      { title: "RMSCom" },
       {
         name: "description",
         content: "Pôle commerce mutualisé MESELEC — AO, BPU/DPGF, prospection",
       },
       { name: "author", content: "MESELEC" },
-      { property: "og:title", content: "Meselec Finance DAF" },
+      { property: "og:title", content: "RMSCom" },
       { property: "og:description", content: "Pilotage financier MESELEC" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -99,9 +100,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "32x32" },
+      { rel: "apple-touch-icon", href: "/logo-rms.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -130,8 +132,8 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <CommerceAuthGate>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
+        <Toaster richColors position="top-center" />
       </CommerceAuthGate>
     </QueryClientProvider>
   );

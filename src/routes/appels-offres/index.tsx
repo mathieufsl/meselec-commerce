@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell, Panel, StatusBadge } from "@/components/commerce/AppShell";
+import { CommerceAoCard } from "@/components/commerce/CommerceAoCard";
+import { CommerceAoDateFilters } from "@/components/commerce/CommerceAoDateFilters";
+import { CommerceAoKanban } from "@/components/commerce/CommerceAoKanban";
 import { CommerceKpiBar, type CommerceKpiKey } from "@/components/commerce/CommerceKpiBar";
 import { CommerceStatusTabs, type AoStatutTab } from "@/components/commerce/CommerceStatusTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -22,11 +25,15 @@ import {
   useSocietes,
   useUpsertAppelOffre,
 } from "@/hooks/useCommerceData";
+import { matchesAoSocieteFilter, useAoSocieteFilter } from "@/hooks/useAoSocieteFilter";
 import { AO_STATUT_LABELS, AO_STATUTS, type AoStatut } from "@/lib/commerceTypes";
 import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
+import { matchesAoDateFilter, type AoDateFilterPreset } from "@/lib/aoFilters";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Paperclip, Search } from "lucide-react";
+import { AlertTriangle, Columns3, LayoutList, Paperclip, Search } from "lucide-react";
+
+type AoViewMode = "liste" | "kanban";
 
 export const Route = createFileRoute("/appels-offres/")({
   component: AppelsOffresPage,
@@ -38,11 +45,16 @@ function AppelsOffresPage() {
   const { data: docCounts = {} } = useAoDocumentCounts();
   const { data: clients = [] } = useClients();
   const { data: societes = [] } = useSocietes();
+  const { selectedSocieteId, setSelectedSocieteId } = useAoSocieteFilter();
   const { data: settings } = useCommerceSettings();
   const upsert = useUpsertAppelOffre();
   const [filter, setFilter] = useState("");
   const [statutTab, setStatutTab] = useState<AoStatutTab>("all");
   const [kpiFilter, setKpiFilter] = useState<CommerceKpiKey | null>(null);
+  const [viewMode, setViewMode] = useState<AoViewMode>("liste");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [datePreset, setDatePreset] = useState<AoDateFilterPreset | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     reference: "",
@@ -53,18 +65,26 @@ function AppelsOffresPage() {
     societe_attribuee_id: societes[0]?.id ?? "",
   });
 
-  const actifs = aos.filter((a) => !["gagne", "perdu", "abandonne"].includes(a.statut));
+  const defaultSocieteId =
+    selectedSocieteId !== "all" ? selectedSocieteId : (societes[0]?.id ?? "");
+
+  const scopedAos = useMemo(
+    () => aos.filter((ao) => matchesAoSocieteFilter(ao.societe_attribuee_id, selectedSocieteId)),
+    [aos, selectedSocieteId],
+  );
+
+  const actifs = scopedAos.filter((a) => !["gagne", "perdu", "abandonne"].includes(a.statut));
   const urgents = actifs.filter((a) => {
     const d = daysUntil(a.date_limite_depot);
     return d != null && d >= 0 && d <= 14;
   });
   const montantPipeline = actifs.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
-  const gagnes = aos.filter((a) => a.statut === "gagne");
+  const gagnes = scopedAos.filter((a) => a.statut === "gagne");
   const montantGagne = gagnes.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
 
   const statusCounts = useMemo(() => {
     const counts: Record<AoStatutTab, number> = {
-      all: aos.length,
+      all: scopedAos.length,
       veille: 0,
       analyse: 0,
       en_cours: 0,
@@ -73,24 +93,25 @@ function AppelsOffresPage() {
       perdu: 0,
       abandonne: 0,
     };
-    for (const ao of aos) counts[ao.statut as AoStatut]++;
+    for (const ao of scopedAos) counts[ao.statut as AoStatut]++;
     return counts;
-  }, [aos]);
+  }, [scopedAos]);
 
-  const filtered = aos.filter((ao) => {
+  const filtered = scopedAos.filter((ao) => {
     const q = filter.toLowerCase();
     const matchSearch =
       !q ||
       ao.reference.toLowerCase().includes(q) ||
       ao.titre.toLowerCase().includes(q) ||
       (ao.clients?.nom_entreprise ?? "").toLowerCase().includes(q);
-    const matchTab = statutTab === "all" || ao.statut === statutTab;
+    const matchTab = viewMode === "kanban" || statutTab === "all" || ao.statut === statutTab;
     const matchKpi =
       !kpiFilter ||
       (kpiFilter === "pipeline" && !["gagne", "perdu", "abandonne"].includes(ao.statut)) ||
       (kpiFilter === "montant" && !["gagne", "perdu", "abandonne"].includes(ao.statut)) ||
       (kpiFilter === "gagnes" && ao.statut === "gagne");
-    return matchSearch && matchTab && matchKpi;
+    const matchDate = matchesAoDateFilter(ao.date_limite_depot, dateFrom, dateTo, datePreset);
+    return matchSearch && matchTab && matchKpi && matchDate;
   });
 
   const mobileGroups = useMemo(
@@ -111,6 +132,10 @@ function AppelsOffresPage() {
       })
     : null;
 
+  async function moveAoStatut(aoId: string, statut: AoStatut) {
+    await upsert.mutateAsync({ id: aoId, statut });
+  }
+
   async function createAo() {
     await upsert.mutateAsync({
       reference: form.reference.trim(),
@@ -128,21 +153,50 @@ function AppelsOffresPage() {
       donneur_ordre_id: "",
       date_limite_depot: "",
       montant_estime: "",
-      societe_attribuee_id: societes[0]?.id ?? "",
+      societe_attribuee_id: defaultSocieteId,
     });
   }
 
-  const enCours = aos.filter((a) => ["analyse", "en_cours"].includes(a.statut));
+  async function openCreateForm() {
+    setForm((f) => ({
+      ...f,
+      societe_attribuee_id: defaultSocieteId,
+    }));
+    setShowForm(true);
+  }
+
+  const enCours = scopedAos.filter((a) => ["analyse", "en_cours"].includes(a.statut));
+
+  const headerBanner =
+    urgents.length > 0 || enCours.length > 0 ? (
+      <>
+        {urgents.length > 0 ? (
+          <div className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-info/25 bg-info/5 px-2.5 text-xs text-info">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-info" />
+            <span>
+              <span className="font-semibold">{urgents.length}</span> échéance(s) · 14 j
+            </span>
+          </div>
+        ) : null}
+        {enCours.length > 0 ? (
+          <div className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-warning/25 bg-warning/5 px-2.5 text-xs text-warning">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
+            <span>
+              <span className="font-semibold">{enCours.length}</span> en analyse ou chiffrage
+            </span>
+          </div>
+        ) : null}
+      </>
+    ) : null;
 
   return (
     <AppShell
       title="Appels d'offres"
-      subtitle={`${aos.length} marché(s)`}
-      syncLabel={syncLabel}
       flush
+      banner={headerBanner}
       {...(showForm
         ? {}
-        : { primaryAction: { label: "Créer un AO", onClick: () => setShowForm(true) } })}
+        : { primaryAction: { label: "Créer un AO", onClick: openCreateForm } })}
 
       actions={
         showForm ? (
@@ -151,36 +205,10 @@ function AppelsOffresPage() {
           </Button>
         ) : null
       }
-      contentClassName="flex min-h-0 flex-col"
+      contentClassName="flex min-h-0 flex-col overflow-hidden"
     >
-      <div className="flex min-h-0 flex-1 flex-col space-y-0">
-        <div className="shrink-0 space-y-2 px-4 pb-2 pt-2 sm:px-6">
-          {urgents.length > 0 ? (
-            <Alert className="border-sky-500/30 bg-sky-500/5">
-              <AlertTriangle className="h-4 w-4 text-sky-600" />
-              <AlertTitle>Échéances proches</AlertTitle>
-              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                <span>
-                  {urgents.length} appel(s) d&apos;offres avec dépôt dans les 14 prochains jours.
-                </span>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/appels-offres">Ouvrir la liste</Link>
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : null}
-          {enCours.length > 0 ? (
-            <Alert className="border-amber-500/30 bg-amber-500/5">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertTitle>Réponses en cours</AlertTitle>
-              <AlertDescription>
-                {enCours.length} AO en analyse ou en cours de chiffrage.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-        </div>
-
-        <div className="shrink-0 px-4 sm:px-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="shrink-0 px-4 pb-1.5 pt-1.5 sm:px-6">
           <CommerceKpiBar
           pipelineCount={actifs.length}
           montantPipeline={montantPipeline}
@@ -202,8 +230,48 @@ function AppelsOffresPage() {
                 className="h-9 pl-9"
               />
             </div>
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(v) => v && setViewMode(v as AoViewMode)}
+              className="shrink-0 rounded-lg border border-border/70 bg-card p-0.5"
+            >
+              <ToggleGroupItem
+                value="liste"
+                aria-label="Vue liste"
+                className="h-8 gap-1.5 px-2.5 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                <LayoutList className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Liste</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="kanban"
+                aria-label="Vue kanban"
+                className="h-8 gap-1.5 px-2.5 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                <Columns3 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Kanban</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
-          <CommerceStatusTabs active={statutTab} counts={statusCounts} onChange={setStatutTab} />
+          <div className="mb-2">
+            <CommerceAoDateFilters
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              preset={datePreset}
+              onDateFromChange={setDateFrom}
+              onDateToChange={setDateTo}
+              onPresetChange={setDatePreset}
+              onClear={() => {
+                setDateFrom("");
+                setDateTo("");
+                setDatePreset(null);
+              }}
+            />
+          </div>
+          {viewMode === "liste" ? (
+            <CommerceStatusTabs active={statutTab} counts={statusCounts} onChange={setStatutTab} />
+          ) : null}
         </div>
 
         {showForm ? (
@@ -275,98 +343,75 @@ function AppelsOffresPage() {
           </Panel>
         ) : null}
 
-        {/* Mobile : cartes groupées par statut */}
-        <div className="min-h-0 flex-1 space-y-4 px-4 pb-4 pt-2 md:hidden">
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Chargement…</p>
-          ) : filtered.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-              Aucun appel d&apos;offres pour ce filtre.
-            </div>
-          ) : (
-            mobileGroups.map((group) => (
-              <section key={group.statut} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={cn("h-2 w-2 rounded-full", AO_STATUT_STYLES[group.statut].dot)}
-                  />
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {AO_STATUT_LABELS[group.statut]}
-                  </h3>
-                  <span className="rounded-full bg-muted px-1.5 text-[10px] font-semibold tabular-nums text-foreground/70">
-                    {group.items.length}
-                  </span>
-                  <span className="ml-auto text-[11px] font-medium tabular-nums text-muted-foreground">
-                    {formatEuro(group.items.reduce((s, a) => s + (a.montant_estime ?? 0), 0))}
-                  </span>
+        {viewMode === "kanban" ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {isLoading ? (
+              <p className="px-4 py-4 text-sm text-muted-foreground sm:px-6">Chargement…</p>
+            ) : filtered.length === 0 ? (
+              <div className="mx-4 mt-2 rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground sm:mx-6">
+                Aucun appel d&apos;offres pour ce filtre.
+              </div>
+            ) : (
+              <CommerceAoKanban
+                items={filtered}
+                docCounts={docCounts}
+                onMoveStatut={moveAoStatut}
+                isMoving={upsert.isPending}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {/* Mobile : cartes groupées par statut */}
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 pt-2 md:hidden">
+              {isLoading ? (
+                <p className="text-sm text-muted-foreground">Chargement…</p>
+              ) : filtered.length === 0 ? (
+                <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                  Aucun appel d&apos;offres pour ce filtre.
                 </div>
-                <div className="space-y-2">
-                  {group.items.map((ao) => {
-                    const days = daysUntil(ao.date_limite_depot);
-                    const urgent = days != null && days >= 0 && days <= 7;
-                    return (
-                      <Link
-                        key={ao.id}
-                        to="/appels-offres/$aoId"
-                        params={{ aoId: ao.id }}
-                        className="relative block overflow-hidden rounded-xl border border-border/70 bg-card p-3 pl-4 shadow-sm active:bg-muted/40"
-                      >
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 left-0 w-1",
-                            AO_STATUT_STYLES[group.statut].bar,
-                          )}
+              ) : (
+                mobileGroups.map((group) => (
+                  <section key={group.statut} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn("h-2 w-2 rounded-full", AO_STATUT_STYLES[group.statut].dot)}
+                      />
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {AO_STATUT_LABELS[group.statut]}
+                      </h3>
+                      <span className="rounded-full bg-muted px-1.5 text-[10px] font-semibold tabular-nums text-foreground/70">
+                        {group.items.length}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {group.items.map((ao) => (
+                        <CommerceAoCard
+                          key={ao.id}
+                          ao={ao}
+                          statut={group.statut}
+                          docCount={docCounts[ao.id]}
                         />
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold leading-tight">
-                              {ao.clients?.nom_entreprise ?? ao.reference}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">{ao.titre}</p>
-                          </div>
-                          <span className="shrink-0 text-sm font-bold tabular-nums">
-                            {formatEuro(ao.montant_estime)}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                          <span className="font-medium text-foreground/70">{ao.reference}</span>
-                          {ao.lieu ? <span className="truncate">{ao.lieu}</span> : null}
-                          {ao.date_limite_depot ? (
-                            <span
-                              className={cn(
-                                "ml-auto font-medium tabular-nums",
-                                urgent && "text-amber-600",
-                              )}
-                            >
-                              {new Date(ao.date_limite_depot).toLocaleDateString("fr-FR", {
-                                day: "2-digit",
-                                month: "short",
-                              })}
-                              {days != null && days >= 0 ? ` · J-${days}` : ""}
-                            </span>
-                          ) : null}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </section>
-            ))
-          )}
-        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))
+              )}
+            </div>
 
-        <Panel
-          title={`${filtered.length} appel(s) d'offres`}
-          bodyClassName="p-0"
-          className="mx-4 mt-2 hidden min-h-0 flex-1 sm:mx-6 md:block"
-        >
+            <Panel
+              title={`${filtered.length} appel(s) d'offres`}
+              bodyClassName="min-h-0 flex-1 overflow-y-auto p-0"
+              className="mx-4 mt-2 hidden min-h-0 flex-1 flex-col sm:mx-6 md:flex"
+            >
           {isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Chargement…</p>
           ) : (
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_hsl(var(--border))]">
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Client</TableHead>
+                  <TableHead>Société</TableHead>
                   <TableHead>Réf.</TableHead>
                   <TableHead>Lieu / Objet</TableHead>
                   <TableHead>Statut</TableHead>
@@ -386,6 +431,15 @@ function AppelsOffresPage() {
                     >
                       <TableCell className="font-medium">
                         {ao.clients?.nom_entreprise ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        {ao.societes_exploitation?.code ? (
+                          <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-foreground/80">
+                            {ao.societes_exploitation.code}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell>
                         <Link
@@ -417,7 +471,7 @@ function AppelsOffresPage() {
                       </TableCell>
                       <TableCell
                         className={cn(
-                          days != null && days <= 7 && ao.statut !== "gagne" && "text-amber-600 font-medium",
+                          days != null && days <= 7 && ao.statut !== "gagne" && "font-medium text-[var(--color-accent)]",
                         )}
                       >
                         {ao.date_limite_depot
@@ -437,11 +491,14 @@ function AppelsOffresPage() {
               </TableBody>
             </Table>
           )}
-        </Panel>
+            </Panel>
+          </div>
+        )}
 
-        <div className="flex shrink-0 items-center justify-between border-t px-4 py-2 text-xs text-muted-foreground sm:px-6">
+        <div className="flex shrink-0 items-center justify-between border-t px-4 py-1.5 text-[11px] text-muted-foreground sm:px-6">
           <span>
-            {filtered.length} élément(s) affiché(s)
+            {filtered.length} élément(s)
+            {viewMode === "kanban" ? " · glisser-déposer pour changer le statut" : ""}
             {syncLabel ? ` · Sync ERP ${syncLabel}` : ""}
           </span>
         </div>

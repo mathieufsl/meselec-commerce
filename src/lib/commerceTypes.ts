@@ -60,6 +60,7 @@ export interface SocieteExploitation {
   id: string;
   code: string;
   nom: string;
+  groupe?: string | null;
   erp_bridge_url: string | null;
   actif: boolean;
 }

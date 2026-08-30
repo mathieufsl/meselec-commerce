@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Session, User } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useCommerceAuth() {
@@ -49,11 +49,4 @@ export function useCommerceAuth() {
   };
 }
 
-export function userDisplayName(user: User | null): string {
-  if (!user) return "";
-  const meta = user.user_metadata as Record<string, string> | undefined;
-  if (meta?.first_name) return meta.first_name;
-  if (meta?.full_name) return meta.full_name.split(/\s+/)[0] ?? "";
-  if (user.email) return user.email.split("@")[0] ?? "";
-  return "Compte";
-}
+export { userDisplayName } from "@/lib/userDisplay";

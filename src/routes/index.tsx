@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/commerce/AppShell";
 import { CommerceKpiBrick } from "@/components/commerce/CommerceKpiBrick";
 import { CommerceQuickAction } from "@/components/commerce/CommerceQuickAction";
-import { useAppelsOffres, useCommerceSettings } from "@/hooks/useCommerceData";
+import { useAppelsOffres } from "@/hooks/useCommerceData";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +31,6 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const { data: aos = [] } = useAppelsOffres();
-  const { data: settings } = useCommerceSettings();
 
   const actifs = aos.filter((a) => !["gagne", "perdu", "abandonne"].includes(a.statut));
   const urgents = actifs.filter((a) => {
@@ -41,15 +40,6 @@ function HomePage() {
   const enCours = aos.filter((a) => ["analyse", "en_cours"].includes(a.statut));
   const montantPipeline = actifs.reduce((s, a) => s + (a.montant_estime ?? 0), 0);
   const gagnes = aos.filter((a) => a.statut === "gagne");
-
-  const syncLabel = settings?.last_erp_sync_at
-    ? new Date(settings.last_erp_sync_at).toLocaleString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : null;
 
   const todoItems = [
     urgents.length > 0
@@ -83,7 +73,7 @@ function HomePage() {
   });
 
   return (
-    <AppShell title="Vue d'ensemble" subtitle="Pôle commerce mutualisé" syncLabel={syncLabel}>
+    <AppShell title="Vue d'ensemble">
       <div className="space-y-8 pb-12">
         <div className="grid items-stretch gap-4 lg:grid-cols-[1.25fr_0.9fr_320px]">
           <div className="min-h-[170px] space-y-3 rounded-2xl border bg-card p-4 shadow-sm">
@@ -95,7 +85,7 @@ function HomePage() {
               <CommerceQuickAction to="/appels-offres" label="Nouvel AO" icon={Briefcase} />
               <CommerceQuickAction to="/catalogues" label="Catalogues" icon={BookOpen} />
               <CommerceQuickAction to="/prospection" label="Prospection" icon={MapPin} />
-              <CommerceQuickAction to="/admin" label="Paramètres" icon={Settings} dashed />
+              <CommerceQuickAction to="/profil" label="Mon profil" icon={Settings} dashed />
             </div>
           </div>
 

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Panel } from "@/components/commerce/AppShell";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -41,14 +40,7 @@ function CatalogueDetailPage() {
   return (
     <AppShell
       title={catalogue?.nom ?? "Catalogue"}
-      subtitle={`${lignes.length} lignes · ${catalogue?.type.toUpperCase() ?? ""}`}
-      actions={
-        <Link to="/catalogues">
-          <Button variant="outline" size="sm">
-            Retour
-          </Button>
-        </Link>
-      }
+      back={{ to: "/catalogues" }}
     >
       <Input
         placeholder="Rechercher une ligne…"

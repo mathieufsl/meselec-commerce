@@ -45,8 +45,8 @@ export function CommerceAuthGate({ children }: { children: React.ReactNode }) {
   if (!hasAccess) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background px-4">
-        <div className="max-w-md space-y-4 rounded-xl border border-amber-500/30 bg-card p-6 text-center shadow-sm">
-          <ShieldAlert className="mx-auto h-10 w-10 text-amber-600" />
+        <div className="max-w-md space-y-4 rounded-xl border border-warning/30 bg-card p-6 text-center shadow-sm">
+          <ShieldAlert className="mx-auto h-10 w-10 text-warning" />
           <div>
             <h1 className="text-lg font-semibold">Accès non autorisé</h1>
             <p className="mt-2 text-sm text-muted-foreground">

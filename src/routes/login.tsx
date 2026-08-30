@@ -100,7 +100,7 @@ function LoginPage() {
       <div className="flex min-h-dvh items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm space-y-6 rounded-xl border bg-card p-6 shadow-sm">
           <div className="text-center">
-            <img src="/logo-meselec.svg" alt="Meselec" className="mx-auto h-8" />
+            <img src="/logo-rms.png" alt="" width={48} height={48} className="mx-auto h-12 w-12 object-contain" />
             <h1 className="mt-4 text-lg font-semibold">Nouveau mot de passe</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Choisissez un mot de passe pour votre compte commerce.
@@ -134,7 +134,7 @@ function LoginPage() {
             </div>
 
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
+            {message ? <p className="text-sm text-success">{message}</p> : null}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -150,8 +150,8 @@ function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6 rounded-xl border bg-card p-6 shadow-sm">
         <div className="text-center">
-          <img src="/logo-meselec.svg" alt="Meselec" className="mx-auto h-8" />
-          <h1 className="mt-4 text-lg font-semibold">Meselec Commerce</h1>
+          <img src="/logo-rms.png" alt="" width={48} height={48} className="mx-auto h-12 w-12 object-contain" />
+          <h1 className="mt-4 text-lg font-semibold">RMSCom</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Connectez-vous avec un compte autorisé
           </p>
@@ -186,7 +186,7 @@ function LoginPage() {
           ) : null}
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
+          {message ? <p className="text-sm text-success">{message}</p> : null}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
