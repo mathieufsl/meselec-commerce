@@ -38,6 +38,25 @@ function LoginPage() {
     return () => subscription.unsubscribe();
   }, []);
 
+  async function onMicrosoftSignIn() {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          redirectTo: window.location.origin,
+          scopes: "openid profile email",
+        },
+      });
+      if (oauthError) throw oauthError;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connexion Microsoft impossible");
+      setLoading(false);
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
