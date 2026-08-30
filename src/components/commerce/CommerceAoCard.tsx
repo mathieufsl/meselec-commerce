@@ -104,9 +104,12 @@ export function CommerceAoCard({
       }}
       className={cn(
         "group relative block overflow-hidden rounded-lg border border-border/60 bg-card transition-all hover:border-border hover:shadow-sm",
-        isKanban ? "p-2.5 pl-3" : "rounded-xl p-3 pl-4 shadow-sm hover:bg-muted/20",
+        isKanban
+          ? "p-2.5 pl-3"
+          : "min-h-[68px] rounded-xl p-3.5 pl-4 shadow-sm active:bg-muted/40 hover:bg-muted/20",
         draggable && "cursor-grab active:cursor-grabbing active:shadow-md",
       )}
+
     >
       <span
         className={cn(
