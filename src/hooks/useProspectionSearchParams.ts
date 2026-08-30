@@ -13,7 +13,11 @@ export function useProspectionSearchParams() {
       next.forEach((value, key) => {
         search[key] = value;
       });
-      void navigate({ to: "/prospection", search, replace: opts?.replace ?? false });
+      void navigate({
+        to: "/prospection",
+        search: search as never,
+        replace: opts?.replace ?? false,
+      });
     },
     [navigate],
   );

@@ -116,7 +116,7 @@ export function CommerceAoKanban({
                         key={ao.id}
                         ao={ao}
                         statut={statut}
-                        docCount={docCounts[ao.id]}
+                        {...(docCounts[ao.id] !== undefined ? { docCount: docCounts[ao.id] } : {})}
                         variant="kanban"
                         draggable={!isMoving}
                         onDragStart={(e) => {

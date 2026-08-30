@@ -390,7 +390,7 @@ function AppelsOffresPage() {
                           key={ao.id}
                           ao={ao}
                           statut={group.statut}
-                          docCount={docCounts[ao.id]}
+                          {...(docCounts[ao.id] !== undefined ? { docCount: docCounts[ao.id] } : {})}
                         />
                       ))}
                     </div>
