@@ -147,7 +147,7 @@ function ProfilPage() {
                     onChange={(e) => setForm((f) => ({ ...f, telephone: e.target.value }))}
                   />
                 </div>
-                <Button onClick={() => void saveProfile()} disabled={saving}>
+                <Button className="w-full sm:w-auto" onClick={() => void saveProfile()} disabled={saving}>
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Enregistrer
                 </Button>
@@ -185,7 +185,7 @@ function ProfilPage() {
                       }
                     />
                   </div>
-                  <Button type="submit" variant="outline" disabled={passwordSaving}>
+                  <Button type="submit" variant="outline" className="w-full sm:w-auto" disabled={passwordSaving}>
                     {passwordSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                     Mettre à jour le mot de passe
                   </Button>

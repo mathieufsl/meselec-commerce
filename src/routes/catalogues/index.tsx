@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Pencil, Search } from "lucide-react";
+import { ChevronRight, Pencil, Search } from "lucide-react";
 import { AppShell, Panel } from "@/components/commerce/AppShell";
 import { BpuExcelImportPanel } from "@/components/commerce/BpuExcelImportPanel";
 import { Button } from "@/components/ui/button";
@@ -218,35 +218,65 @@ function CataloguesPage() {
       </div>
 
       <Panel title={`${filtered.length} catalogue(s)`} bodyClassName="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nom</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Secteur</TableHead>
-              <TableHead>Source</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((c) => (
-              <TableRow
+        {/* Mobile : liste de cartes tactiles */}
+        <div className="divide-y divide-border/60 md:hidden">
+          {filtered.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">Aucun catalogue.</p>
+          ) : (
+            filtered.map((c) => (
+              <button
                 key={c.id}
-                className="cursor-pointer hover:bg-muted/40"
+                type="button"
                 onClick={() =>
                   navigate({ to: "/catalogues/$catalogueId", params: { catalogueId: c.id } })
                 }
+                className="flex min-h-[60px] w-full items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50"
               >
-                <TableCell className="font-semibold">{c.nom}</TableCell>
-                <TableCell className="uppercase">{c.type}</TableCell>
-                <TableCell>{c.secteur ?? "—"}</TableCell>
-                <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                  {c.source_fichier ?? "—"}
-                </TableCell>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{c.nom}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {[c.type?.toUpperCase(), c.secteur, c.source_fichier].filter(Boolean).join(" · ") ||
+                      "—"}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            ))
+          )}
+        </div>
+
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nom</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Secteur</TableHead>
+                <TableHead>Source</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((c) => (
+                <TableRow
+                  key={c.id}
+                  className="cursor-pointer hover:bg-muted/40"
+                  onClick={() =>
+                    navigate({ to: "/catalogues/$catalogueId", params: { catalogueId: c.id } })
+                  }
+                >
+                  <TableCell className="font-semibold">{c.nom}</TableCell>
+                  <TableCell className="uppercase">{c.type}</TableCell>
+                  <TableCell>{c.secteur ?? "—"}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                    {c.source_fichier ?? "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Panel>
+
     </AppShell>
   );
 }

@@ -74,8 +74,48 @@ function HomePage() {
 
   return (
     <AppShell title="Vue d'ensemble">
-      <div className="space-y-8 pb-12">
-        <div className="grid items-stretch gap-4 lg:grid-cols-[1.25fr_0.9fr_320px]">
+      <div className="space-y-4 pb-10 sm:space-y-8 sm:pb-12">
+        {/* Résumé mobile : 3 chiffres clés lisibles d'un coup d'œil */}
+        <div className="grid grid-cols-3 gap-2 lg:hidden">
+          <Link
+            to="/appels-offres"
+            className="rounded-2xl border bg-card p-3 shadow-sm active:bg-muted/50"
+          >
+            <Target className="h-4 w-4 text-primary" />
+            <p className="mt-2 text-xl font-bold leading-none tabular-nums">{actifs.length}</p>
+            <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Pipeline actif</p>
+          </Link>
+          <Link
+            to="/appels-offres"
+            className="rounded-2xl border bg-card p-3 shadow-sm active:bg-muted/50"
+          >
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <p className="mt-2 truncate text-xl font-bold leading-none tabular-nums">
+              {formatEuro(montantPipeline, 0)}
+            </p>
+            <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Montant HT</p>
+          </Link>
+          <Link
+            to="/appels-offres"
+            className="rounded-2xl border bg-card p-3 shadow-sm active:bg-muted/50"
+          >
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <p className="mt-2 text-xl font-bold leading-none tabular-nums">{urgents.length}</p>
+            <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Échéance &lt; 14j</p>
+          </Link>
+        </div>
+
+        {/* Accès rapides mobile : rangée scrollable */}
+        <div className="lg:hidden">
+          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <CommerceQuickAction to="/appels-offres" label="Nouvel AO" icon={Briefcase} />
+            <CommerceQuickAction to="/catalogues" label="Catalogues" icon={BookOpen} />
+            <CommerceQuickAction to="/prospection" label="Prospection" icon={MapPin} />
+            <CommerceQuickAction to="/profil" label="Mon profil" icon={Settings} dashed />
+          </div>
+        </div>
+
+        <div className="hidden items-stretch gap-4 lg:grid lg:grid-cols-[1.25fr_0.9fr_320px]">
           <div className="min-h-[170px] space-y-3 rounded-2xl border bg-card p-4 shadow-sm">
             <div className="space-y-1">
               <h2 className="text-2xl font-bold tracking-tight">Bonjour</h2>
@@ -158,17 +198,45 @@ function HomePage() {
           </Card>
         </div>
 
+        {/* À faire — version mobile */}
+        <section className="space-y-2 lg:hidden">
+          <h2 className="px-0.5 text-sm font-semibold tracking-tight">À faire</h2>
+          {todoItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed p-4 text-center text-sm text-muted-foreground">
+              Vous êtes à jour.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+              {todoItems.slice(0, 3).map((item, i) => (
+                <Link
+                  key={item.label}
+                  to={item.href}
+                  className={`flex min-h-[52px] items-center justify-between gap-3 px-3.5 active:bg-muted/50 ${
+                    i > 0 ? "border-t border-border/60" : ""
+                  }`}
+                >
+                  <span className="min-w-0 truncate text-sm font-medium">{item.label}</span>
+                  <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 px-1.5 text-xs font-semibold text-primary tabular-nums">
+                    {item.value}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Échéances — liste simple sur mobile, colonnes sur desktop */}
         <Card className="overflow-hidden border bg-gradient-to-br from-card to-muted/20 shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
-              <div>
+              <div className="min-w-0">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <CalendarDays className="h-4 w-4 text-primary" />
-                  Échéances de la semaine
+                  <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="truncate">Échéances de la semaine</span>
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Dépôts AO à venir</p>
+                <p className="text-xs text-muted-foreground sm:text-sm">Dépôts AO à venir</p>
               </div>
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" className="shrink-0" asChild>
                 <Link to="/appels-offres">
                   Ouvrir
                   <ChevronRight className="ml-1 h-3.5 w-3.5" />
@@ -176,49 +244,62 @@ function HomePage() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             {echeancesSemaine.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune échéance proche.</p>
             ) : (
               <div className="grid gap-3 lg:grid-cols-3">
-                {planningDates.map((dateKey) => (
-                  <div key={dateKey} className="space-y-2 rounded-xl border bg-background/70 p-2.5">
-                    <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {format(parseISO(dateKey), "EEE d MMM", { locale: fr })}
-                    </p>
-                    <div className="space-y-2">
-                      {(echeancesByDate[dateKey] ?? []).slice(0, 4).map((ao) => (
-                        <Link
-                          key={ao.id}
-                          to="/appels-offres/$aoId"
-                          params={{ aoId: ao.id }}
-                          className="flex items-center justify-between rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-muted/40"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">
-                              {ao.clients?.nom_entreprise ?? ao.reference}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {[ao.reference, ao.titre].filter(Boolean).join(" · ")}
-                            </p>
-                          </div>
-                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        </Link>
-                      ))}
-                      {(echeancesByDate[dateKey] ?? []).length === 0 && (
+                {planningDates.map((dateKey) => {
+                  const jour = echeancesByDate[dateKey] ?? [];
+                  if (jour.length === 0) {
+                    return (
+                      <div key={dateKey} className="hidden space-y-2 rounded-xl border bg-background/70 p-2.5 lg:block">
+                        <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {format(parseISO(dateKey), "EEE d MMM", { locale: fr })}
+                        </p>
                         <div className="rounded-lg border border-dashed bg-card px-3 py-4 text-center text-xs text-muted-foreground">
                           Aucun dépôt prévu
                         </div>
-                      )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div
+                      key={dateKey}
+                      className="space-y-2 rounded-xl border bg-background/70 p-2.5"
+                    >
+                      <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {format(parseISO(dateKey), "EEE d MMM", { locale: fr })}
+                      </p>
+                      <div className="space-y-2">
+                        {jour.slice(0, 4).map((ao) => (
+                          <Link
+                            key={ao.id}
+                            to="/appels-offres/$aoId"
+                            params={{ aoId: ao.id }}
+                            className="flex min-h-[52px] items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2 transition-colors active:bg-muted/50 hover:bg-muted/40"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">
+                                {ao.clients?.nom_entreprise ?? ao.reference}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {[ao.reference, ao.titre].filter(Boolean).join(" · ")}
+                              </p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
         </Card>
-
       </div>
     </AppShell>
   );
 }
+

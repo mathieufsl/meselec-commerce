@@ -146,24 +146,28 @@ export function AppShell({
           </aside>
 
           <main className="ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:ml-14">
-            <header className="z-10 shrink-0 border-b border-border/60 bg-card/80 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:px-6">
+            <header className="z-10 shrink-0 border-b border-border/60 bg-card/85 px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-card/65 sm:px-6 sm:py-2.5">
               <div className="mx-auto w-full max-w-[1920px]">
-                <div className="flex flex-nowrap items-center justify-between gap-3">
-                  <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-nowrap sm:justify-between sm:gap-3">
+                  <div className="flex min-w-0 items-center gap-2 sm:flex-1 sm:gap-3">
                     {back ? (
                       <Link to={back.to} className="shrink-0">
-                        <Button variant="outline" size="sm" className="h-8 gap-1 px-2 sm:px-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 w-9 gap-1 p-0 sm:h-8 sm:w-auto sm:px-3"
+                        >
                           <ChevronLeft className="h-4 w-4" />
                           <span className="sr-only sm:not-sr-only">{back.label ?? "Retour"}</span>
                         </Button>
                       </Link>
                     ) : null}
                     <div className="min-w-0">
-                      <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight sm:text-base">
+                      <h1 className="truncate text-[17px] font-semibold leading-tight tracking-tight sm:text-base">
                         {title}
                       </h1>
                       {(subtitle || syncLabel) && (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground sm:text-xs">
                           {subtitle}
                           {subtitle && syncLabel ? " · " : null}
                           {syncLabel ? `Dernière synchro ERP : ${syncLabel}` : null}
@@ -171,18 +175,31 @@ export function AppShell({
                       )}
                     </div>
                   </div>
-                  <div className="flex min-w-0 shrink items-center justify-end gap-2">
-                    {banner ? <div className="flex items-center gap-1.5">{banner}</div> : null}
-                    {actions}
+                  <div className="flex shrink-0 items-center justify-end gap-1.5 sm:min-w-0 sm:shrink sm:gap-2">
+                    {banner ? (
+                      <div className="hidden items-center gap-1.5 sm:flex">{banner}</div>
+                    ) : null}
+                    <div className="hidden items-center gap-2 sm:flex">{actions}</div>
                     {primaryAction ? (
-                      <Button size="sm" className="gap-2" onClick={primaryAction.onClick}>
+                      <Button
+                        size="sm"
+                        className="h-9 w-9 gap-2 p-0 sm:h-8 sm:w-auto sm:px-3"
+                        onClick={primaryAction.onClick}
+                      >
                         <Plus className="h-4 w-4" />
-                        {primaryAction.label}
+                        <span className="sr-only sm:not-sr-only">{primaryAction.label}</span>
                       </Button>
                     ) : null}
                     <CommerceProfileMenu className="shrink-0" />
                   </div>
                 </div>
+
+                {(actions || banner) && (
+                  <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
+                    {banner}
+                    {actions}
+                  </div>
+                )}
               </div>
             </header>
 
@@ -193,9 +210,7 @@ export function AppShell({
             <div
               className={cn(
                 "commerce-main-enter min-h-0 flex-1 overflow-y-auto overscroll-y-none",
-                flush
-                  ? ""
-                  : "mx-auto w-full max-w-[1920px] px-4 py-6 sm:px-6",
+                flush ? "" : "mx-auto w-full max-w-[1920px] px-3 py-4 sm:px-6 sm:py-6",
                 contentClassName,
               )}
             >
@@ -204,7 +219,7 @@ export function AppShell({
           </main>
         </div>
 
-        <nav className="grid shrink-0 grid-cols-6 gap-0.5 border-t border-border/60 bg-card/95 px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">
+        <nav className="grid shrink-0 grid-cols-6 gap-0.5 border-t border-border/60 bg-card/95 px-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur lg:hidden">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
@@ -215,18 +230,24 @@ export function AppShell({
                 to={item.to}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[10px] font-medium leading-none transition-colors",
-                  active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground active:bg-muted",
+                  "flex min-h-[46px] flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1 text-[10px] font-medium leading-none transition-colors",
+                  active ? "text-primary" : "text-muted-foreground active:bg-muted",
                 )}
               >
-                <Icon className={cn("h-[18px] w-[18px]", active && "stroke-[2.4]")} />
+                <span
+                  className={cn(
+                    "flex h-6 w-10 items-center justify-center rounded-full transition-colors",
+                    active ? "bg-primary/12" : "bg-transparent",
+                  )}
+                >
+                  <Icon className={cn("h-[18px] w-[18px]", active && "stroke-[2.5]")} />
+                </span>
                 <span className="w-full truncate text-center">{short}</span>
               </Link>
             );
           })}
         </nav>
+
       </div>
     </TooltipProvider>
   );
@@ -254,7 +275,7 @@ export function Panel({
         className,
       )}
     >
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-4 py-2.5">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-3 py-2.5 sm:px-4">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold tracking-tight">{title}</h2>
           {description ? (
@@ -263,7 +284,8 @@ export function Panel({
         </div>
         {actions}
       </div>
-      <div className={cn("p-4", bodyClassName)}>{children}</div>
+      <div className={cn("p-3 sm:p-4", bodyClassName)}>{children}</div>
+
     </section>
   );
 }
