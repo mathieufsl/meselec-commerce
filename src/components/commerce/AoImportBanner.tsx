@@ -99,7 +99,7 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
         aoId,
         type,
         file: currentFile.file,
-        notes: notes || undefined,
+        ...(notes ? { notes } : {}),
         uploadedBy: user?.id ?? null,
         uploadedByEmail: user?.email ?? null,
       });

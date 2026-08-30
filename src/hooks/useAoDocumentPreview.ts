@@ -63,5 +63,8 @@ export function useAoDocumentPreview(doc: AoDocument | null, enabled = true) {
     previewKind: previewKind as AoDocumentPreviewKind,
     imageSrc,
     error,
+    // Aliases kept for consumers that distinguish the iframe viewer / external open URL.
+    viewerSrc: previewSrc,
+    signedUrl: previewSrc,
   };
 }

@@ -33,9 +33,9 @@ function scriptHtml(ville: string, agglo: string) {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ville?: string;
-  agglo?: string;
-  maire?: string;
+  ville?: string | undefined;
+  agglo?: string | undefined;
+  maire?: string | undefined;
 };
 
 export function ProspectionScriptsModal({ open, onOpenChange, ville = "", agglo = "", maire = "" }: Props) {

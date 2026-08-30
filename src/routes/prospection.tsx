@@ -4,11 +4,11 @@ import { ProspectionWorkspace } from "@/components/prospection/ProspectionWorksp
 
 export const Route = createFileRoute("/prospection")({
   validateSearch: (search: Record<string, unknown>) => ({
-    q: (search.q as string) || undefined,
-    dep: (search.dep as string) || undefined,
-    agglo: (search.agglo as string) || undefined,
-    pop: (search.pop as string) || undefined,
-    status: (search.status as string) || undefined,
+    q: (search["q"] as string) || undefined,
+    dep: (search["dep"] as string) || undefined,
+    agglo: (search["agglo"] as string) || undefined,
+    pop: (search["pop"] as string) || undefined,
+    status: (search["status"] as string) || undefined,
   }),
   component: ProspectionPage,
 });

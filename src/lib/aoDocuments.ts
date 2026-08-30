@@ -88,7 +88,7 @@ export async function uploadAoDocument(params: {
     .from(AO_DOCUMENTS_BUCKET)
     .upload(storagePath, file, {
       upsert: false,
-      contentType: file.type || undefined,
+      ...(file.type ? { contentType: file.type } : {}),
     });
   if (uploadError) throw uploadError;
 

@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      ao_comments: {
+        Row: {
+          ao_id: string
+          author_user_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          ao_id: string
+          author_user_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          ao_id?: string
+          author_user_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ao_comments_ao_id_fkey"
+            columns: ["ao_id"]
+            isOneToOne: false
+            referencedRelation: "appels_offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ao_documents: {
         Row: {
           ao_id: string
@@ -482,6 +520,33 @@ export type Database = {
         }
         Relationships: []
       }
+      commerce_profiles: {
+        Row: {
+          created_at: string
+          nom: string | null
+          prenom: string | null
+          telephone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          nom?: string | null
+          prenom?: string | null
+          telephone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          nom?: string | null
+          prenom?: string | null
+          telephone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       commerce_settings: {
         Row: {
           id: number
@@ -667,6 +732,39 @@ export type Database = {
           },
         ]
       }
+      prospection_commune_suivi: {
+        Row: {
+          commune_key: string
+          contact: string
+          gestion: string | null
+          notes: string
+          prestataire: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          commune_key: string
+          contact?: string
+          gestion?: string | null
+          notes?: string
+          prestataire?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          commune_key?: string
+          contact?: string
+          gestion?: string | null
+          notes?: string
+          prestataire?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       prospection_suivi: {
         Row: {
           commune_key: string
@@ -713,6 +811,7 @@ export type Database = {
           created_at: string
           erp_bridge_key_env: string | null
           erp_bridge_url: string | null
+          groupe: string
           id: string
           nom: string
           updated_at: string
@@ -723,6 +822,7 @@ export type Database = {
           created_at?: string
           erp_bridge_key_env?: string | null
           erp_bridge_url?: string | null
+          groupe?: string
           id?: string
           nom: string
           updated_at?: string
@@ -733,6 +833,7 @@ export type Database = {
           created_at?: string
           erp_bridge_key_env?: string | null
           erp_bridge_url?: string | null
+          groupe?: string
           id?: string
           nom?: string
           updated_at?: string
@@ -745,6 +846,18 @@ export type Database = {
     }
     Functions: {
       commerce_has_access: { Args: never; Returns: boolean }
+      get_ao_comments: {
+        Args: { p_ao_id: string; p_limit?: number }
+        Returns: {
+          ao_id: string
+          author_nom: string
+          author_prenom: string
+          author_user_id: string
+          body: string
+          created_at: string
+          id: string
+        }[]
+      }
       import_ao_reponse_lignes: {
         Args: { p_lignes: Json; p_replace?: boolean; p_reponse_id: string }
         Returns: number
@@ -752,6 +865,10 @@ export type Database = {
       import_bpu_lignes: {
         Args: { p_catalogue_id: string; p_lignes: Json }
         Returns: number
+      }
+      post_ao_comment: {
+        Args: { p_ao_id: string; p_body: string }
+        Returns: string
       }
       recalc_ao_reponse_montant: {
         Args: { p_reponse_id: string }

@@ -38,6 +38,25 @@ function LoginPage() {
     return () => subscription.unsubscribe();
   }, []);
 
+  async function onMicrosoftSignIn() {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          redirectTo: window.location.origin,
+          scopes: "openid profile email",
+        },
+      });
+      if (oauthError) throw oauthError;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connexion Microsoft impossible");
+      setLoading(false);
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -191,6 +210,31 @@ function LoginPage() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {mode === "password" ? "Se connecter" : "Recevoir un lien"}
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">ou</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={loading}
+            onClick={() => void onMicrosoftSignIn()}
+          >
+            <svg className="h-4 w-4" viewBox="0 0 23 23" aria-hidden="true">
+              <path fill="#f35325" d="M1 1h10v10H1z" />
+              <path fill="#81bc06" d="M12 1h10v10H12z" />
+              <path fill="#05a6f0" d="M1 12h10v10H1z" />
+              <path fill="#ffba08" d="M12 12h10v10H12z" />
+            </svg>
+            Continuer avec Microsoft
           </Button>
         </form>
 
