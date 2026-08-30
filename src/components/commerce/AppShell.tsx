@@ -275,7 +275,7 @@ export function Panel({
         className,
       )}
     >
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-4 py-2.5">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-3 py-2.5 sm:px-4">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold tracking-tight">{title}</h2>
           {description ? (
@@ -284,7 +284,8 @@ export function Panel({
         </div>
         {actions}
       </div>
-      <div className={cn("p-4", bodyClassName)}>{children}</div>
+      <div className={cn("p-3 sm:p-4", bodyClassName)}>{children}</div>
+
     </section>
   );
 }
