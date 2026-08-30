@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Pencil, Search } from "lucide-react";
+import { ChevronRight, Pencil, Search } from "lucide-react";
 import { AppShell, Panel } from "@/components/commerce/AppShell";
 import { BpuExcelImportPanel } from "@/components/commerce/BpuExcelImportPanel";
 import { Button } from "@/components/ui/button";
