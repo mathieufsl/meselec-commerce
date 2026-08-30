@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { consumeRedirectPath, parseOAuthError } from "@/lib/authRedirect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -90,7 +91,7 @@ function LoginPage() {
           password,
         });
         if (signInError) throw signInError;
-        void navigate({ to: "/" });
+        void navigate({ to: consumeRedirectPath(), replace: true });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion impossible");
@@ -119,7 +120,7 @@ function LoginPage() {
       if (updateError) throw updateError;
       setMessage("Mot de passe mis à jour. Redirection…");
       window.history.replaceState(null, "", window.location.pathname);
-      void navigate({ to: "/" });
+      void navigate({ to: consumeRedirectPath(), replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Mise à jour impossible");
     } finally {
