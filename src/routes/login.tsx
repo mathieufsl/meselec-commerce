@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { consumeRedirectPath, parseOAuthError } from "@/lib/authRedirect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -27,26 +28,39 @@ function LoginPage() {
       setRecoveryMode(true);
     }
 
+    // Erreur renvoyée par Microsoft / Supabase au retour OAuth.
+    const oauthError = parseOAuthError(window.location.href);
+    if (oauthError) {
+      setError(oauthError.message);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setRecoveryMode(true);
+        return;
+      }
+      if (event === "SIGNED_IN") {
+        void navigate({ to: consumeRedirectPath(), replace: true });
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   async function onMicrosoftSignIn() {
     setLoading(true);
     setError(null);
     setMessage(null);
     try {
+      // Le retour se fait sur /login : les erreurs OAuth y sont affichées,
+      // et le SIGNED_IN renvoie vers la page protégée initialement demandée.
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "azure",
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/login`,
           scopes: "openid profile email",
         },
       });
@@ -77,7 +91,7 @@ function LoginPage() {
           password,
         });
         if (signInError) throw signInError;
-        void navigate({ to: "/" });
+        void navigate({ to: consumeRedirectPath(), replace: true });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion impossible");
@@ -106,7 +120,7 @@ function LoginPage() {
       if (updateError) throw updateError;
       setMessage("Mot de passe mis à jour. Redirection…");
       window.history.replaceState(null, "", window.location.pathname);
-      void navigate({ to: "/" });
+      void navigate({ to: consumeRedirectPath(), replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Mise à jour impossible");
     } finally {

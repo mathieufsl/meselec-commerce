@@ -1,11 +1,21 @@
+import { useEffect } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { useCommerceAuth } from "@/hooks/useCommerceAuth";
 import { Button } from "@/components/ui/button";
+import { saveRedirectPath } from "@/lib/authRedirect";
 
 export function CommerceAuthGate({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const href = useRouterState({ select: (s) => s.location.href });
   const { booting, session, hasAccess, checkingAccess, signOut } = useCommerceAuth();
+
+  // Mémorise la page protégée demandée pour y revenir après connexion.
+  useEffect(() => {
+    if (booting || session) return;
+    if (pathname === "/login") return;
+    saveRedirectPath(href);
+  }, [booting, session, pathname, href]);
 
   if (pathname === "/login") {
     return <>{children}</>;
