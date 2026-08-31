@@ -236,7 +236,7 @@ function CataloguesPage() {
                   <p className="truncate text-sm font-semibold">{c.nom}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {[c.type?.toUpperCase(), c.secteur, c.source_fichier].filter(Boolean).join(" · ") ||
-                      "—"}
+                      ""}
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -266,9 +266,9 @@ function CataloguesPage() {
                 >
                   <TableCell className="font-semibold">{c.nom}</TableCell>
                   <TableCell className="uppercase">{c.type}</TableCell>
-                  <TableCell>{c.secteur ?? "—"}</TableCell>
+                  <TableCell>{c.secteur ?? ""}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                    {c.source_fichier ?? "—"}
+                    {c.source_fichier ?? ""}
                   </TableCell>
                 </TableRow>
               ))}

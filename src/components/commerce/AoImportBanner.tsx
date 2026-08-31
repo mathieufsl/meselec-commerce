@@ -13,25 +13,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCommerceAuth } from "@/hooks/useCommerceAuth";
-import type { AoDocumentType } from "@/lib/commerceTypes";
-import { AO_DOCUMENT_TYPE_LABELS, uploadAoDocument } from "@/lib/aoDocuments";
+import type { AoUploadAllowedType } from "@/lib/aoDocuments";
+import {
+  AO_DOCUMENT_TYPE_LABELS,
+  AO_UPLOAD_ALLOWED_TYPES,
+  guessAoDocumentTypeFromFileName,
+  triageIncomingAoFiles,
+  uploadAoDocument,
+} from "@/lib/aoDocuments";
+import { collectDroppedFiles } from "@/lib/collectDroppedFiles";
 import { cn } from "@/lib/utils";
-
-type ClassificationChoice = "memoire" | "chiffrage" | "projet" | "annexe";
-
-const PROJET_TYPES: AoDocumentType[] = ["dce", "rc", "cctp", "ae", "dpgf", "bpu"];
 
 type PendingFile = {
   file: File;
   id: string;
+  type: AoUploadAllowedType;
 };
 
 type AoImportBannerProps = {
   aoId: string;
-  onExcelImport?: (file: File) => void;
 };
 
-export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
+export function AoImportBanner({ aoId }: AoImportBannerProps) {
   const qc = useQueryClient();
   const { user } = useCommerceAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,52 +44,93 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingQueue, setPendingQueue] = useState<PendingFile[]>([]);
   const [currentFile, setCurrentFile] = useState<PendingFile | null>(null);
-  const [classification, setClassification] = useState<ClassificationChoice>("projet");
-  const [projetType, setProjetType] = useState<AoDocumentType>("dce");
   const [notes, setNotes] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [importExcelToo, setImportExcelToo] = useState(false);
+  const [skipNotice, setSkipNotice] = useState<string | null>(null);
 
   const expanded = dragOver;
 
-  const openClassification = useCallback((files: File[]) => {
-    const queue = files.map((file) => ({ file, id: `${Date.now()}_${file.name}` }));
-    setPendingQueue(queue);
-    setCurrentFile(queue[0] ?? null);
-    setClassification("projet");
-    setProjetType("dce");
-    setNotes("");
-    setImportExcelToo(false);
-    setError(null);
-    setDialogOpen(true);
+  const refresh = useCallback(async () => {
+    await qc.invalidateQueries({ queryKey: ["ao-documents", aoId] });
+    await qc.invalidateQueries({ queryKey: ["ao-document-counts"] });
+  }, [aoId, qc]);
+
+  const flashSuccess = useCallback(() => {
     setSuccessFlash(true);
     window.setTimeout(() => setSuccessFlash(false), 600);
   }, []);
 
-  function handleIncomingFiles(files: FileList | File[]) {
+  const openManualQueue = useCallback((files: File[]) => {
+    const queue: PendingFile[] = files.map((file) => ({
+      file,
+      id: `${Date.now()}_${file.name}`,
+      type: guessAoDocumentTypeFromFileName(file.name) ?? "memoire",
+    }));
+    setPendingQueue(queue);
+    setCurrentFile(queue[0] ?? null);
+    setNotes("");
+    setError(null);
+    setDialogOpen(true);
+    flashSuccess();
+  }, [flashSuccess]);
+
+  const uploadBatch = useCallback(
+    async (items: Array<{ file: File; type: AoUploadAllowedType }>) => {
+      setUploading(true);
+      setError(null);
+      try {
+        for (const { file, type } of items) {
+          await uploadAoDocument({
+            aoId,
+            type,
+            file,
+            uploadedBy: user?.id ?? null,
+            uploadedByEmail: user?.email ?? null,
+          });
+        }
+        await refresh();
+        flashSuccess();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Échec du dépôt");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [aoId, flashSuccess, refresh, user?.email, user?.id],
+  );
+
+  const handleDroppedFiles = useCallback(
+    async (files: File[]) => {
+      const { accepted, skipped } = triageIncomingAoFiles(files);
+
+      if (skipped.length > 0) {
+        setSkipNotice(
+          `${skipped.length} fichier${skipped.length > 1 ? "s" : ""} ignoré${skipped.length > 1 ? "s" : ""} — seuls Mémoire technique, CCTP et DPGF sont acceptés (détection par nom de fichier).`,
+        );
+        window.setTimeout(() => setSkipNotice(null), 8000);
+      } else {
+        setSkipNotice(null);
+      }
+
+      if (!accepted.length) return;
+
+      await uploadBatch(accepted);
+    },
+    [uploadBatch],
+  );
+
+  function handleManualFiles(files: FileList | File[]) {
     const list = Array.from(files).filter((f) => f.size > 0);
     if (!list.length) return;
-    openClassification(list);
+    openManualQueue(list);
   }
 
-  async function refresh() {
-    await qc.invalidateQueries({ queryKey: ["ao-documents", aoId] });
-    await qc.invalidateQueries({ queryKey: ["ao-document-counts"] });
-  }
-
-  function resolveDocType(): AoDocumentType {
-    switch (classification) {
-      case "memoire":
-        return "memoire";
-      case "chiffrage":
-        return "reponse";
-      case "annexe":
-        return "annexe";
-      case "projet":
-      default:
-        return projetType;
-    }
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = await collectDroppedFiles(e.dataTransfer);
+    await handleDroppedFiles(files);
   }
 
   async function confirmUpload() {
@@ -94,23 +138,14 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
     setUploading(true);
     setError(null);
     try {
-      const type = resolveDocType();
       await uploadAoDocument({
         aoId,
-        type,
+        type: currentFile.type,
         file: currentFile.file,
         ...(notes ? { notes } : {}),
         uploadedBy: user?.id ?? null,
         uploadedByEmail: user?.email ?? null,
       });
-
-      const isExcel =
-        currentFile.file.name.toLowerCase().endsWith(".xlsx") ||
-        currentFile.file.name.toLowerCase().endsWith(".xls");
-
-      if (classification === "chiffrage" && isExcel && importExcelToo && onExcelImport) {
-        onExcelImport(currentFile.file);
-      }
 
       await refresh();
 
@@ -119,12 +154,10 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
       if (remaining.length > 0) {
         setCurrentFile(remaining[0] ?? null);
         setNotes("");
-        setClassification("projet");
-        setProjetType("dce");
-        setImportExcelToo(false);
       } else {
         setDialogOpen(false);
         setCurrentFile(null);
+        flashSuccess();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Échec du dépôt");
@@ -133,22 +166,25 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
     }
   }
 
-  const isExcelFile =
-    currentFile?.file.name.toLowerCase().endsWith(".xlsx") ||
-    currentFile?.file.name.toLowerCase().endsWith(".xls");
-
   return (
     <>
       <div
         className={cn(
           "relative mx-auto w-full max-w-[1920px] transition-all duration-300 ease-out",
-          expanded ? "px-4 py-3 sm:px-6" : "px-4 py-1.5 sm:px-6",
+          expanded ? "px-3 py-2 sm:px-6" : "px-3 py-1 sm:px-6",
         )}
       >
+        {skipNotice ? (
+          <p className="mb-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+            {skipNotice}
+          </p>
+        ) : null}
         <div
           className={cn(
             "flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-all duration-300",
-            expanded ? "min-h-[72px] border-primary bg-primary/5 px-4 py-4" : "min-h-[44px] border-border/60 bg-muted/30 px-3 py-2",
+            expanded
+              ? "min-h-[56px] border-primary bg-primary/5 px-3 py-3 sm:min-h-[72px] sm:px-4 sm:py-4"
+              : "min-h-[36px] border-border/60 bg-muted/30 px-2 py-1.5 sm:min-h-[44px]",
             successFlash && "border-success bg-success/10",
             uploading && "pointer-events-none opacity-70",
           )}
@@ -157,11 +193,7 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
             setDragOver(true);
           }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            handleIncomingFiles(e.dataTransfer.files);
-          }}
+          onDrop={(e) => void handleDrop(e)}
           onClick={() => fileInputRef.current?.click()}
         >
           <input
@@ -170,7 +202,7 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
             multiple
             className="hidden"
             onChange={(e) => {
-              if (e.target.files) handleIncomingFiles(e.target.files);
+              if (e.target.files) handleManualFiles(e.target.files);
               e.target.value = "";
             }}
           />
@@ -181,16 +213,16 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
           ) : (
             <FileUp className={cn("h-5 w-5 text-muted-foreground", expanded && "text-primary")} />
           )}
-          <p className={cn("text-sm font-medium", expanded ? "text-foreground" : "text-muted-foreground")}>
+          <p className={cn("text-xs font-medium sm:text-sm", expanded ? "text-foreground" : "text-muted-foreground")}>
             {successFlash
-              ? "Fichier reçu — classification en cours…"
+              ? "Document(s) déposé(s)"
               : expanded
-                ? "Relâchez pour déposer vos documents"
-                : "Glisser-déposer des documents ici ou cliquer pour parcourir"}
+                ? "Relâchez — Mémoire · CCTP · DPGF"
+                : "Déposer un document"}
           </p>
           {!expanded ? (
             <span className="hidden text-xs text-muted-foreground sm:inline">
-              · PDF, Excel, Word, images
+              · Mémoire technique, CCTP, DPGF
             </span>
           ) : null}
         </div>
@@ -222,65 +254,31 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
                   ) : null}
                 </>
               ) : (
-                "Choisissez la catégorie de ce document."
+                "Choisissez le type de document."
               )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  ["memoire", "Mémoire technique"],
-                  ["chiffrage", "Version chiffrage"],
-                  ["projet", "Documents projet"],
-                  ["annexe", "Annexe"],
-                ] as const
-              ).map(([value, label]) => (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {AO_UPLOAD_ALLOWED_TYPES.map((type) => (
                 <button
-                  key={value}
+                  key={type}
                   type="button"
-                  onClick={() => setClassification(value)}
+                  onClick={() =>
+                    setCurrentFile((prev) => (prev ? { ...prev, type } : prev))
+                  }
                   className={cn(
                     "rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
-                    classification === value
+                    currentFile?.type === type
                       ? "border-primary bg-primary/10 font-medium text-primary"
                       : "hover:bg-muted/50",
                   )}
                 >
-                  {label}
+                  {AO_DOCUMENT_TYPE_LABELS[type]}
                 </button>
               ))}
             </div>
-
-            {classification === "projet" ? (
-              <div className="space-y-1.5">
-                <Label className="text-xs">Sous-catégorie</Label>
-                <select
-                  className="h-9 w-full rounded-md border bg-background px-2 text-sm"
-                  value={projetType}
-                  onChange={(e) => setProjetType(e.target.value as AoDocumentType)}
-                >
-                  {PROJET_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {AO_DOCUMENT_TYPE_LABELS[t]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-
-            {classification === "chiffrage" && isExcelFile ? (
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={importExcelToo}
-                  onChange={(e) => setImportExcelToo(e.target.checked)}
-                  className="rounded"
-                />
-                Importer aussi comme nouvelle version de chiffrage (Excel)
-              </label>
-            ) : null}
 
             <div className="space-y-1.5">
               <Label className="text-xs">Note (optionnel)</Label>
@@ -295,11 +293,7 @@ export function AoImportBanner({ aoId, onExcelImport }: AoImportBannerProps) {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              disabled={uploading}
-            >
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={uploading}>
               Annuler
             </Button>
             <Button onClick={() => void confirmUpload()} disabled={uploading || !currentFile}>

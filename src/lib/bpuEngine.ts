@@ -5,7 +5,7 @@ export function roundEuro(n: number): number {
 }
 
 export function formatEuro(n: number | null | undefined, digits = 2): string {
-  if (n == null || Number.isNaN(n)) return "—";
+  if (n == null || Number.isNaN(n)) return "";
   return (
     n.toLocaleString("fr-FR", { minimumFractionDigits: digits, maximumFractionDigits: digits }) +
     " €"

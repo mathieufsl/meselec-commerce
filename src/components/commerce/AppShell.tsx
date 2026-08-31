@@ -8,7 +8,6 @@ import {
   Settings,
   RotateCw,
   Plus,
-  Sun,
   ChevronLeft,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +21,8 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MeselecAppLogoSwitcher } from "@/components/MeselecAppLogoSwitcher";
+import { ThemeSegmentToggle } from "@/components/ThemeSegmentToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommerceProfileMenu } from "@/components/commerce/CommerceProfileMenu";
 import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
 import type { AoStatut } from "@/lib/commerceTypes";
@@ -56,6 +57,7 @@ function sidebarItemClass(active: boolean) {
 export function AppShell({
   title,
   subtitle,
+  titleIcon: TitleIcon,
   children,
   actions,
   back,
@@ -64,19 +66,24 @@ export function AppShell({
   flush = false,
   syncLabel,
   primaryAction,
+  headerExtra,
   contentClassName,
+  mobileFooter,
 }: {
   title: string;
   subtitle?: string;
+  titleIcon?: LucideIcon;
   children: React.ReactNode;
   actions?: React.ReactNode;
-  back?: { to: string; label?: string };
+  back?: { to: string; label?: string; onNavigate?: () => void };
   banner?: React.ReactNode;
   belowHeader?: React.ReactNode;
   flush?: boolean;
   syncLabel?: string | null;
   primaryAction?: { label: string; onClick: () => void };
+  headerExtra?: React.ReactNode;
   contentClassName?: string;
+  mobileFooter?: React.ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -116,14 +123,12 @@ export function AppShell({
                 <div className="rms-sidebar-tools flex flex-col items-center gap-1 rounded-lg p-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-white/80 hover:bg-white/10 hover:text-white"
-                        onClick={() => document.documentElement.classList.toggle("dark")}
-                      >
-                        <Sun className="h-3.5 w-3.5" strokeWidth={2.6} />
-                      </Button>
+                      <div>
+                        <ThemeToggle
+                          iconOnly
+                          className="h-7 w-7 text-white/80 hover:bg-white/10 hover:text-white hover:bg-transparent"
+                        />
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent side="right">Thème</TooltipContent>
                   </Tooltip>
@@ -146,36 +151,63 @@ export function AppShell({
           </aside>
 
           <main className="ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:ml-14">
-            <header className="z-10 shrink-0 border-b border-border/60 bg-card/85 px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-card/65 sm:px-6 sm:py-2.5">
+            <header className="z-10 shrink-0 border-b border-border/80 bg-background/95 px-3 pb-2 pt-[max(0.375rem,env(safe-area-inset-top))] backdrop-blur-md supports-[backdrop-filter]:bg-background/90 sm:px-6 lg:py-3">
               <div className="mx-auto w-full max-w-[1920px]">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-nowrap sm:justify-between sm:gap-3">
                   <div className="flex min-w-0 items-center gap-2 sm:flex-1 sm:gap-3">
                     {back ? (
-                      <Link to={back.to} className="shrink-0">
+                      back.onNavigate ? (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-9 w-9 gap-1 p-0 sm:h-8 sm:w-auto sm:px-3"
+                          className="h-9 w-9 gap-1 p-0 sm:h-8 sm:w-auto sm:px-3 shrink-0"
+                          onClick={back.onNavigate}
                         >
                           <ChevronLeft className="h-4 w-4" />
                           <span className="sr-only sm:not-sr-only">{back.label ?? "Retour"}</span>
                         </Button>
-                      </Link>
+                      ) : (
+                        <Link to={back.to} className="shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 w-9 gap-1 p-0 sm:h-8 sm:w-auto sm:px-3"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            <span className="sr-only sm:not-sr-only">{back.label ?? "Retour"}</span>
+                          </Button>
+                        </Link>
+                      )
                     ) : null}
-                    <div className="min-w-0">
-                      <h1 className="truncate text-[17px] font-semibold leading-tight tracking-tight sm:text-base">
-                        {title}
-                      </h1>
-                      {(subtitle || syncLabel) && (
-                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground sm:text-xs">
-                          {subtitle}
-                          {subtitle && syncLabel ? " · " : null}
-                          {syncLabel ? `Dernière synchro ERP : ${syncLabel}` : null}
-                        </p>
-                      )}
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      {TitleIcon ? (
+                        <TitleIcon className="hidden h-5 w-5 shrink-0 text-primary sm:block" strokeWidth={2.2} />
+                      ) : null}
+                      <div className="min-w-0">
+                        <h1 className="truncate text-base font-semibold leading-tight tracking-tight lg:text-xl lg:font-bold">
+                          {title}
+                        </h1>
+                        {(subtitle || syncLabel) && (
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {subtitle}
+                            {subtitle && syncLabel ? (
+                              <span className="hidden sm:inline">
+                                {" · "}
+                                {`Dernière synchro ERP : ${syncLabel}`}
+                              </span>
+                            ) : null}
+                            {!subtitle && syncLabel ? (
+                              <span className="hidden sm:inline">{`Dernière synchro ERP : ${syncLabel}`}</span>
+                            ) : null}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center justify-end gap-1.5 sm:min-w-0 sm:shrink sm:gap-2">
+                    {headerExtra ? (
+                      <div className="hidden items-center sm:flex">{headerExtra}</div>
+                    ) : null}
                     {banner ? (
                       <div className="hidden items-center gap-1.5 sm:flex">{banner}</div>
                     ) : null}
@@ -190,12 +222,14 @@ export function AppShell({
                         <span className="sr-only sm:not-sr-only">{primaryAction.label}</span>
                       </Button>
                     ) : null}
+                    <ThemeSegmentToggle />
                     <CommerceProfileMenu className="shrink-0" />
                   </div>
                 </div>
 
-                {(actions || banner) && (
-                  <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
+                {(actions || banner || headerExtra) && (
+                  <div className="mt-1.5 flex items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
+                    {headerExtra}
                     {banner}
                     {actions}
                   </div>
@@ -209,17 +243,23 @@ export function AppShell({
 
             <div
               className={cn(
-                "commerce-main-enter min-h-0 flex-1 overflow-y-auto overscroll-y-none",
+                "commerce-main-enter min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-none",
                 flush ? "" : "mx-auto w-full max-w-[1920px] px-3 py-4 sm:px-6 sm:py-6",
                 contentClassName,
               )}
             >
               {children}
             </div>
+
+            {mobileFooter ? (
+              <div className="shrink-0 border-t border-border/80 bg-background lg:hidden">
+                {mobileFooter}
+              </div>
+            ) : null}
           </main>
         </div>
 
-        <nav className="grid shrink-0 grid-cols-6 gap-0.5 border-t border-border/60 bg-card/95 px-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur lg:hidden">
+        <nav className="grid shrink-0 grid-cols-6 gap-0 border-t border-border/60 bg-card/95 px-0.5 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
@@ -230,17 +270,17 @@ export function AppShell({
                 to={item.to}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-[46px] flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1 text-[10px] font-medium leading-none transition-colors",
+                  "flex min-h-[42px] flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-0.5 text-[10px] font-medium leading-none transition-colors",
                   active ? "text-primary" : "text-muted-foreground active:bg-muted",
                 )}
               >
                 <span
                   className={cn(
-                    "flex h-6 w-10 items-center justify-center rounded-full transition-colors",
+                    "flex h-7 w-9 items-center justify-center rounded-full transition-colors",
                     active ? "bg-primary/12" : "bg-transparent",
                   )}
                 >
-                  <Icon className={cn("h-[18px] w-[18px]", active && "stroke-[2.5]")} />
+                  <Icon className={cn("h-[17px] w-[17px]", active && "stroke-[2.5]")} />
                 </span>
                 <span className="w-full truncate text-center">{short}</span>
               </Link>
@@ -275,7 +315,7 @@ export function Panel({
         className,
       )}
     >
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-3 py-2.5 sm:px-4">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-3 py-2 sm:px-4 lg:py-2.5">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold tracking-tight">{title}</h2>
           {description ? (
@@ -285,7 +325,6 @@ export function Panel({
         {actions}
       </div>
       <div className={cn("p-3 sm:p-4", bodyClassName)}>{children}</div>
-
     </section>
   );
 }
@@ -301,8 +340,8 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset",
-        style?.badge ?? "bg-muted text-foreground ring-border",
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
+        style?.badge ?? "bg-muted text-foreground border-border",
       )}
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", style?.dot ?? "bg-muted-foreground")} />

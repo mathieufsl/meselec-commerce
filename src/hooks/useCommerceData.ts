@@ -6,6 +6,8 @@ import type {
   AoDocument,
   AoReponse,
   AoReponseLigne,
+  AoSecteur,
+  AoSecteurCode,
   BpuCatalogue,
   BpuLigne,
   Client,
@@ -59,13 +61,16 @@ export function useClients() {
   });
 }
 
+const AO_SELECT =
+  "*, clients(nom_entreprise, secteur), societes_exploitation(code, nom), ao_secteurs(*)";
+
 export function useAppelsOffres() {
   return useQuery({
     queryKey: ["appels-offres"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appels_offres")
-        .select("*, clients(nom_entreprise, secteur), societes_exploitation(code, nom)")
+        .select(AO_SELECT)
         .order("date_limite_depot", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data ?? []) as AppelOffre[];
@@ -80,7 +85,7 @@ export function useAppelOffre(aoId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appels_offres")
-        .select("*, clients(*), societes_exploitation(*)")
+        .select("*, clients(*), societes_exploitation(*), ao_secteurs(*)")
         .eq("id", aoId)
         .single();
       if (error) throw error;
@@ -254,7 +259,7 @@ export function useUpsertAppelOffre() {
   return useMutation({
     mutationFn: async (payload: Partial<AppelOffre> & { id?: string }) => {
       if (payload.id) {
-        const { id, clients, societes_exploitation, ...rest } = payload;
+        const { id, clients, societes_exploitation, ao_secteurs, ...rest } = payload;
         const { data, error } = await supabase
           .from("appels_offres")
           .update(rest)
@@ -264,7 +269,7 @@ export function useUpsertAppelOffre() {
         if (error) throw error;
         return data;
       }
-      const { clients, societes_exploitation, ...insert } = payload;
+      const { clients, societes_exploitation, ao_secteurs, ...insert } = payload;
       const { data, error } = await supabase
         .from("appels_offres")
         .insert(insert as never)
@@ -272,6 +277,75 @@ export function useUpsertAppelOffre() {
         .single();
       if (error) throw error;
       return data;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+type AoSecteurInput = {
+  secteur: AoSecteurCode;
+  nature_marche: string;
+  prestations?: string[];
+  bail_duree_mois?: number | null;
+  bail_date_debut?: string | null;
+  bail_date_fin?: string | null;
+};
+
+export function useCreateAppelOffreWithSecteurs() {
+  const invalidate = useInvalidateCommerce();
+  return useMutation({
+    mutationFn: async ({
+      ao,
+      secteurs,
+    }: {
+      ao: Partial<AppelOffre>;
+      secteurs: AoSecteurInput[];
+    }) => {
+      const { data: created, error } = await supabase
+        .from("appels_offres")
+        .insert(ao as never)
+        .select()
+        .single();
+      if (error) throw error;
+
+      if (secteurs.length > 0) {
+        const rows = secteurs.map((s) => ({ ...s, ao_id: created.id }));
+        const { error: sectErr } = await supabase.from("ao_secteurs").insert(rows as never);
+        if (sectErr) throw sectErr;
+      }
+
+      return created as AppelOffre;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useSyncAoSecteurs() {
+  const invalidate = useInvalidateCommerce();
+  return useMutation({
+    mutationFn: async ({
+      aoId,
+      secteurs,
+    }: {
+      aoId: string;
+      secteurs: AoSecteurInput[];
+    }) => {
+      const { error: delErr } = await supabase.from("ao_secteurs").delete().eq("ao_id", aoId);
+      if (delErr) throw delErr;
+
+      if (secteurs.length > 0) {
+        const rows = secteurs.map((s) => ({ ...s, ao_id: aoId }));
+        const { error: insErr } = await supabase.from("ao_secteurs").insert(rows as never);
+        if (insErr) throw insErr;
+      }
+
+      const { data, error } = await supabase
+        .from("ao_secteurs")
+        .select("*")
+        .eq("ao_id", aoId)
+        .order("secteur");
+      if (error) throw error;
+      return (data ?? []) as AoSecteur[];
     },
     onSuccess: invalidate,
   });

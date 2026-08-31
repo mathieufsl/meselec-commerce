@@ -80,7 +80,7 @@ export function AoDocumentTriptych({
                     <p className="mt-1 text-[10px] text-muted-foreground">
                       {doc.created_at
                         ? format(new Date(doc.created_at), "dd/MM/yy HH:mm", { locale: fr })
-                        : "—"}
+                        : ""}
                       {doc.taille_octets ? ` · ${formatFileSize(doc.taille_octets)}` : ""}
                     </p>
                   </button>
@@ -158,7 +158,7 @@ export function AoDocumentTriptych({
                 <div>
                   <dt className="text-muted-foreground">Déposé par</dt>
                   <dd className="font-medium">
-                    {selected.uploaded_by_email?.split("@")[0] ?? "—"}
+                    {selected.uploaded_by_email?.split("@")[0] ?? ""}
                   </dd>
                 </div>
                 <div>
@@ -166,7 +166,7 @@ export function AoDocumentTriptych({
                   <dd className="font-medium">
                     {selected.created_at
                       ? format(new Date(selected.created_at), "dd MMM yyyy HH:mm", { locale: fr })
-                      : "—"}
+                      : ""}
                   </dd>
                 </div>
                 <div>

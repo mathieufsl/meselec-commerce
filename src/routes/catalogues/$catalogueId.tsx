@@ -65,7 +65,7 @@ function CatalogueDetailPage() {
               <TableRow key={l.id} className={!isBpuLigneSelectable(l) ? "opacity-60" : ""}>
                 <TableCell>{l.numero_prix}</TableCell>
                 <TableCell>{l.designation}</TableCell>
-                <TableCell>{l.unite ?? "—"}</TableCell>
+                <TableCell>{l.unite ?? ""}</TableCell>
                 <TableCell>{l.niveau}</TableCell>
                 <TableCell className="text-right">{formatEuro(l.pu_ht)}</TableCell>
               </TableRow>

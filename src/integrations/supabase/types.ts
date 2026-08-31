@@ -279,6 +279,53 @@ export type Database = {
           },
         ]
       }
+      ao_secteurs: {
+        Row: {
+          ao_id: string
+          bail_date_debut: string | null
+          bail_date_fin: string | null
+          bail_duree_mois: number | null
+          created_at: string
+          id: string
+          nature_marche: string
+          prestations: string[]
+          secteur: string
+          updated_at: string
+        }
+        Insert: {
+          ao_id: string
+          bail_date_debut?: string | null
+          bail_date_fin?: string | null
+          bail_duree_mois?: number | null
+          created_at?: string
+          id?: string
+          nature_marche: string
+          prestations?: string[]
+          secteur: string
+          updated_at?: string
+        }
+        Update: {
+          ao_id?: string
+          bail_date_debut?: string | null
+          bail_date_fin?: string | null
+          bail_duree_mois?: number | null
+          created_at?: string
+          id?: string
+          nature_marche?: string
+          prestations?: string[]
+          secteur?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ao_secteurs_ao_id_fkey"
+            columns: ["ao_id"]
+            isOneToOne: false
+            referencedRelation: "appels_offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appels_offres: {
         Row: {
           chantier_erp_id: string | null
@@ -287,9 +334,11 @@ export type Database = {
           date_limite_depot: string | null
           date_publication: string | null
           donneur_ordre_id: string | null
+          donneur_ordre_libre: string | null
           handoff_at: string | null
           id: string
           lieu: string | null
+          marche_pluriannuel: boolean
           montant_estime: number | null
           notes: string | null
           reference: string
@@ -306,9 +355,11 @@ export type Database = {
           date_limite_depot?: string | null
           date_publication?: string | null
           donneur_ordre_id?: string | null
+          donneur_ordre_libre?: string | null
           handoff_at?: string | null
           id?: string
           lieu?: string | null
+          marche_pluriannuel?: boolean
           montant_estime?: number | null
           notes?: string | null
           reference: string
@@ -325,9 +376,11 @@ export type Database = {
           date_limite_depot?: string | null
           date_publication?: string | null
           donneur_ordre_id?: string | null
+          donneur_ordre_libre?: string | null
           handoff_at?: string | null
           id?: string
           lieu?: string | null
+          marche_pluriannuel?: boolean
           montant_estime?: number | null
           notes?: string | null
           reference?: string

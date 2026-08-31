@@ -12,7 +12,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { CommerceAuthGate } from "../components/commerce/CommerceAuthGate";
 import { PwaRegistrar } from "../components/PwaRegistrar";
-import { Toaster } from "../components/ui/sonner";
+import { ThemedToaster } from "../components/ThemedToaster";
+import { ThemeProvider } from "../contexts/ThemeContext";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -93,7 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "apple-mobile-web-app-title", content: "RMSCom" },
-      { name: "theme-color", content: "#12171b" },
+      { name: "theme-color", content: "#067540" },
       { property: "og:title", content: "RMSCom" },
       { property: "og:description", content: "Pôle commerce mutualisé MESELEC" },
       { property: "og:type", content: "website" },
@@ -110,7 +111,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
       },
       { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "32x32" },
       { rel: "icon", href: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
@@ -125,9 +126,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var k='rms-commerce-theme';var t=localStorage.getItem(k);var theme=t==='dark'||t==='light'||t==='system'?t:'system';var dark=theme==='dark'||(theme==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);document.documentElement.style.colorScheme=dark?'dark':'light';}catch(e){}})();`,
+          }}
+        />
       </head>
       <body className="antialiased">
         {children}
@@ -142,11 +148,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PwaRegistrar />
-      <CommerceAuthGate>
-        <Outlet />
-        <Toaster richColors position="top-center" />
-      </CommerceAuthGate>
+      <ThemeProvider>
+        <PwaRegistrar />
+        <CommerceAuthGate>
+          <Outlet />
+          <ThemedToaster />
+        </CommerceAuthGate>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

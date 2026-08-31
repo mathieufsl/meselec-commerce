@@ -1,17 +1,17 @@
 import { daysUntil } from "@/lib/bpuEngine";
+import type { AoSecteurCode } from "@/lib/commerceTypes";
 
 export type AoDateFilterPreset = "7j" | "30j" | "ce_mois" | "sans_date";
 
 export function matchesAoDateFilter(
   dateLimite: string | null,
-  dateFrom: string,
-  dateTo: string,
+  dateMax: string,
   preset: AoDateFilterPreset | null,
 ): boolean {
   if (preset === "sans_date") return !dateLimite;
 
   if (!dateLimite) {
-    if (preset || dateFrom || dateTo) return false;
+    if (preset || dateMax) return false;
     return true;
   }
 
@@ -31,15 +31,19 @@ export function matchesAoDateFilter(
     return target.getMonth() === now.getMonth() && target.getFullYear() === now.getFullYear();
   }
 
-  if (dateFrom && dateKey < dateFrom) return false;
-  if (dateTo && dateKey > dateTo) return false;
+  if (dateMax && dateKey > dateMax) return false;
   return true;
 }
 
-export function hasActiveDateFilter(
-  dateFrom: string,
-  dateTo: string,
-  preset: AoDateFilterPreset | null,
+export function hasActiveDateFilter(dateMax: string, preset: AoDateFilterPreset | null): boolean {
+  return Boolean(preset || dateMax);
+}
+
+export function matchesAoSecteurFilter(
+  secteurs: AoSecteurCode[] | undefined,
+  selected: AoSecteurCode[],
 ): boolean {
-  return Boolean(preset || dateFrom || dateTo);
+  if (selected.length === 0) return true;
+  if (!secteurs?.length) return false;
+  return selected.some((s) => secteurs.includes(s));
 }

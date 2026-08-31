@@ -4,6 +4,7 @@ import { CommerceKpiBrick } from "@/components/commerce/CommerceKpiBrick";
 import { CommerceQuickAction } from "@/components/commerce/CommerceQuickAction";
 import { useAppelsOffres } from "@/hooks/useCommerceData";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
+import { cleanDisplaySeparators } from "@/lib/displayText";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -284,7 +285,7 @@ function HomePage() {
                                 {ao.clients?.nom_entreprise ?? ao.reference}
                               </p>
                               <p className="truncate text-xs text-muted-foreground">
-                                {[ao.reference, ao.titre].filter(Boolean).join(" · ")}
+                                {[ao.reference, cleanDisplaySeparators(ao.titre)].filter(Boolean).join(" · ")}
                               </p>
                             </div>
                             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />

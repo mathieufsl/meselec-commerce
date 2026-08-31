@@ -1,5 +1,5 @@
 export type AoStatut =
-  | "veille"
+  | "non_traite"
   | "analyse"
   | "en_cours"
   | "depose"
@@ -28,8 +28,42 @@ export type ProspectionStatut =
   | "perdu"
   | "inactif";
 
+export type AoSecteurCode = "EP" | "CFO_CFA" | "Illumination" | "VRD" | "Enedis";
+
+export type AoNatureMarche = "bail" | "travaux_neuf" | "autre";
+
+export type AoPrestation = "pose" | "fourniture" | "autre";
+
+export const AO_SECTEURS: AoSecteurCode[] = [
+  "EP",
+  "CFO_CFA",
+  "Illumination",
+  "VRD",
+  "Enedis",
+];
+
+export const AO_SECTEUR_LABELS: Record<AoSecteurCode, string> = {
+  EP: "EP",
+  CFO_CFA: "CFO/CFA",
+  Illumination: "Illumination",
+  VRD: "VRD",
+  Enedis: "Enedis",
+};
+
+export const AO_NATURE_MARCHE_LABELS: Record<AoNatureMarche, string> = {
+  bail: "Bail",
+  travaux_neuf: "Travaux neuf",
+  autre: "Autre",
+};
+
+export const AO_PRESTATION_LABELS: Record<AoPrestation, string> = {
+  pose: "Pose",
+  fourniture: "Fourniture",
+  autre: "Autre",
+};
+
 export const AO_STATUTS: AoStatut[] = [
-  "veille",
+  "non_traite",
   "analyse",
   "en_cours",
   "depose",
@@ -39,7 +73,7 @@ export const AO_STATUTS: AoStatut[] = [
 ];
 
 export const AO_STATUT_LABELS: Record<AoStatut, string> = {
-  veille: "Veille",
+  non_traite: "Non traité",
   analyse: "Analyse",
   en_cours: "En cours",
   depose: "Déposé",
@@ -49,11 +83,12 @@ export const AO_STATUT_LABELS: Record<AoStatut, string> = {
 };
 
 export const AO_PIPELINE_COLUMNS: AoStatut[] = [
-  "veille",
+  "non_traite",
   "analyse",
   "en_cours",
   "depose",
   "gagne",
+  "perdu",
 ];
 
 export interface SocieteExploitation {
@@ -75,16 +110,31 @@ export interface Client {
   email: string | null;
 }
 
+export interface AoSecteur {
+  id: string;
+  ao_id: string;
+  secteur: AoSecteurCode;
+  nature_marche: AoNatureMarche;
+  prestations: AoPrestation[];
+  bail_duree_mois: number | null;
+  bail_date_debut: string | null;
+  bail_date_fin: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface AppelOffre {
   id: string;
   reference: string;
   titre: string;
   donneur_ordre_id: string | null;
+  donneur_ordre_libre: string | null;
   type_marche: string | null;
   lieu: string | null;
   date_publication: string | null;
   date_limite_depot: string | null;
   montant_estime: number | null;
+  marche_pluriannuel: boolean;
   statut: AoStatut;
   societe_attribuee_id: string | null;
   chantier_erp_id: string | null;
@@ -94,6 +144,7 @@ export interface AppelOffre {
   updated_at: string;
   clients?: Client | null;
   societes_exploitation?: SocieteExploitation | null;
+  ao_secteurs?: AoSecteur[];
 }
 
 export interface AoLot {

@@ -10,18 +10,20 @@ import { formatEuro } from "@/lib/bpuEngine";
 import { cn } from "@/lib/utils";
 import { CommerceAoCard } from "@/components/commerce/CommerceAoCard";
 
-const ARCHIVE_STATUTS: AoStatut[] = ["perdu", "abandonne"];
+const ARCHIVE_STATUTS: AoStatut[] = ["abandonne"];
 
 export function CommerceAoKanban({
   items,
   docCounts,
   onMoveStatut,
   isMoving,
+  onCardSelect,
 }: {
   items: AppelOffre[];
   docCounts: Record<string, number>;
   onMoveStatut: (aoId: string, statut: AoStatut) => void;
   isMoving?: boolean;
+  onCardSelect?: (ao: AppelOffre) => void;
 }) {
   const [dragOverColumn, setDragOverColumn] = useState<AoStatut | null>(null);
 
@@ -85,16 +87,16 @@ export function CommerceAoKanban({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-1.5">
                       <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", AO_STATUT_STYLES[statut].dot)} />
-                      <h3 className="truncate text-[11px] font-semibold uppercase tracking-wide">
+                      <h3 className="truncate text-xs font-semibold">
                         {AO_STATUT_LABELS[statut]}
                       </h3>
                     </div>
-                    <span className="shrink-0 rounded-md bg-background/60 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    <span className="shrink-0 rounded-md bg-background/60 px-1.5 py-0.5 text-xs font-semibold tabular-nums">
                       {columnItems.length}
                     </span>
                   </div>
                   {total > 0 ? (
-                    <p className="mt-0.5 truncate text-[10px] font-medium tabular-nums opacity-80">
+                    <p className="mt-0.5 truncate text-xs font-medium tabular-nums opacity-80">
                       {formatEuro(total)}
                     </p>
                   ) : null}
@@ -104,11 +106,11 @@ export function CommerceAoKanban({
                   {columnItems.length === 0 ? (
                     <div
                       className={cn(
-                        "rounded-md border border-dashed border-border/50 px-2 py-3 text-center text-[10px] text-muted-foreground/70",
+                        "rounded-md border border-dashed border-border/50 px-2 py-3 text-center text-xs text-muted-foreground/70",
                         isOver && "border-primary/40 bg-primary/5 text-primary",
                       )}
                     >
-                      {isOver ? "Déposer ici" : "—"}
+                      {isOver ? "Déposer ici" : ""}
                     </div>
                   ) : (
                     columnItems.map((ao) => (
@@ -117,6 +119,7 @@ export function CommerceAoKanban({
                         ao={ao}
                         statut={statut}
                         {...(docCounts[ao.id] !== undefined ? { docCount: docCounts[ao.id] } : {})}
+                        {...(onCardSelect ? { onSelect: onCardSelect } : {})}
                         variant="kanban"
                         draggable={!isMoving}
                         onDragStart={(e) => {

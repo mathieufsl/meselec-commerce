@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import type { AoDateFilterPreset } from "@/lib/aoFilters";
 import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
+import { Calendar, X } from "lucide-react";
 
 const PRESETS: Array<{ id: AoDateFilterPreset; label: string }> = [
   { id: "7j", label: "7 j" },
@@ -12,82 +17,83 @@ const PRESETS: Array<{ id: AoDateFilterPreset; label: string }> = [
 ];
 
 export function CommerceAoDateFilters({
-  dateFrom,
-  dateTo,
+  dateMax,
   preset,
-  onDateFromChange,
-  onDateToChange,
+  onDateMaxChange,
   onPresetChange,
   onClear,
 }: {
-  dateFrom: string;
-  dateTo: string;
+  dateMax: string;
   preset: AoDateFilterPreset | null;
-  onDateFromChange: (value: string) => void;
-  onDateToChange: (value: string) => void;
+  onDateMaxChange: (value: string) => void;
   onPresetChange: (value: AoDateFilterPreset | null) => void;
   onClear: () => void;
 }) {
-  const active = Boolean(preset || dateFrom || dateTo);
+  const active = Boolean(preset || dateMax);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-      <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-2 py-1">
-        <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Échéance
-        </span>
-        <Input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => {
-            onPresetChange(null);
-            onDateFromChange(e.target.value);
+    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+      <span className="hidden text-xs font-medium text-muted-foreground lg:inline">Échéance</span>
+      {PRESETS.map((p) => (
+        <Button
+          key={p.id}
+          type="button"
+          size="sm"
+          variant="outline"
+          className={cn(
+            "h-9 shrink-0 px-2.5 text-xs font-normal",
+            preset === p.id && "border-primary/40 bg-primary/10 text-primary",
+          )}
+          onClick={() => {
+            onDateMaxChange("");
+            onPresetChange(preset === p.id ? null : p.id);
           }}
-          className="h-7 w-[7.5rem] border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0"
-          aria-label="Date limite à partir du"
-        />
-        <span className="text-[10px] text-muted-foreground">→</span>
-        <Input
-          type="date"
-          value={dateTo}
-          onChange={(e) => {
-            onPresetChange(null);
-            onDateToChange(e.target.value);
-          }}
-          className="h-7 w-[7.5rem] border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0"
-          aria-label="Date limite jusqu'au"
-        />
-      </div>
+        >
+          {p.label}
+        </Button>
+      ))}
 
-      <div className="-mx-1 flex flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {PRESETS.map((p) => (
+      <Popover>
+        <PopoverTrigger asChild>
           <Button
-            key={p.id}
             type="button"
             size="sm"
-            variant={preset === p.id ? "default" : "outline"}
+            variant="outline"
             className={cn(
-              "h-7 shrink-0 px-2.5 text-[11px]",
-              preset === p.id && "shadow-sm",
+              "h-9 shrink-0 gap-1.5 px-2.5 text-xs font-normal",
+              dateMax && "border-primary/40 bg-primary/10 text-primary",
             )}
-            onClick={() => onPresetChange(preset === p.id ? null : p.id)}
           >
-            {p.label}
+            <Calendar className="h-3.5 w-3.5 opacity-70" />
+            Personnaliser
           </Button>
-        ))}
-        {active ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-7 shrink-0 gap-1 px-2 text-[11px] text-muted-foreground"
-            onClick={onClear}
-          >
-            <X className="h-3 w-3" />
-            Effacer
-          </Button>
-        ) : null}
-      </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3" align="end">
+          <p className="mb-2 text-xs text-muted-foreground">Échéance max (inclus)</p>
+          <Input
+            type="date"
+            value={dateMax}
+            onChange={(e) => {
+              onPresetChange(null);
+              onDateMaxChange(e.target.value);
+            }}
+            className="h-9"
+          />
+        </PopoverContent>
+      </Popover>
+
+      {active ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-9 shrink-0 gap-1 px-2 text-xs text-muted-foreground"
+          onClick={onClear}
+        >
+          <X className="h-3.5 w-3.5" />
+          Effacer
+        </Button>
+      ) : null}
     </div>
   );
 }

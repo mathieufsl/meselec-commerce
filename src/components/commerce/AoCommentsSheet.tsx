@@ -61,7 +61,7 @@ export function AoCommentsSheet({ aoId, commentCount, className }: AoCommentsShe
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button size="sm" variant="outline" className={cn("gap-1.5", className)}>
-          <MessageSquare className="h-4 w-4" />
+          <MessageSquare className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Commentaires</span>
           {(commentCount ?? comments.length) > 0 ? (
             <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">

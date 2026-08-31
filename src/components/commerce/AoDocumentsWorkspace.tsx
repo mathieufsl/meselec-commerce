@@ -22,24 +22,16 @@ import type { AoDocument, AoDocumentType } from "@/lib/commerceTypes";
 import {
   AO_DOCUMENT_GROUPS,
   AO_DOCUMENT_TYPE_LABELS,
+  AO_UPLOAD_ALLOWED_TYPES,
   deleteAoDocument,
   downloadAoDocument,
+  filterAoDocumentsByAllowedTypes,
   formatFileSize,
+  isAoUploadAllowedType,
 } from "@/lib/aoDocuments";
 import { cn } from "@/lib/utils";
 
-const ALL_TYPES: AoDocumentType[] = [
-  "dce",
-  "rc",
-  "cctp",
-  "ae",
-  "dpgf",
-  "bpu",
-  "reponse",
-  "memoire",
-  "annexe",
-  "autre",
-];
+const ALL_TYPES = [...AO_UPLOAD_ALLOWED_TYPES];
 
 function pickDefaultSelection(docs: AoDocument[], currentId: string | null): string | null {
   if (currentId && docs.some((doc) => doc.id === currentId)) return currentId;
@@ -167,14 +159,14 @@ function DocumentDetailsPane({
       <dl className="space-y-2 text-xs">
         <div>
           <dt className="text-muted-foreground">Déposé par</dt>
-          <dd className="font-medium">{doc.uploaded_by_email?.split("@")[0] ?? "—"}</dd>
+          <dd className="font-medium">{doc.uploaded_by_email?.split("@")[0] ?? ""}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Date</dt>
           <dd className="font-medium">
             {doc.created_at
               ? format(new Date(doc.created_at), "dd MMM yyyy HH:mm", { locale: fr })
-              : "—"}
+              : ""}
           </dd>
         </div>
         <div>
@@ -224,6 +216,10 @@ function DocumentDetailsPane({
 export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
   const qc = useQueryClient();
   const { data: documents = [], isLoading } = useAoDocuments(aoId);
+  const allowedDocuments = useMemo(
+    () => filterAoDocumentsByAllowedTypes(documents),
+    [documents],
+  );
 
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -233,7 +229,7 @@ export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return documents.filter((doc) => {
+    return allowedDocuments.filter((doc) => {
       if (categoryFilter !== "all") {
         const group = AO_DOCUMENT_GROUPS.find((g) => g.id === categoryFilter);
         if (group && !group.types.includes(doc.type)) return false;
@@ -245,7 +241,7 @@ export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
         AO_DOCUMENT_TYPE_LABELS[doc.type].toLowerCase().includes(q)
       );
     });
-  }, [documents, categoryFilter, search]);
+  }, [allowedDocuments, categoryFilter, search]);
 
   useEffect(() => {
     setSelectedId((current) => pickDefaultSelection(filtered, current));
@@ -286,113 +282,134 @@ export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
   const selected = filtered.find((d) => d.id === selectedId) ?? null;
   const preview = useAoDocumentPreview(selected, Boolean(selected));
 
+  const filtersBlock = (
+    <div className="shrink-0 space-y-2 border-b p-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold">Documents</h3>
+        <Badge variant="secondary" className="font-normal">
+          {allowedDocuments.length}
+        </Badge>
+      </div>
+      <div className="space-y-1">
+        <label className="text-[11px] font-medium text-muted-foreground">Catégorie</label>
+        <select
+          className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+        >
+          <option value="all">Tous les types</option>
+          {AO_UPLOAD_ALLOWED_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {AO_DOCUMENT_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Rechercher…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 pl-8 text-xs"
+        />
+      </div>
+    </div>
+  );
+
+  const listBlock = (
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain lg:overflow-y-auto">
+      {filtered.length === 0 ? (
+        <p className="p-4 text-center text-xs text-muted-foreground">Aucun document.</p>
+      ) : (
+        filtered.map((doc) => {
+          const isSelected = doc.id === selectedId;
+          return (
+            <button
+              key={doc.id}
+              type="button"
+              onClick={() => setSelectedId(doc.id)}
+              className={cn(
+                "w-full border-b px-3 py-2.5 text-left transition-colors",
+                isSelected
+                  ? "border-l-2 border-l-primary bg-primary/10"
+                  : "border-l-2 border-l-transparent hover:bg-muted/50",
+              )}
+            >
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                {AO_DOCUMENT_TYPE_LABELS[doc.type]}
+                {doc.version > 1 ? ` · v${doc.version}` : ""}
+              </p>
+              <p className="mt-0.5 truncate text-xs font-medium">{doc.nom_fichier}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {doc.created_at
+                  ? format(new Date(doc.created_at), "dd/MM/yy HH:mm", { locale: fr })
+                  : ""}
+                {doc.taille_octets ? ` · ${formatFileSize(doc.taille_octets)}` : ""}
+              </p>
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex h-[min(720px,calc(100dvh-11rem))] overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         {isLoading ? (
-          <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Chargement des documents…
           </div>
         ) : (
-          <div className="flex h-full min-h-0 w-full overflow-hidden">
-            {/* Left panel — filters + list */}
-            <div className="flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r">
-              <div className="shrink-0 space-y-2 border-b p-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold">Documents</h3>
-                  <Badge variant="secondary" className="font-normal">
-                    {documents.length}
-                  </Badge>
+          <>
+            {/* Mobile — liste verticale, aperçu en dessous */}
+            <div className="flex flex-col lg:hidden">
+              {filtersBlock}
+              {listBlock}
+              {selected ? (
+                <>
+                  <div className="border-t">
+                    <div className="relative min-h-[220px] overflow-hidden bg-muted/20">
+                      <DocumentPreviewPane doc={selected} preview={preview} />
+                    </div>
+                  </div>
+                  <div className="border-t">
+                    <DocumentDetailsPane
+                      doc={selected}
+                      preview={preview}
+                      busyId={busyId}
+                      onDownload={(d) => void handleDownload(d)}
+                      onDelete={(d) => void handleDelete(d)}
+                    />
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            {/* Desktop — triptyque */}
+            <div className="hidden h-[min(720px,calc(100dvh-11rem))] lg:flex lg:overflow-hidden">
+              <div className="flex h-full min-h-0 w-full overflow-hidden">
+                <div className="flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r">
+                  {filtersBlock}
+                  {listBlock}
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">Catégorie</label>
-                  <select
-                    className="h-8 w-full rounded-md border bg-background px-2 text-xs"
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                  >
-                    <option value="all">Toutes les catégories</option>
-                    {AO_DOCUMENT_GROUPS.map((g) => (
-                      <optgroup key={g.id} label={g.label}>
-                        {g.types.map((t) => (
-                          <option key={t} value={t}>
-                            {AO_DOCUMENT_TYPE_LABELS[t]}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                    <optgroup label="Groupes">
-                      {AO_DOCUMENT_GROUPS.map((g) => (
-                        <option key={`group-${g.id}`} value={g.id}>
-                          {g.label} (tout)
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
+                <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20">
+                  <DocumentPreviewPane doc={selected} preview={preview} />
                 </div>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="h-8 pl-8 text-xs"
+                <div className="flex h-full w-[360px] shrink-0 flex-col overflow-y-auto overscroll-contain border-l">
+                  <DocumentDetailsPane
+                    doc={selected}
+                    preview={preview}
+                    busyId={busyId}
+                    onDownload={(d) => void handleDownload(d)}
+                    onDelete={(d) => void handleDelete(d)}
                   />
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                {filtered.length === 0 ? (
-                  <p className="p-4 text-center text-xs text-muted-foreground">Aucun document.</p>
-                ) : (
-                  filtered.map((doc) => {
-                    const isSelected = doc.id === selectedId;
-                    return (
-                      <button
-                        key={doc.id}
-                        type="button"
-                        onClick={() => setSelectedId(doc.id)}
-                        className={cn(
-                          "w-full border-b px-3 py-2.5 text-left transition-colors",
-                          isSelected
-                            ? "border-l-2 border-l-primary bg-primary/10"
-                            : "border-l-2 border-l-transparent hover:bg-muted/50",
-                        )}
-                      >
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                          {AO_DOCUMENT_TYPE_LABELS[doc.type]}
-                          {doc.version > 1 ? ` · v${doc.version}` : ""}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs font-medium">{doc.nom_fichier}</p>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
-                          {doc.created_at
-                            ? format(new Date(doc.created_at), "dd/MM/yy HH:mm", { locale: fr })
-                            : "—"}
-                          {doc.taille_octets ? ` · ${formatFileSize(doc.taille_octets)}` : ""}
-                        </p>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
             </div>
-
-            {/* Center — preview */}
-            <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20">
-              <DocumentPreviewPane doc={selected} preview={preview} />
-            </div>
-
-            {/* Right — details */}
-            <div className="flex h-full w-[360px] shrink-0 flex-col overflow-y-auto overscroll-contain border-l">
-              <DocumentDetailsPane
-                doc={selected}
-                preview={preview}
-                busyId={busyId}
-                onDownload={(d) => void handleDownload(d)}
-                onDelete={(d) => void handleDelete(d)}
-              />
-            </div>
-          </div>
+          </>
         )}
       </div>
 
@@ -400,8 +417,8 @@ export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
 
       <Panel title="Référence rapide (sans fichier)" bodyClassName="space-y-3">
         <p className="text-xs text-muted-foreground">
-          Pour signaler un document externe (lien plateforme, DCE sur marches-publics.gouv.fr…) sans
-          uploader le fichier.
+          Signaler un lien externe vers le mémoire technique, le CCTP ou la DPGF sans uploader le
+          fichier.
         </p>
         <QuickReferenceForm aoId={aoId} onDone={refresh} />
       </Panel>
@@ -410,7 +427,7 @@ export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
 }
 
 function QuickReferenceForm({ aoId, onDone }: { aoId: string; onDone: () => Promise<void> }) {
-  const [type, setType] = useState<AoDocumentType>("dce");
+  const [type, setType] = useState<AoDocumentType>("cctp");
   const [nom, setNom] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -418,6 +435,7 @@ function QuickReferenceForm({ aoId, onDone }: { aoId: string; onDone: () => Prom
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!nom.trim()) return;
+    if (!isAoUploadAllowedType(type)) return;
     setSaving(true);
     try {
       await supabase.from("ao_documents").insert({

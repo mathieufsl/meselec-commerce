@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { AppShell, Panel, StatusBadge } from "@/components/commerce/AppShell";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { AppShell, Panel } from "@/components/commerce/AppShell";
 import { AoCommentsSheet } from "@/components/commerce/AoCommentsSheet";
+import { AoIdentityCard } from "@/components/commerce/AoIdentityCard";
 import {
   AoDetailSommaireFloating,
-  AoDetailSommaireMobile,
   useAoSectionObserver,
   type AoSection,
 } from "@/components/commerce/AoDetailSommaire";
@@ -27,17 +27,20 @@ import {
   useAoReponseLignes,
   useAoReponses,
   useAppelOffre,
+  useAppelsOffres,
   useBpuCatalogues,
   useBpuLignes,
   useClients,
   useImportAoReponseLignes,
   useMemoiresTechniques,
   useSocietes,
+  useSyncAoSecteurs,
   useUpsertAppelOffre,
 } from "@/hooks/useCommerceData";
 import { supabase } from "@/integrations/supabase/client";
+import { isFormDirty, toForm, toPayload, type AoDetailFormState } from "@/lib/aoDetailForm";
 import { executeHandoff } from "@/lib/syncErpCache";
-import { AO_STATUT_LABELS, AO_STATUTS, type AoReponse } from "@/lib/commerceTypes";
+import { type AoReponse } from "@/lib/commerceTypes";
 import {
   calcLigneMontant,
   formatEuro,
@@ -45,8 +48,10 @@ import {
   sumReponseLignes,
 } from "@/lib/bpuEngine";
 import { catalogueRowsOnly, parseBpuExcelFile } from "@/lib/bpuExcelImport";
+import { filterAoDocumentsByAllowedTypes } from "@/lib/aoDocuments";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { cleanDisplaySeparators } from "@/lib/displayText";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/appels-offres/$aoId")({
@@ -55,27 +60,38 @@ export const Route = createFileRoute("/appels-offres/$aoId")({
 
 const AO_SECTIONS: AoSection[] = [
   { id: "projet", label: "Fiche projet", number: 1 },
-  { id: "historique", label: "Historique réponses", number: 2 },
-  { id: "chiffrage", label: "Chiffrage", number: 3 },
-  { id: "documents", label: "Documents", number: 4 },
+  { id: "documents", label: "Documents", number: 2 },
+  { id: "historique", label: "Historique réponses", number: 3 },
+  { id: "chiffrage", label: "Chiffrage", number: 4 },
   { id: "memoire", label: "Mémoire technique", number: 5 },
 ];
 
 function AoDetailPage() {
   const { aoId } = Route.useParams();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: ao } = useAppelOffre(aoId);
+  const { data: allAos = [] } = useAppelsOffres();
   const { data: documents = [] } = useAoDocuments(aoId);
+  const allowedDocumentCount = useMemo(
+    () => filterAoDocumentsByAllowedTypes(documents).length,
+    [documents],
+  );
   const { data: reponses = [] } = useAoReponses(aoId);
   const { data: catalogues = [] } = useBpuCatalogues();
   const { data: clients = [] } = useClients();
   const { data: societes = [] } = useSocietes();
   const { data: memoires = [] } = useMemoiresTechniques(aoId);
   const upsertAo = useUpsertAppelOffre();
+  const syncSecteurs = useSyncAoSecteurs();
   const importReponse = useImportAoReponseLignes();
 
+  const [form, setForm] = useState<AoDetailFormState | null>(null);
+  const [baseline, setBaseline] = useState<AoDetailFormState | null>(null);
+  const [saving, setSaving] = useState(false);
+
   const sectionIds = useMemo(() => AO_SECTIONS.map((s) => s.id), []);
-  const { activeId, navigate } = useAoSectionObserver(sectionIds);
+  const { activeId, navigate: scrollToSection } = useAoSectionObserver(sectionIds);
 
   const [selectedReponseId, setSelectedReponseId] = useState<string | null>(null);
   const reponse = reponses.find((r) => r.id === selectedReponseId) ?? reponses[0] ?? null;
@@ -94,9 +110,46 @@ function AoDetailPage() {
   const [memoireContenu, setMemoireContenu] = useState("");
   const [searchBpu, setSearchBpu] = useState("");
 
+  const isDirty = useMemo(
+    () => (form && baseline ? isFormDirty(baseline, form) : false),
+    [form, baseline],
+  );
+
+  useEffect(() => {
+    if (!ao) return;
+    if (isDirty) return;
+    const next = toForm(ao, ao.ao_secteurs ?? []);
+    setForm(next);
+    setBaseline(next);
+  }, [ao, isDirty]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty]);
+
+  const donneurOrdreSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of clients) {
+      if (c.nom_entreprise?.trim()) set.add(c.nom_entreprise.trim());
+    }
+    for (const item of allAos) {
+      if (item.donneur_ordre_libre?.trim()) set.add(item.donneur_ordre_libre.trim());
+      if (item.clients?.nom_entreprise?.trim()) set.add(item.clients.nom_entreprise.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "fr"));
+  }, [clients, allAos]);
+
   const clientNom =
-    ao?.clients?.nom_entreprise ??
-    clients.find((c) => c.id === ao?.donneur_ordre_id)?.nom_entreprise ??
+    form?.donneur_ordre_libre?.trim() ||
+    ao?.donneur_ordre_libre?.trim() ||
+    ao?.clients?.nom_entreprise ||
+    clients.find((c) => c.id === ao?.donneur_ordre_id)?.nom_entreprise ||
     "Client";
 
   const filteredBpu = useMemo(() => {
@@ -112,13 +165,34 @@ function AoDetailPage() {
     await qc.invalidateQueries();
   }
 
-  async function updateAoField(fields: Record<string, unknown>) {
-    if (!ao) return;
-    await upsertAo.mutateAsync({ id: ao.id, ...fields });
+  async function handleSave() {
+    if (!ao || !form) return;
+    setSaving(true);
+    setMsg(null);
+    try {
+      const { ao: payload, secteurs } = toPayload(form);
+      await upsertAo.mutateAsync({ id: ao.id, ...payload });
+      const savedSecteurs = await syncSecteurs.mutateAsync({ aoId: ao.id, secteurs });
+      const fresh = toForm({ ...ao, ...payload }, savedSecteurs);
+      setBaseline(fresh);
+      setForm(fresh);
+      await refresh();
+      setMsg("Fiche enregistrée.");
+    } catch (err) {
+      setMsg(`Échec : ${(err as Error).message}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  async function updateStatut(statut: (typeof AO_STATUTS)[number]) {
-    await updateAoField({ statut });
+  function navigateBackToList() {
+    if (
+      isDirty &&
+      !window.confirm("Des modifications ne sont pas enregistrées. Quitter cette fiche ?")
+    ) {
+      return;
+    }
+    void navigate({ to: "/appels-offres" });
   }
 
   async function nextReponseVersion(): Promise<number> {
@@ -224,11 +298,6 @@ function AoDetailPage() {
     await refresh();
   }
 
-  async function importExcelFromFile(file: File) {
-    const result = await parseBpuExcelFile(file);
-    await importExcelReponse(result);
-  }
-
   async function saveMemoire() {
     const version = (memoires[0]?.version ?? 0) + 1;
     await supabase.from("memoires_techniques").insert({
@@ -294,16 +363,42 @@ function AoDetailPage() {
   return (
     <AppShell
       title={ao.reference}
-      subtitle={ao.titre}
-      back={{ to: "/appels-offres", label: "Retour liste" }}
+      subtitle={cleanDisplaySeparators(ao.titre)}
+      back={{ to: "/appels-offres", label: "Retour liste", onNavigate: navigateBackToList }}
       flush
-      belowHeader={<AoImportBanner aoId={aoId} onExcelImport={importExcelFromFile} />}
-      contentClassName="flex min-h-0 flex-col px-4 py-4 sm:px-6"
+      belowHeader={<AoImportBanner aoId={aoId} />}
+      contentClassName="flex min-h-0 flex-col px-3 py-3 sm:px-6 sm:py-4"
+      mobileFooter={
+        <div className="flex items-center gap-2 px-3 py-2">
+          {isDirty ? (
+            <span className="shrink-0 rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-[10px] font-medium text-warning">
+              Non enregistré
+            </span>
+          ) : null}
+          <Button
+            size="sm"
+            className="min-w-0 flex-1"
+            onClick={() => void handleSave()}
+            disabled={!isDirty || saving}
+          >
+            {saving ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+          <AoCommentsSheet aoId={aoId} className="h-9 w-9 shrink-0 p-0 [&_span]:sr-only" />
+        </div>
+      }
       actions={
-        <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-2 lg:flex">
+          {isDirty ? (
+            <span className="rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs font-medium text-warning">
+              Non enregistré
+            </span>
+          ) : null}
+          <Button size="sm" onClick={() => void handleSave()} disabled={!isDirty || saving}>
+            {saving ? "Enregistrement…" : "Enregistrer"}
+          </Button>
           <AoCommentsSheet aoId={aoId} />
           {ao.statut !== "gagne" && reponse ? (
-            <Button size="sm" onClick={runHandoff} disabled={busy || lignes.length === 0}>
+            <Button size="sm" variant="outline" onClick={runHandoff} disabled={busy || lignes.length === 0}>
               {busy ? "Handoff…" : "Attribuer & créer chantier ERP"}
             </Button>
           ) : null}
@@ -314,143 +409,47 @@ function AoDetailPage() {
         <p className="mb-3 rounded-md border bg-muted/40 px-3 py-2 text-sm">{msg}</p>
       ) : null}
 
-      <AoDetailSommaireMobile
-        sections={AO_SECTIONS}
-        activeId={activeId}
-        onNavigate={navigate}
-      />
-
       <AoDetailSommaireFloating
         sections={AO_SECTIONS}
         activeId={activeId}
-        onNavigate={navigate}
+        onNavigate={scrollToSection}
       />
 
-      <div className="min-w-0 flex-1 space-y-10 pb-12">
+      <div className="min-w-0 flex-1 space-y-6 pb-4 lg:space-y-10 lg:pb-12">
           {/* Section 1 — Fiche projet */}
           <section id="projet" className="scroll-mt-24">
             <Panel title="Fiche projet" bodyClassName="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <div className="md:col-span-2 xl:col-span-3">
-                  <label className="text-xs font-medium text-muted-foreground">Titre</label>
-                  <Input
-                    className="mt-1"
-                    value={ao.titre}
-                    onChange={(e) => void updateAoField({ titre: e.target.value })}
+              {form ? (
+                <>
+                  <AoIdentityCard
+                    form={form}
+                    onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
+                    societes={societes}
+                    donneurOrdreSuggestions={donneurOrdreSuggestions}
+                    mode="detail"
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Client / donneur d&apos;ordre
-                  </label>
-                  <p className="mt-1 text-sm font-medium">{clientNom}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Lieu</label>
-                  <Input
-                    className="mt-1"
-                    value={ao.lieu ?? ""}
-                    onChange={(e) => void updateAoField({ lieu: e.target.value || null })}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Type de marché</label>
-                  <Input
-                    className="mt-1"
-                    value={ao.type_marche ?? ""}
-                    onChange={(e) => void updateAoField({ type_marche: e.target.value || null })}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Date publication</label>
-                  <Input
-                    type="date"
-                    className="mt-1"
-                    value={ao.date_publication?.slice(0, 10) ?? ""}
-                    onChange={(e) =>
-                      void updateAoField({ date_publication: e.target.value || null })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Échéance dépôt</label>
-                  <Input
-                    type="date"
-                    className="mt-1"
-                    value={ao.date_limite_depot?.slice(0, 10) ?? ""}
-                    onChange={(e) =>
-                      void updateAoField({ date_limite_depot: e.target.value || null })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Montant estimé (€ HT)</label>
-                  <Input
-                    type="number"
-                    className="mt-1"
-                    value={ao.montant_estime ?? ""}
-                    onChange={(e) =>
-                      void updateAoField({
-                        montant_estime: e.target.value ? Number(e.target.value) : null,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Statut</label>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <StatusBadge statut={ao.statut} labels={AO_STATUT_LABELS} />
-                    <select
-                      className="h-8 rounded-md border px-2 text-xs"
-                      value={ao.statut}
-                      onChange={(e) => updateStatut(e.target.value as (typeof AO_STATUTS)[number])}
-                    >
-                      {AO_STATUTS.map((s) => (
-                        <option key={s} value={s}>
-                          {AO_STATUT_LABELS[s]}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Réponses enregistrées
+                      </label>
+                      <p className="mt-1 text-sm font-semibold">{reponses.length}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Documents</label>
+                      <p className="mt-1 text-sm font-semibold">{allowedDocumentCount}</p>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Société d&apos;exploitation
-                  </label>
-                  <select
-                    className="mt-1 h-9 w-full rounded-md border px-2 text-sm"
-                    value={ao.societe_attribuee_id ?? ""}
-                    onChange={(e) =>
-                      void updateAoField({ societe_attribuee_id: e.target.value || null })
-                    }
-                  >
-                    <option value="">—</option>
-                    {societes.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nom} ({s.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Réponses enregistrées</label>
-                  <p className="mt-1 text-sm font-semibold">{reponses.length}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Documents</label>
-                  <p className="mt-1 text-sm font-semibold">{documents.length}</p>
-                </div>
-                <div className="md:col-span-2 xl:col-span-3">
-                  <label className="text-xs font-medium text-muted-foreground">Notes internes</label>
-                  <Textarea
-                    className="mt-1"
-                    rows={3}
-                    value={ao.notes ?? ""}
-                    onChange={(e) => void updateAoField({ notes: e.target.value || null })}
-                  />
-                </div>
-              </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Chargement…</p>
+              )}
             </Panel>
+          </section>
+
+          {/* Documents — sous la fiche, liste verticale sur mobile */}
+          <section id="documents" className="scroll-mt-24">
+            <AoDocumentsWorkspace aoId={aoId} />
           </section>
 
           {/* Section 2 — Historique réponses */}
@@ -491,7 +490,7 @@ function AoDetailPage() {
                         <TableCell>v{r.version}</TableCell>
                         <TableCell className="font-medium">{r.libelle}</TableCell>
                         <TableCell className="max-w-[180px] truncate text-xs text-muted-foreground">
-                          {r.source_fichier ?? "—"}
+                          {r.source_fichier ?? ""}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">{r.statut}</Badge>
@@ -537,7 +536,7 @@ function AoDetailPage() {
                       <TableRow key={l.id}>
                         <TableCell className="whitespace-nowrap">{l.numero_prix}</TableCell>
                         <TableCell>{l.designation}</TableCell>
-                        <TableCell>{l.unite ?? "—"}</TableCell>
+                        <TableCell>{l.unite ?? ""}</TableCell>
                         <TableCell className="text-right tabular-nums">{l.quantite}</TableCell>
                         <TableCell className="text-right tabular-nums">{formatEuro(l.pu_ht)}</TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
@@ -668,11 +667,6 @@ function AoDetailPage() {
                 </div>
               </Panel>
             ) : null}
-          </section>
-
-          {/* Section 4 — Documents */}
-          <section id="documents" className="scroll-mt-24">
-            <AoDocumentsWorkspace aoId={aoId} />
           </section>
 
           {/* Section 5 — Mémoire technique */}

@@ -139,7 +139,7 @@ export function ProspectionCommuneDetailSheet({
                     {commune.nuance}
                   </span>
                 ) : (
-                  <p className="text-sm">—</p>
+                  <p className="text-sm"></p>
                 )}
               </div>
             </div>

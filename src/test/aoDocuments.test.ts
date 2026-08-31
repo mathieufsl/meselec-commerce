@@ -4,7 +4,10 @@ import {
   blobWithMime,
   formatFileSize,
   getAoDocumentPreviewKind,
+  guessAoDocumentTypeFromFileName,
   inferAoDocumentMime,
+  isAoUploadAllowedType,
+  triageIncomingAoFiles,
 } from "@/lib/aoDocuments";
 import type { AoDocument } from "@/lib/commerceTypes";
 
@@ -57,5 +60,31 @@ describe("aoDocuments", () => {
     expect(inferAoDocumentMime(doc)).toBe("application/pdf");
     const raw = new Blob(["%PDF"], { type: "application/octet-stream" });
     expect(blobWithMime(raw, doc).type).toBe("application/pdf");
+  });
+
+  it("restricts upload types to memoire, cctp and dpgf", () => {
+    expect(isAoUploadAllowedType("memoire")).toBe(true);
+    expect(isAoUploadAllowedType("cctp")).toBe(true);
+    expect(isAoUploadAllowedType("dpgf")).toBe(true);
+    expect(isAoUploadAllowedType("dce")).toBe(false);
+    expect(isAoUploadAllowedType("reponse")).toBe(false);
+  });
+
+  it("guesses document type from file name", () => {
+    expect(guessAoDocumentTypeFromFileName("CCTP_Epinay.pdf")).toBe("cctp");
+    expect(guessAoDocumentTypeFromFileName("lot1_DPGF.xlsx")).toBe("dpgf");
+    expect(guessAoDocumentTypeFromFileName("Memoire_technique_v2.docx")).toBe("memoire");
+    expect(guessAoDocumentTypeFromFileName("RC_consultation.pdf")).toBeNull();
+  });
+
+  it("triages dropped files and skips unrelated DCE pieces", () => {
+    const { accepted, skipped } = triageIncomingAoFiles([
+      new File(["a"], "CCTP.pdf"),
+      new File(["b"], "reglement.pdf"),
+      new File(["c"], "DPGF_lot.xlsx"),
+    ]);
+    expect(accepted.map((a) => a.type)).toEqual(["cctp", "dpgf"]);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]?.name).toBe("reglement.pdf");
   });
 });

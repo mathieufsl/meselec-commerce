@@ -30,16 +30,16 @@ export function CommerceProfileMenu({ className }: { className?: string }) {
         <Button
           variant="outline"
           className={cn(
-            "flex h-10 items-center justify-start gap-2.5 rounded-md border-border/60 bg-background/95 px-2.5 transition-colors hover:bg-muted/70",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border-border/60 bg-background/95 p-0 transition-colors hover:bg-muted/70 lg:h-10 lg:w-auto lg:justify-start lg:gap-2.5 lg:px-2.5",
             className,
           )}
         >
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-primary/15 text-sm font-semibold text-primary">
+          <Avatar className="h-7 w-7 lg:h-8 lg:w-8">
+            <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary lg:text-sm">
               {prenom ? prenom.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0 flex-1 text-left">
+          <div className="hidden min-w-0 flex-1 text-left lg:block">
             <div className="truncate text-sm font-medium">{prenom || "Profil"}</div>
             <div className="truncate text-xs text-muted-foreground">Compte</div>
           </div>

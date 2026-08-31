@@ -1,4 +1,4 @@
-export type MeselecAppId = "suivi" | "commerce" | "finance";
+export type MeselecAppId = "suivi" | "commerce" | "finance" | "renovation";
 
 export type MeselecApp = {
   id: MeselecAppId;
@@ -35,6 +35,12 @@ export function getMeselecApps(): MeselecApp[] {
       label: "RMSFin",
       shortLabel: "Fin",
       href: envUrl("VITE_FINANCE_APP_URL", "http://localhost:8082"),
+    },
+    {
+      id: "renovation",
+      label: "RMSRenov",
+      shortLabel: "Renov",
+      href: envUrl("VITE_RENOVATION_APP_URL", "http://localhost:8083"),
     },
   ];
 }

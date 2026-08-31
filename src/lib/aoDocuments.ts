@@ -3,6 +3,47 @@ import type { AoDocument, AoDocumentType } from "@/lib/commerceTypes";
 
 export const AO_DOCUMENTS_BUCKET = "ao-documents";
 
+/** Seuls ces types peuvent être déposés sur un AO (évite d'alourdir le dossier). */
+export const AO_UPLOAD_ALLOWED_TYPES = ["memoire", "cctp", "dpgf"] as const satisfies readonly AoDocumentType[];
+
+export type AoUploadAllowedType = (typeof AO_UPLOAD_ALLOWED_TYPES)[number];
+
+export function isAoUploadAllowedType(type: AoDocumentType): type is AoUploadAllowedType {
+  return (AO_UPLOAD_ALLOWED_TYPES as readonly string[]).includes(type);
+}
+
+/** Détection heuristique à partir du nom de fichier (dépôt dossier / glisser-déposer). */
+export function guessAoDocumentTypeFromFileName(fileName: string): AoUploadAllowedType | null {
+  const n = fileName.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+
+  if (/cctp/i.test(n)) return "cctp";
+  if (/dpgf/i.test(n)) return "dpgf";
+  if (/memoire/i.test(n) || /memo[\s._-]tech/i.test(n)) return "memoire";
+
+  return null;
+}
+
+export function triageIncomingAoFiles(files: File[]): {
+  accepted: Array<{ file: File; type: AoUploadAllowedType }>;
+  skipped: File[];
+} {
+  const accepted: Array<{ file: File; type: AoUploadAllowedType }> = [];
+  const skipped: File[] = [];
+
+  for (const file of files) {
+    if (file.size <= 0) continue;
+    const type = guessAoDocumentTypeFromFileName(file.name);
+    if (type) accepted.push({ file, type });
+    else skipped.push(file);
+  }
+
+  return { accepted, skipped };
+}
+
+export function filterAoDocumentsByAllowedTypes(docs: AoDocument[]): AoDocument[] {
+  return docs.filter((doc) => isAoUploadAllowedType(doc.type));
+}
+
 export const AO_DOCUMENT_TYPE_LABELS: Record<AoDocumentType, string> = {
   dce: "DCE",
   rc: "Règlement de consultation",
@@ -23,27 +64,27 @@ export const AO_DOCUMENT_GROUPS: Array<{
   types: AoDocumentType[];
 }> = [
   {
-    id: "dce",
-    label: "Documents AO (DCE)",
-    description: "Pièces du dossier de consultation émises par le donneur d'ordre.",
-    types: ["dce", "rc", "cctp", "ae", "dpgf", "bpu"],
+    id: "memoire",
+    label: "Mémoire technique",
+    description: "Mémoire technique de réponse.",
+    types: ["memoire"],
   },
   {
-    id: "reponse",
-    label: "Notre réponse",
-    description: "Offre déposée, chiffrage exporté, mémoire et pièces de réponse.",
-    types: ["reponse", "memoire", "annexe"],
+    id: "cctp",
+    label: "CCTP",
+    description: "Cahier des clauses techniques particulières.",
+    types: ["cctp"],
   },
   {
-    id: "autre",
-    label: "Autres pièces",
-    description: "Échanges, compléments, notes internes partagées.",
-    types: ["autre"],
+    id: "dpgf",
+    label: "DPGF",
+    description: "Décomposition du prix global et forfaitaire.",
+    types: ["dpgf"],
   },
 ];
 
 export function formatFileSize(bytes: number | null | undefined): string {
-  if (!bytes || bytes <= 0) return "—";
+  if (!bytes || bytes <= 0) return "";
   if (bytes < 1024) return `${bytes} o`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
@@ -81,6 +122,11 @@ export async function uploadAoDocument(params: {
   uploadedByEmail?: string | null;
 }): Promise<AoDocument> {
   const { aoId, type, file, notes, uploadedBy, uploadedByEmail } = params;
+  if (!isAoUploadAllowedType(type)) {
+    throw new Error(
+      "Type de document non autorisé. Seuls le mémoire technique, le CCTP et la DPGF peuvent être déposés.",
+    );
+  }
   const storagePath = buildAoDocumentStoragePath(aoId, type, file.name);
   const version = await nextAoDocumentVersion(aoId, file.name);
 

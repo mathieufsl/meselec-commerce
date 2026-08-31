@@ -1,21 +1,24 @@
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
-import type { AppelOffre, AoStatut } from "@/lib/commerceTypes";
+import { AO_SECTEUR_LABELS, type AppelOffre, type AoSecteurCode, type AoStatut } from "@/lib/commerceTypes";
 import { daysUntil, formatEuro } from "@/lib/bpuEngine";
+import { cleanDisplaySeparators } from "@/lib/displayText";
 import { cn } from "@/lib/utils";
 import { Calendar, MapPin, Paperclip } from "lucide-react";
 
 function cardContent(ao: AppelOffre) {
   const clientName = ao.clients?.nom_entreprise?.trim();
-  const secondary = clientName || ao.titre;
+  const titre = cleanDisplaySeparators(ao.titre);
+  const secondary = clientName || titre;
   const detail =
-    clientName && ao.titre && ao.titre.toLowerCase() !== clientName.toLowerCase() ? ao.titre : null;
+    clientName && titre && titre.toLowerCase() !== clientName.toLowerCase() ? titre : null;
+  const lieuRaw = ao.lieu?.trim() ?? "";
   const lieu =
-    ao.lieu &&
-    !secondary.toLowerCase().includes(ao.lieu.toLowerCase()) &&
-    !(detail?.toLowerCase().includes(ao.lieu.toLowerCase()) ?? false)
-      ? ao.lieu
+    lieuRaw &&
+    !secondary.toLowerCase().includes(lieuRaw.toLowerCase()) &&
+    !(detail?.toLowerCase().includes(lieuRaw.toLowerCase()) ?? false)
+      ? cleanDisplaySeparators(lieuRaw)
       : null;
   return { primary: ao.reference, secondary, detail, lieu };
 }
@@ -27,6 +30,7 @@ export function CommerceAoCard({
   variant = "default",
   draggable,
   onDragStart,
+  onSelect,
 }: {
   ao: AppelOffre;
   statut: AoStatut;
@@ -34,6 +38,7 @@ export function CommerceAoCard({
   variant?: "default" | "kanban";
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  onSelect?: (ao: AppelOffre) => void;
 }) {
   const draggedRef = useRef(false);
   const days = daysUntil(ao.date_limite_depot);
@@ -43,8 +48,19 @@ export function CommerceAoCard({
   const isKanban = variant === "kanban";
 
   const societeCode = ao.societes_exploitation?.code;
+  const secteurCodes = (ao.ao_secteurs ?? []).map((s) => s.secteur as AoSecteurCode);
 
   const metaItems = [
+    secteurCodes.length > 0
+      ? secteurCodes.map((code) => (
+          <span
+            key={code}
+            className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary"
+          >
+            {AO_SECTEUR_LABELS[code]}
+          </span>
+        ))
+      : null,
     societeCode ? (
       <span
         key="societe"
@@ -83,6 +99,99 @@ export function CommerceAoCard({
     ) : null,
   ].filter(Boolean);
 
+  const className = cn(
+    "group relative block overflow-hidden rounded-lg border border-border/60 bg-card transition-all hover:border-border hover:shadow-sm",
+    isKanban
+      ? "p-2.5 pl-3"
+      : "min-h-[68px] rounded-xl p-3.5 pl-4 shadow-sm active:bg-muted/40 hover:bg-muted/20",
+    draggable && "cursor-grab active:cursor-grabbing active:shadow-md",
+    onSelect && "cursor-pointer text-left w-full",
+  );
+
+  const inner = (
+    <>
+      <span
+        className={cn(
+          "absolute inset-y-0 left-0 w-0.5",
+          AO_STATUT_STYLES[statut].bar,
+          isKanban && "w-1",
+        )}
+      />
+
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "truncate font-semibold leading-snug text-foreground",
+              "text-sm",
+            )}
+          >
+            {primary}
+          </p>
+          {secondary ? (
+            <p
+              className={cn(
+                "truncate leading-snug text-muted-foreground",
+              "text-xs",
+              )}
+            >
+              {secondary}
+            </p>
+          ) : null}
+          {detail && !isKanban ? (
+            <p className="truncate text-xs leading-snug text-muted-foreground/80">{detail}</p>
+          ) : null}
+        </div>
+        {hasAmount ? (
+          <span
+            className={cn(
+              "shrink-0 font-semibold tabular-nums text-foreground/80",
+              "text-sm",
+            )}
+          >
+            {formatEuro(ao.montant_estime)}
+          </span>
+        ) : null}
+      </div>
+
+      {metaItems.length > 0 ? (
+        <div
+          className={cn(
+            "mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground",
+            "text-xs",
+          )}
+        >
+          {metaItems}
+        </div>
+      ) : null}
+    </>
+  );
+
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        draggable={draggable}
+        onDragStart={(e) => {
+          draggedRef.current = true;
+          onDragStart?.(e);
+        }}
+        onDragEnd={() => {
+          window.setTimeout(() => {
+            draggedRef.current = false;
+          }, 0);
+        }}
+        onClick={() => {
+          if (draggedRef.current) return;
+          onSelect(ao);
+        }}
+        className={className}
+      >
+        {inner}
+      </button>
+    );
+  }
+
   return (
     <Link
       to="/appels-offres/$aoId"
@@ -102,69 +211,9 @@ export function CommerceAoCard({
           e.preventDefault();
         }
       }}
-      className={cn(
-        "group relative block overflow-hidden rounded-lg border border-border/60 bg-card transition-all hover:border-border hover:shadow-sm",
-        isKanban
-          ? "p-2.5 pl-3"
-          : "min-h-[68px] rounded-xl p-3.5 pl-4 shadow-sm active:bg-muted/40 hover:bg-muted/20",
-        draggable && "cursor-grab active:cursor-grabbing active:shadow-md",
-      )}
-
+      className={className}
     >
-      <span
-        className={cn(
-          "absolute inset-y-0 left-0 w-0.5",
-          AO_STATUT_STYLES[statut].bar,
-          isKanban && "w-1",
-        )}
-      />
-
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p
-            className={cn(
-              "truncate font-semibold leading-snug text-foreground",
-              isKanban ? "text-[13px]" : "text-sm",
-            )}
-          >
-            {primary}
-          </p>
-          {secondary ? (
-            <p
-              className={cn(
-                "truncate leading-snug text-muted-foreground",
-                isKanban ? "text-[11px]" : "text-xs",
-              )}
-            >
-              {secondary}
-            </p>
-          ) : null}
-          {detail && !isKanban ? (
-            <p className="truncate text-[11px] leading-snug text-muted-foreground/80">{detail}</p>
-          ) : null}
-        </div>
-        {hasAmount ? (
-          <span
-            className={cn(
-              "shrink-0 font-semibold tabular-nums text-foreground/80",
-              isKanban ? "text-[11px]" : "text-sm",
-            )}
-          >
-            {formatEuro(ao.montant_estime)}
-          </span>
-        ) : null}
-      </div>
-
-      {metaItems.length > 0 ? (
-        <div
-          className={cn(
-            "mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground",
-            isKanban ? "text-[10px]" : "text-[11px]",
-          )}
-        >
-          {metaItems}
-        </div>
-      ) : null}
+      {inner}
     </Link>
   );
 }
