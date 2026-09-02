@@ -15,6 +15,7 @@ import { Route as FournisseursRouteImport } from './routes/fournisseurs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as ProspectionRouteImport } from './routes/prospection'
+import { Route as VeilleRouteImport } from './routes/veille'
 import { Route as AppelsOffresIndexRouteImport } from './routes/appels-offres/index'
 import { Route as AppelsOffresAoIdRouteImport } from './routes/appels-offres/$aoId'
 import { Route as CataloguesIndexRouteImport } from './routes/catalogues/index'
@@ -50,6 +51,11 @@ const ProspectionRoute = ProspectionRouteImport.update({
   path: '/prospection',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VeilleRoute = VeilleRouteImport.update({
+  id: '/veille',
+  path: '/veille',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppelsOffresIndexRoute = AppelsOffresIndexRouteImport.update({
   id: '/appels-offres/',
   path: '/appels-offres/',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/profil': typeof ProfilRoute
   '/prospection': typeof ProspectionRoute
+  '/veille': typeof VeilleRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/appels-offres/': typeof AppelsOffresIndexRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/profil': typeof ProfilRoute
   '/prospection': typeof ProspectionRoute
+  '/veille': typeof VeilleRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/appels-offres': typeof AppelsOffresIndexRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/profil': typeof ProfilRoute
   '/prospection': typeof ProspectionRoute
+  '/veille': typeof VeilleRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/appels-offres/': typeof AppelsOffresIndexRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profil'
     | '/prospection'
+    | '/veille'
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
     | '/appels-offres/'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profil'
     | '/prospection'
+    | '/veille'
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
     | '/appels-offres'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profil'
     | '/prospection'
+    | '/veille'
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
     | '/appels-offres/'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfilRoute: typeof ProfilRoute
   ProspectionRoute: typeof ProspectionRoute
+  VeilleRoute: typeof VeilleRoute
   AppelsOffresAoIdRoute: typeof AppelsOffresAoIdRoute
   CataloguesCatalogueIdRoute: typeof CataloguesCatalogueIdRoute
   AppelsOffresIndexRoute: typeof AppelsOffresIndexRoute
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProspectionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/veille': {
+      id: '/veille'
+      path: '/veille'
+      fullPath: '/veille'
+      preLoaderRoute: typeof VeilleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/appels-offres/': {
       id: '/appels-offres/'
       path: '/appels-offres'
@@ -242,6 +262,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfilRoute: ProfilRoute,
   ProspectionRoute: ProspectionRoute,
+  VeilleRoute: VeilleRoute,
   AppelsOffresAoIdRoute: AppelsOffresAoIdRoute,
   CataloguesCatalogueIdRoute: CataloguesCatalogueIdRoute,
   AppelsOffresIndexRoute: AppelsOffresIndexRoute,
