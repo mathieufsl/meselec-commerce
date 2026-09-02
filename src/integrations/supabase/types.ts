@@ -893,6 +893,74 @@ export type Database = {
         }
         Relationships: []
       }
+      veille_annonces: {
+        Row: {
+          acheteur: string | null
+          ao_id: string | null
+          cpv: string | null
+          created_at: string
+          date_limite: string | null
+          date_parution: string | null
+          departement: string | null
+          domaines: string[]
+          id: string
+          intitule: string
+          lien: string | null
+          raw: Json
+          secteurs: string[]
+          source: string
+          source_id: string
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          acheteur?: string | null
+          ao_id?: string | null
+          cpv?: string | null
+          created_at?: string
+          date_limite?: string | null
+          date_parution?: string | null
+          departement?: string | null
+          domaines?: string[]
+          id?: string
+          intitule?: string
+          lien?: string | null
+          raw?: Json
+          secteurs?: string[]
+          source?: string
+          source_id: string
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          acheteur?: string | null
+          ao_id?: string | null
+          cpv?: string | null
+          created_at?: string
+          date_limite?: string | null
+          date_parution?: string | null
+          departement?: string | null
+          domaines?: string[]
+          id?: string
+          intitule?: string
+          lien?: string | null
+          raw?: Json
+          secteurs?: string[]
+          source?: string
+          source_id?: string
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veille_annonces_ao_id_fkey"
+            columns: ["ao_id"]
+            isOneToOne: false
+            referencedRelation: "appels_offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
