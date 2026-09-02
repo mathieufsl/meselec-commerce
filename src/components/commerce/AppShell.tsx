@@ -5,6 +5,8 @@ import {
   BookOpen,
   Users,
   MapPin,
+  Radar,
+
   Settings,
   RotateCw,
   Plus,
