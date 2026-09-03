@@ -68,8 +68,18 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
         }
         const { collecterVeille } = await import("@/lib/veilleCollect.server");
 
+        // Options facultatives (renvoi manuel) : fenêtre de collecte et inclusion
+        // des annonces déjà connues sur la période.
+        let opts: { fenetreJours?: number; inclureExistantes?: boolean } = {};
+        try {
+          opts = (await request.json()) as typeof opts;
+        } catch {
+          opts = {};
+        }
+        const fenetreJours = Math.min(Math.max(opts.fenetreJours ?? 1, 1), 30);
+
         const collecte = await collecterVeille(supabaseAdmin, {
-          fenetreJours: 1,
+          fenetreJours,
           idfSeulement: true,
         });
         if (!collecte.ok) {
