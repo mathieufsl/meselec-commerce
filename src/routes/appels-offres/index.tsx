@@ -186,7 +186,7 @@ function AppelsOffresPage() {
         flush
         syncLabel={syncLabel}
         primaryAction={{ label: "Créer un AO", onClick: () => setWizardOpen(true) }}
-        actions={
+        inlineAction={
           <Button variant="outline" size="sm" className="h-9 gap-2 px-3 sm:h-8" asChild>
             <Link to="/veille">
               <Radar className="h-4 w-4" />
