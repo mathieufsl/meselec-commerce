@@ -40,7 +40,7 @@ import { cleanDisplaySeparators } from "@/lib/displayText";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { AppelOffre } from "@/lib/commerceTypes";
-import { Briefcase, Columns3, LayoutList, Paperclip, Search, SlidersHorizontal } from "lucide-react";
+import { Briefcase, Columns3, LayoutList, Paperclip, Radar, Search, SlidersHorizontal } from "lucide-react";
 
 type AoViewMode = "liste" | "kanban";
 
@@ -186,6 +186,14 @@ function AppelsOffresPage() {
         flush
         syncLabel={syncLabel}
         primaryAction={{ label: "Créer un AO", onClick: () => setWizardOpen(true) }}
+        actions={
+          <Button variant="outline" size="sm" className="h-9 gap-2 px-3 sm:h-8" asChild>
+            <Link to="/veille">
+              <Radar className="h-4 w-4" />
+              <span className="sr-only sm:not-sr-only">Veille AO</span>
+            </Link>
+          </Button>
+        }
         headerExtra={<div className="hidden sm:block">{viewToggle}</div>}
         contentClassName="flex min-h-0 flex-col overflow-hidden"
       >
