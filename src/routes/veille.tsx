@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ExternalLink, EyeOff, Loader2, RefreshCw, Send, Radar } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/commerce/AppShell";
+import { VeilleRecipientsDialog } from "@/components/commerce/VeilleRecipientsDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,7 @@ function VeillePage() {
       titleIcon={Radar}
       actions={
         <div className="flex items-center gap-2">
+          <VeilleRecipientsDialog />
           <Button
             variant="outline"
             size="sm"
