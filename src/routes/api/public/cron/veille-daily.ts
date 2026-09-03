@@ -100,14 +100,26 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           year: "numeric",
           timeZone: "Europe/Paris",
         });
-        const annonces = collecte.annoncesNouvelles.map((a) => ({
+        let annonces = collecte.annoncesNouvelles.map((a) => ({
           intitule: a.intitule,
           acheteur: a.acheteur,
           departement: a.departement,
           date_limite: a.date_limite,
           lien: a.lien,
-          domaines: a.domaines,
+          domaines: a.domaines as string[],
         }));
+
+        if (opts.inclureExistantes) {
+          const depuis = new Date(Date.now() - fenetreJours * 86400000)
+            .toISOString()
+            .slice(0, 10);
+          const { data: rows } = await supabaseAdmin
+            .from("veille_annonces")
+            .select("intitule, acheteur, departement, date_limite, lien, domaines")
+            .gte("date_parution", depuis)
+            .order("date_parution", { ascending: false });
+          annonces = (rows ?? []) as typeof annonces;
+        }
 
         const templateData = {
           date: dateLabel,
