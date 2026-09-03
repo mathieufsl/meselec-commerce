@@ -61,6 +61,7 @@ export function AppShell({
   titleIcon: TitleIcon,
   children,
   actions,
+  inlineAction,
   back,
   banner,
   belowHeader,
@@ -76,6 +77,7 @@ export function AppShell({
   titleIcon?: LucideIcon;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  inlineAction?: React.ReactNode;
   back?: { to: string; label?: string; onNavigate?: () => void };
   banner?: React.ReactNode;
   belowHeader?: React.ReactNode;
@@ -212,6 +214,9 @@ export function AppShell({
                     {banner ? (
                       <div className="hidden items-center gap-1.5 sm:flex">{banner}</div>
                     ) : null}
+                    {inlineAction ? (
+                      <div className="flex shrink-0 items-center">{inlineAction}</div>
+                    ) : null}
                     <div className="hidden items-center gap-2 sm:flex">{actions}</div>
                     {primaryAction ? (
                       <Button
@@ -228,9 +233,8 @@ export function AppShell({
                   </div>
                 </div>
 
-                {(actions || banner || headerExtra) && (
+                {(actions || banner) && (
                   <div className="mt-1.5 flex items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
-                    {headerExtra}
                     {banner}
                     {actions}
                   </div>
