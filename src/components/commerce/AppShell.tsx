@@ -61,6 +61,7 @@ export function AppShell({
   titleIcon: TitleIcon,
   children,
   actions,
+  inlineAction,
   back,
   banner,
   belowHeader,
@@ -76,6 +77,7 @@ export function AppShell({
   titleIcon?: LucideIcon;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  inlineAction?: React.ReactNode;
   back?: { to: string; label?: string; onNavigate?: () => void };
   banner?: React.ReactNode;
   belowHeader?: React.ReactNode;
