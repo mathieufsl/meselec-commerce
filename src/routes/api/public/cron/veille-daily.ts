@@ -1,11 +1,43 @@
+import * as React from "react";
+import { render } from "@react-email/render";
 import { createFileRoute } from "@tanstack/react-router";
-import { sendTemplateEmail } from "@/lib/email-templates/send-email";
+import { TEMPLATES } from "@/lib/email-templates/registry";
+
+const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
+const FROM = "RMS Commerce <veille@meselec.fr>";
 
 /**
  * Récapitulatif quotidien de veille AO (planifié à 10h, heure de Paris, via pg_cron).
  * Le jeton porteur est stocké dans `public.cron_config` (généré en base, jamais exposé) :
  * la route le compare à celui fourni dans l'en-tête Authorization.
+ * L'envoi passe par Resend (connecteur gateway) avec le domaine vérifié meselec.fr.
  */
+async function sendVeilleEmail(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  const lovableKey = process.env["LOVABLE_API_KEY"];
+  const resendKey = process.env["RESEND_API_KEY"];
+  if (!lovableKey || !resendKey) {
+    return { ok: false, status: 500, error: "Configuration e-mail manquante" };
+  }
+  const res = await fetch(`${RESEND_GATEWAY}/emails`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": resendKey,
+    },
+    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`[veille-daily] Resend error [${res.status}]: ${body}`);
+    return { ok: false, status: res.status, error: body };
+  }
+  return { ok: true, status: res.status };
+}
 async function authenticateCron(request: Request, supabaseAdmin: any): Promise<boolean> {
   const match = /^Bearer ([^\s,]+)$/.exec(request.headers.get("authorization") ?? "");
   const token = match?.[1];
@@ -56,7 +88,6 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           year: "numeric",
           timeZone: "Europe/Paris",
         });
-        const dateKey = new Date().toISOString().slice(0, 10);
         const annonces = collecte.annoncesNouvelles.map((a) => ({
           intitule: a.intitule,
           acheteur: a.acheteur,
@@ -74,29 +105,28 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           appUrl: "https://commerce.rmsenergies.com/veille",
         };
 
+        const entry = TEMPLATES["veille-recap"];
+        if (!entry) {
+          return Response.json({ ok: false, error: "Template introuvable" }, { status: 500 });
+        }
+        const element = React.createElement(entry.component, templateData);
+        const html = await render(element);
+        const subject =
+          typeof entry.subject === "function" ? entry.subject(templateData) : entry.subject;
+
         let sent = 0;
-        let suppressed = 0;
         let failed = 0;
         for (const r of recipients ?? []) {
-          try {
-            const out = await sendTemplateEmail("veille-recap", r.email, {
-              templateData,
-              idempotencyKey: `veille-recap-${dateKey}-${r.email}`,
-            });
-            if (out.sent) sent += 1;
-            else suppressed += 1;
-          } catch (e) {
-            failed += 1;
-            console.error("[veille-daily] send failed:", e instanceof Error ? e.message : e);
-          }
+          const out = await sendVeilleEmail(r.email, subject, html);
+          if (out.ok) sent += 1;
+          else failed += 1;
         }
 
         return Response.json({
-          ok: true,
+          ok: failed === 0,
           nouvelles: annonces.length,
           destinataires: (recipients ?? []).length,
           sent,
-          suppressed,
           failed,
         });
       },
