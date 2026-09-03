@@ -20,6 +20,8 @@ import { Route as AppelsOffresIndexRouteImport } from './routes/appels-offres/in
 import { Route as AppelsOffresAoIdRouteImport } from './routes/appels-offres/$aoId'
 import { Route as CataloguesIndexRouteImport } from './routes/catalogues/index'
 import { Route as CataloguesCatalogueIdRouteImport } from './routes/catalogues/$catalogueId'
+import { Route as ApiPublicCronVeilleDailyRouteImport } from './routes/api/public/cron/veille-daily'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +78,18 @@ const CataloguesCatalogueIdRoute = CataloguesCatalogueIdRouteImport.update({
   path: '/catalogues/$catalogueId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronVeilleDailyRoute =
+  ApiPublicCronVeilleDailyRouteImport.update({
+    id: '/api/public/cron/veille-daily',
+    path: '/api/public/cron/veille-daily',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +103,8 @@ export interface FileRoutesByFullPath {
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/appels-offres/': typeof AppelsOffresIndexRoute
   '/catalogues/': typeof CataloguesIndexRoute
+  '/api/public/cron/veille-daily': typeof ApiPublicCronVeilleDailyRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +118,8 @@ export interface FileRoutesByTo {
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/appels-offres': typeof AppelsOffresIndexRoute
   '/catalogues': typeof CataloguesIndexRoute
+  '/api/public/cron/veille-daily': typeof ApiPublicCronVeilleDailyRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +134,8 @@ export interface FileRoutesById {
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/appels-offres/': typeof AppelsOffresIndexRoute
   '/catalogues/': typeof CataloguesIndexRoute
+  '/api/public/cron/veille-daily': typeof ApiPublicCronVeilleDailyRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +151,8 @@ export interface FileRouteTypes {
     | '/catalogues/$catalogueId'
     | '/appels-offres/'
     | '/catalogues/'
+    | '/api/public/cron/veille-daily'
+    | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +166,8 @@ export interface FileRouteTypes {
     | '/catalogues/$catalogueId'
     | '/appels-offres'
     | '/catalogues'
+    | '/api/public/cron/veille-daily'
+    | '/lovable/email/transactional/preview'
   id:
     | '__root__'
     | '/'
@@ -157,6 +181,8 @@ export interface FileRouteTypes {
     | '/catalogues/$catalogueId'
     | '/appels-offres/'
     | '/catalogues/'
+    | '/api/public/cron/veille-daily'
+    | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +197,8 @@ export interface RootRouteChildren {
   CataloguesCatalogueIdRoute: typeof CataloguesCatalogueIdRoute
   AppelsOffresIndexRoute: typeof AppelsOffresIndexRoute
   CataloguesIndexRoute: typeof CataloguesIndexRoute
+  ApiPublicCronVeilleDailyRoute: typeof ApiPublicCronVeilleDailyRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,6 +280,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CataloguesCatalogueIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/veille-daily': {
+      id: '/api/public/cron/veille-daily'
+      path: '/api/public/cron/veille-daily'
+      fullPath: '/api/public/cron/veille-daily'
+      preLoaderRoute: typeof ApiPublicCronVeilleDailyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -267,6 +309,8 @@ const rootRouteChildren: RootRouteChildren = {
   CataloguesCatalogueIdRoute: CataloguesCatalogueIdRoute,
   AppelsOffresIndexRoute: AppelsOffresIndexRoute,
   CataloguesIndexRoute: CataloguesIndexRoute,
+  ApiPublicCronVeilleDailyRoute: ApiPublicCronVeilleDailyRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
