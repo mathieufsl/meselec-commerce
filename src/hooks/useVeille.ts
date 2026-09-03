@@ -101,3 +101,68 @@ export function useImportVeilleToAo() {
     },
   });
 }
+
+export type VeilleRecipient = {
+  id: string;
+  email: string;
+  nom: string | null;
+  actif: boolean;
+};
+
+export function useVeilleRecipients() {
+  return useQuery({
+    queryKey: ["veille-recipients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("veille_email_recipients")
+        .select("id, email, nom, actif")
+        .order("email");
+      if (error) throw error;
+      return (data ?? []) as VeilleRecipient[];
+    },
+  });
+}
+
+export function useAddVeilleRecipient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ email, nom }: { email: string; nom?: string }) => {
+      const { error } = await supabase
+        .from("veille_email_recipients")
+        .insert({ email: email.trim().toLowerCase(), nom: nom?.trim() || null } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-recipients"] });
+    },
+  });
+}
+
+export function useUpdateVeilleRecipient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, actif }: { id: string; actif: boolean }) => {
+      const { error } = await supabase
+        .from("veille_email_recipients")
+        .update({ actif } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-recipients"] });
+    },
+  });
+}
+
+export function useDeleteVeilleRecipient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("veille_email_recipients").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-recipients"] });
+    },
+  });
+}
