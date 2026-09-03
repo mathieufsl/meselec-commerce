@@ -961,6 +961,63 @@ export type Database = {
           },
         ]
       }
+      veille_digest_runs: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          inserted_count: number
+          new_count: number
+          recipients_count: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          inserted_count?: number
+          new_count?: number
+          recipients_count?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          inserted_count?: number
+          new_count?: number
+          recipients_count?: number
+          status?: string
+        }
+        Relationships: []
+      }
+      veille_email_recipients: {
+        Row: {
+          actif: boolean
+          created_at: string
+          email: string
+          id: string
+          nom: string | null
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          nom?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          nom?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
