@@ -191,13 +191,8 @@ function VeillePage() {
                     disabled={a.statut === "importe" || importAo.isPending}
                     onClick={() =>
                       importAo.mutate(a, {
-                        onSuccess: (aoId) => {
-                          toast.success("Appel d'offres créé");
-                          void navigate({
-                            to: "/appels-offres/$aoId",
-                            params: { aoId },
-                          });
-                        },
+                        onSuccess: () =>
+                          toast.success("Appel d'offres créé dans les AO"),
                         onError: (e: unknown) =>
                           toast.error(e instanceof Error ? e.message : "Échec de l'import"),
                       })
