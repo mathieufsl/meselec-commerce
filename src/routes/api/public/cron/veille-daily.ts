@@ -88,7 +88,6 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           year: "numeric",
           timeZone: "Europe/Paris",
         });
-        const dateKey = new Date().toISOString().slice(0, 10);
         const annonces = collecte.annoncesNouvelles.map((a) => ({
           intitule: a.intitule,
           acheteur: a.acheteur,
