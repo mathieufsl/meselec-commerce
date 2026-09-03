@@ -46,13 +46,15 @@ async function authenticateCron(request: Request, supabaseAdmin: any): Promise<b
   const { data, error } = await supabaseAdmin
     .from("cron_config")
     .select("value")
-    .eq("key", "veille_cron_token")
-    .maybeSingle();
-  if (error || !data?.value) return false;
+    .in("key", ["veille_cron_token", "veille_cron_token_test"]);
+  if (error || !data || data.length === 0) return false;
 
   const { createHash, timingSafeEqual } = await import("node:crypto");
   const digest = (v: string) => createHash("sha256").update(v, "utf8").digest();
-  return timingSafeEqual(digest(token), digest(String(data.value)));
+  const provided = digest(token);
+  return data.some((row: { value: string }) =>
+    timingSafeEqual(provided, digest(String(row.value))),
+  );
 }
 
 export const Route = createFileRoute("/api/public/cron/veille-daily")({
