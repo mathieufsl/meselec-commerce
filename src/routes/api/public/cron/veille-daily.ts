@@ -106,29 +106,28 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           appUrl: "https://commerce.rmsenergies.com/veille",
         };
 
+        const entry = TEMPLATES["veille-recap"];
+        if (!entry) {
+          return Response.json({ ok: false, error: "Template introuvable" }, { status: 500 });
+        }
+        const element = React.createElement(entry.component, templateData);
+        const html = await render(element);
+        const subject =
+          typeof entry.subject === "function" ? entry.subject(templateData) : entry.subject;
+
         let sent = 0;
-        let suppressed = 0;
         let failed = 0;
         for (const r of recipients ?? []) {
-          try {
-            const out = await sendTemplateEmail("veille-recap", r.email, {
-              templateData,
-              idempotencyKey: `veille-recap-${dateKey}-${r.email}`,
-            });
-            if (out.sent) sent += 1;
-            else suppressed += 1;
-          } catch (e) {
-            failed += 1;
-            console.error("[veille-daily] send failed:", e instanceof Error ? e.message : e);
-          }
+          const out = await sendVeilleEmail(r.email, subject, html);
+          if (out.ok) sent += 1;
+          else failed += 1;
         }
 
         return Response.json({
-          ok: true,
+          ok: failed === 0,
           nouvelles: annonces.length,
           destinataires: (recipients ?? []).length,
           sent,
-          suppressed,
           failed,
         });
       },
