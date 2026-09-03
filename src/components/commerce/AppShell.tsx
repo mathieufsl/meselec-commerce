@@ -233,9 +233,8 @@ export function AppShell({
                   </div>
                 </div>
 
-                {(actions || banner || headerExtra) && (
+                {(actions || banner) && (
                   <div className="mt-1.5 flex items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
-                    {headerExtra}
                     {banner}
                     {actions}
                   </div>
