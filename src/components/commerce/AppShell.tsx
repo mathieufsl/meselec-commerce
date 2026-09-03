@@ -214,6 +214,9 @@ export function AppShell({
                     {banner ? (
                       <div className="hidden items-center gap-1.5 sm:flex">{banner}</div>
                     ) : null}
+                    {inlineAction ? (
+                      <div className="flex shrink-0 items-center">{inlineAction}</div>
+                    ) : null}
                     <div className="hidden items-center gap-2 sm:flex">{actions}</div>
                     {primaryAction ? (
                       <Button
