@@ -5,8 +5,6 @@ import {
   BookOpen,
   Users,
   MapPin,
-  Radar,
-
   Settings,
   RotateCw,
   Plus,
@@ -32,7 +30,6 @@ import type { AoStatut } from "@/lib/commerceTypes";
 const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean }> = [
   { to: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
   { to: "/appels-offres", label: "Appels d'offres", icon: Briefcase },
-  { to: "/veille", label: "Veille AO", icon: Radar },
   { to: "/catalogues", label: "Catalogues BPU", icon: BookOpen },
   { to: "/fournisseurs", label: "Fournisseurs", icon: Users },
   { to: "/prospection", label: "Prospection", icon: MapPin },
@@ -42,7 +39,6 @@ const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean 
 const MOBILE_LABELS: Record<string, string> = {
   "/": "Accueil",
   "/appels-offres": "AO",
-  "/veille": "Veille",
   "/catalogues": "BPU",
   "/fournisseurs": "Fourn.",
   "/prospection": "Prospect",
