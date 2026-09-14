@@ -807,6 +807,7 @@ export type Database = {
         Row: {
           commune_key: string
           contact: string
+          contacts_json: Json
           gestion: string | null
           notes: string
           prestataire: string
@@ -817,6 +818,7 @@ export type Database = {
         Insert: {
           commune_key: string
           contact?: string
+          contacts_json?: Json
           gestion?: string | null
           notes?: string
           prestataire?: string
@@ -827,6 +829,7 @@ export type Database = {
         Update: {
           commune_key?: string
           contact?: string
+          contacts_json?: Json
           gestion?: string | null
           notes?: string
           prestataire?: string
