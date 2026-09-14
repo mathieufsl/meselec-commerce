@@ -6,6 +6,7 @@ import {
   type ProspectionCommuneState,
   type ProspectionStateMap,
 } from "@/lib/prospection/api";
+import { summarizeContacts } from "@/lib/prospection/contacts";
 import { ProspectionCommuneDetailSheet } from "@/components/prospection/ProspectionCommuneDetailSheet";
 import { ProspectionCommuneMobileCard } from "@/components/prospection/ProspectionCommuneMobileCard";
 import { ProspectionScriptsModal } from "@/components/prospection/ProspectionScriptsModal";
@@ -58,6 +59,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   gestion: "",
   prestataire: "",
   contact: "",
+  contacts: [],
   notes: "",
 };
 const STATUS_TABS: ProspectionStatusTab[] = ["all", "todo", "inprogress", "done", "callback", "refused"];
@@ -104,7 +106,7 @@ function prospectionFiltersEqual(a: ProspectionListFilters, b: ProspectionListFi
 }
 
 function rowKey(row: ProspectionCommuneState): string {
-  return `${row.status}|${row.gestion}|${row.prestataire}|${row.contact}|${row.notes}`;
+  return `${row.status}|${row.gestion}|${row.prestataire}|${summarizeContacts(row.contacts)}|${row.notes}`;
 }
 
 function getChangedRows(
@@ -217,10 +219,13 @@ export function ProspectionWorkspace() {
   }, [loadFromServer]);
 
   const updateRow = useCallback((communeKey: string, patch: Partial<ProspectionCommuneState>) => {
-    setState((prev) => ({
-      ...prev,
-      [communeKey]: { ...DEFAULT_ROW, ...prev[communeKey], ...patch },
-    }));
+    setState((prev) => {
+      const next = { ...DEFAULT_ROW, ...prev[communeKey], ...patch };
+      if (patch.contacts) {
+        next.contact = summarizeContacts(patch.contacts);
+      }
+      return { ...prev, [communeKey]: next };
+    });
   }, []);
 
   const changedRows = useMemo(
@@ -332,7 +337,8 @@ export function ProspectionWorkspace() {
     let csv = "Departement;Commune;Habitants;Agglo;Maire;Qui gere EP;Statut;Prestataire EP;Contact;Notes\n";
     for (const c of baseFiltered) {
       const s = rows[c.key] ?? DEFAULT_ROW;
-      csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${s.gestion || ""}";"${s.status}";"${s.prestataire || ""}";"${s.contact || ""}";"${s.notes || ""}"\n`;
+      const contactSummary = summarizeContacts(s.contacts) || s.contact || "";
+      csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${s.gestion || ""}";"${s.status}";"${s.prestataire || ""}";"${contactSummary}";"${s.notes || ""}"\n`;
     }
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);

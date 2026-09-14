@@ -171,13 +171,11 @@ export const ProspectionCommuneRow = memo(
             )}
           />
         </TableCell>
-        <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
-          <ProspectionTextInput
-            value={row.contact}
-            placeholder="Nom + tél"
-            onCommit={(contact) => onPatch(communeKey, { contact })}
-            className="h-8 w-full min-w-0 text-xs"
-          />
+        <TableCell
+          className="max-w-0 truncate px-2 py-1.5 text-xs text-muted-foreground"
+          title={row.contact || "Ouvrir le détail pour gérer les contacts"}
+        >
+          {row.contact || "—"}
         </TableCell>
         <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
           <ProspectionTextInput

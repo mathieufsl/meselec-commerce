@@ -65,9 +65,9 @@ export const ProspectionCommuneMobileCard = memo(function ProspectionCommuneMobi
           ) : null}
         </div>
 
-        {row.contact || row.notes ? (
+        {row.contact || row.notes || row.contacts.length > 0 ? (
           <p className="line-clamp-2 text-xs text-muted-foreground">
-            {[row.contact, row.notes].filter(Boolean).join(" · ")}
+            {[row.contact || null, row.notes || null].filter(Boolean).join(" · ")}
           </p>
         ) : null}
 

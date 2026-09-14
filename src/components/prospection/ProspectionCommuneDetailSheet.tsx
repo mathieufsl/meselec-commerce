@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProspectionCommune } from "@/data/prospectionCommunes";
 import type { ProspectionCommuneState } from "@/lib/prospection/api";
+import {
+  CONTACT_TYPE_OPTIONS,
+  contactsEqual,
+  createEmptyContact,
+  createMaireContact,
+  type ProspectionContact,
+  type ProspectionContactType,
+} from "@/lib/prospection/contacts";
 import {
   GESTION_OPTIONS,
   STATUS_OPTIONS,
@@ -28,7 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { FileText, Mail, Phone } from "lucide-react";
+import { FileText, Mail, Phone, Plus, Trash2, UserPlus } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -50,27 +58,80 @@ export function ProspectionCommuneDetailSheet({
   onOpenScript,
 }: Props) {
   const isMobile = useIsMobile();
-  const [contact, setContact] = useState(row.contact);
+  const [contacts, setContacts] = useState(row.contacts);
   const [prestataire, setPrestataire] = useState(row.prestataire);
   const [notes, setNotes] = useState(row.notes);
+  const contactsRef = useRef(contacts);
+  contactsRef.current = contacts;
 
   useEffect(() => {
-    setContact(row.contact);
+    setContacts(row.contacts);
     setPrestataire(row.prestataire);
     setNotes(row.notes);
-  }, [row.contact, row.prestataire, row.notes, commune?.key]);
+  }, [row.contacts, row.prestataire, row.notes, commune?.key]);
 
   if (!commune) return null;
 
   const ville = commune.ville;
   const communeKey = commune.key;
+  const hasMaireContact = contacts.some((c) => c.type === "maire");
 
   const commitTextFields = () => {
     const patch: Partial<ProspectionCommuneState> = {};
-    if (contact !== row.contact) patch.contact = contact;
     if (prestataire !== row.prestataire) patch.prestataire = prestataire;
     if (notes !== row.notes) patch.notes = notes;
     if (Object.keys(patch).length > 0) onPatch(communeKey, patch);
+  };
+
+  const commitContacts = (next: ProspectionContact[]) => {
+    setContacts(next);
+    contactsRef.current = next;
+    if (!contactsEqual(next, row.contacts)) {
+      onPatch(communeKey, { contacts: next });
+    }
+  };
+
+  const commitContactsFromLocal = () => {
+    const next = contactsRef.current;
+    if (!contactsEqual(next, row.contacts)) {
+      onPatch(communeKey, { contacts: next });
+    }
+  };
+
+  const updateContactField = (
+    id: string,
+    field: "nom" | "telephone" | "email",
+    value: string,
+  ) => {
+    setContacts((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, [field]: value } : c));
+      contactsRef.current = next;
+      return next;
+    });
+  };
+
+  const updateContactType = (id: string, type: ProspectionContactType) => {
+    commitContacts(contactsRef.current.map((c) => (c.id === id ? { ...c, type } : c)));
+  };
+
+  const removeContact = (id: string) => {
+    commitContacts(contactsRef.current.filter((c) => c.id !== id));
+  };
+
+  const addMaire = () => {
+    if (hasMaireContact || !commune.maire.trim()) return;
+    commitContacts([
+      ...contactsRef.current,
+      createMaireContact({
+        nom: commune.maire,
+        telephone: commune.telephone,
+        email: commune.email,
+      }),
+    ]);
+  };
+
+  const addContact = (type: ProspectionContactType = "dst") => {
+    commitContacts([...contactsRef.current, createEmptyContact(type)]);
   };
 
   return (
@@ -245,16 +306,111 @@ export function ProspectionCommuneDetailSheet({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="prospection-contact">Contact</Label>
-              <Input
-                id="prospection-contact"
-                value={contact}
-                placeholder="Nom + téléphone"
-                onChange={(e) => setContact(e.target.value)}
-                onBlur={commitTextFields}
-                className="h-10 w-full"
-              />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Contacts</Label>
+                <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    disabled={hasMaireContact || !commune.maire.trim()}
+                    onClick={addMaire}
+                    title={
+                      hasMaireContact
+                        ? "Le maire est déjà dans les contacts"
+                        : "Préremplir avec le maire et le standard mairie"
+                    }
+                  >
+                    <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                    Maire
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => addContact("dst")}
+                  >
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    Contact
+                  </Button>
+                </div>
+              </div>
+
+              {contacts.length === 0 ? (
+                <p className="rounded-md border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
+                  Aucun contact. Ajoutez le maire ou un contact (DST, technique…).
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {contacts.map((contact, index) => (
+                    <div
+                      key={contact.id}
+                      className="space-y-2 rounded-lg border bg-background p-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={contact.type}
+                          onValueChange={(v) =>
+                            updateContactType(contact.id, v as ProspectionContactType)
+                          }
+                        >
+                          <SelectTrigger
+                            aria-label={`Type du contact ${index + 1}`}
+                            className="h-9 w-[8.5rem] shrink-0"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONTACT_TYPE_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          value={contact.nom}
+                          placeholder="Nom"
+                          onChange={(e) => updateContactField(contact.id, "nom", e.target.value)}
+                          onBlur={commitContactsFromLocal}
+                          className="h-9 min-w-0 flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                          title="Supprimer le contact"
+                          onClick={() => removeContact(contact.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <Input
+                          value={contact.telephone}
+                          placeholder="Téléphone"
+                          onChange={(e) =>
+                            updateContactField(contact.id, "telephone", e.target.value)
+                          }
+                          onBlur={commitContactsFromLocal}
+                          className="h-9"
+                        />
+                        <Input
+                          value={contact.email}
+                          placeholder="Email"
+                          onChange={(e) => updateContactField(contact.id, "email", e.target.value)}
+                          onBlur={commitContactsFromLocal}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

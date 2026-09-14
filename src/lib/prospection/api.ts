@@ -1,10 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
+import {
+  hydrateContacts,
+  summarizeContacts,
+  type ProspectionContact,
+} from "@/lib/prospection/contacts";
+
+export type { ProspectionContact, ProspectionContactType } from "@/lib/prospection/contacts";
 
 export type ProspectionCommuneState = {
   status: "todo" | "inprogress" | "done" | "callback" | "refused";
   gestion: "" | "commune" | "agglo" | "syndicat";
   prestataire: string;
+  /** Résumé lisible (table / CSV), synchronisé depuis `contacts`. */
   contact: string;
+  contacts: ProspectionContact[];
   notes: string;
 };
 
@@ -15,6 +24,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   gestion: "",
   prestataire: "",
   contact: "",
+  contacts: [],
   notes: "",
 };
 
@@ -28,6 +38,7 @@ type ProspectionSuiviRow = {
   gestion: string | null;
   prestataire: string | null;
   contact: string | null;
+  contacts_json?: unknown;
   notes: string | null;
 };
 
@@ -38,11 +49,13 @@ function resolveCommuneKey(row: ProspectionSuiviRow): string | null {
 }
 
 function stateFromRow(row: ProspectionSuiviRow): ProspectionCommuneState {
+  const contacts = hydrateContacts(row.contacts_json, row.contact);
   return {
     status: (row.status as ProspectionCommuneState["status"]) || "todo",
     gestion: (row.gestion as ProspectionCommuneState["gestion"]) || "",
     prestataire: row.prestataire ?? "",
-    contact: row.contact ?? "",
+    contacts,
+    contact: summarizeContacts(contacts) || (row.contact ?? ""),
     notes: row.notes ?? "",
   };
 }
@@ -50,6 +63,13 @@ function stateFromRow(row: ProspectionSuiviRow): ProspectionCommuneState {
 function legacyVilleFromKey(communeKey: string): string | null {
   if (!communeKey.startsWith(YVELINES_LEGACY_PREFIX)) return null;
   return communeKey.slice(YVELINES_LEGACY_PREFIX.length);
+}
+
+function withSyncedContactSummary(row: ProspectionCommuneState): ProspectionCommuneState {
+  return {
+    ...row,
+    contact: summarizeContacts(row.contacts),
+  };
 }
 
 async function fetchAllProspectionSuiviRows(): Promise<ProspectionSuiviRow[]> {
@@ -90,7 +110,7 @@ export async function upsertProspectionCommune(
   communeKey: string,
   patch: Partial<ProspectionCommuneState>,
 ): Promise<void> {
-  const current = await readCurrentRow(communeKey, patch);
+  const current = withSyncedContactSummary(await readCurrentRow(communeKey, patch));
 
   const newPayload = {
     commune_key: communeKey,
@@ -98,6 +118,7 @@ export async function upsertProspectionCommune(
     gestion: current.gestion || null,
     prestataire: current.prestataire,
     contact: current.contact,
+    contacts_json: current.contacts,
     notes: current.notes,
   };
 
@@ -119,6 +140,7 @@ export async function upsertProspectionCommune(
       gestion: current.gestion || null,
       prestataire: current.prestataire,
       contact: current.contact,
+      contacts_json: current.contacts,
       notes: current.notes,
     },
     { onConflict: "ville" },
@@ -131,9 +153,10 @@ async function readCurrentRow(
   communeKey: string,
   patch: Partial<ProspectionCommuneState>,
 ): Promise<ProspectionCommuneState> {
+  const selectCols = "status, gestion, prestataire, contact, contacts_json, notes";
   const { data: byKey, error: byKeyError } = await (supabase as any)
     .from("prospection_commune_suivi")
-    .select("status, gestion, prestataire, contact, notes")
+    .select(selectCols)
     .eq("commune_key", communeKey)
     .maybeSingle();
 
@@ -145,7 +168,7 @@ async function readCurrentRow(
   if (legacyVille) {
     const { data: byVille, error: byVilleError } = await (supabase as any)
       .from("prospection_commune_suivi")
-      .select("status, gestion, prestataire, contact, notes")
+      .select(selectCols)
       .eq("ville", legacyVille)
       .maybeSingle();
 
