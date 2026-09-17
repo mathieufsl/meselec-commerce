@@ -13,6 +13,7 @@ export type AoDetailFormState = {
   montant_estime: string;
   statut: AoStatut;
   societe_attribuee_id: string;
+  lien_source: string;
   notes: string;
   secteurs: AoSecteurDraft[];
 };
@@ -47,6 +48,7 @@ export function toForm(ao: AppelOffre, secteurs: AoSecteur[] = ao.ao_secteurs ??
     montant_estime: ao.montant_estime != null ? String(ao.montant_estime) : "",
     statut: ao.statut,
     societe_attribuee_id: ao.societe_attribuee_id ?? "",
+    lien_source: ao.lien_source ?? "",
     notes: ao.notes ?? "",
     secteurs: secteurs.length > 0 ? secteurs.map(secteurToDraft) : [emptySecteurDraft()],
   };
@@ -81,6 +83,7 @@ export function toPayload(form: AoDetailFormState) {
       montant_estime: form.montant_estime ? Number(form.montant_estime) : null,
       statut: form.statut,
       societe_attribuee_id: form.societe_attribuee_id || null,
+      lien_source: form.lien_source.trim() || null,
       notes: form.notes.trim() || null,
       type_marche: typeMarche || null,
     },
@@ -106,6 +109,7 @@ export function isFormDirty(baseline: AoDetailFormState, form: AoDetailFormState
     "montant_estime",
     "statut",
     "societe_attribuee_id",
+    "lien_source",
     "notes",
   ];
   for (const key of keys) {

@@ -138,6 +138,7 @@ export interface AppelOffre {
   statut: AoStatut;
   societe_attribuee_id: string | null;
   chantier_erp_id: string | null;
+  lien_source: string | null;
   handoff_at: string | null;
   notes: string | null;
   created_at: string;

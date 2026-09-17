@@ -62,13 +62,13 @@ export function useImportVeilleToAo() {
           date_publication: annonce.date_parution,
           date_limite_depot: annonce.date_limite,
           statut: "non_traite",
+          lien_source: annonce.lien ?? null,
           notes: [
-            annonce.lien ? `Annonce : ${annonce.lien}` : null,
             annonce.cpv ? `CPV : ${annonce.cpv}` : null,
             annonce.domaines.length ? `Domaines : ${annonce.domaines.join(", ")}` : null,
           ]
             .filter(Boolean)
-            .join("\n"),
+            .join("\n") || null,
         } as never)
         .select("id")
         .single();

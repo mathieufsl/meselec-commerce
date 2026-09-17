@@ -19,7 +19,7 @@ import {
   type SocieteExploitation,
 } from "@/lib/commerceTypes";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2 } from "lucide-react";
+import { ExternalLink, Plus, Trash2 } from "lucide-react";
 
 type FormState = AoCreateFormState | AoDetailFormState;
 
@@ -281,6 +281,20 @@ export function AoIdentityCard({
               ))}
             </select>
           </label>
+        ) : null}
+        {mode === "detail" && "lien_source" in form && form.lien_source ? (
+          <div className="space-y-1 text-sm">
+            <span className="text-xs font-medium text-muted-foreground">Annonce source</span>
+            <a
+              href={form.lien_source}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+            >
+              <ExternalLink className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">Voir sur BOAMP</span>
+            </a>
+          </div>
         ) : null}
         <label className="flex items-center gap-2 text-sm md:col-span-2">
           <Checkbox

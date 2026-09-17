@@ -44,6 +44,7 @@ import {
   ChevronRight,
   Clock,
   Euro,
+  ExternalLink,
   FileText,
   ListTree,
   MapPin,
@@ -308,13 +309,25 @@ export function AoDetailSheet({
                     ))}
                   </datalist>
                 </ReminderRow>
-                <ReminderRow icon={MapPin} label="Lieu" last>
+                <ReminderRow icon={MapPin} label="Lieu" last={!ao.lien_source}>
                   <ReminderField
                     value={form.lieu}
                     onChange={(e) => setForm((f) => (f ? { ...f, lieu: e.target.value } : f))}
                     placeholder="Ville, adresse…"
                   />
                 </ReminderRow>
+                {ao.lien_source ? (
+                  <ReminderRow icon={ExternalLink} label="Annonce" last>
+                    <a
+                      href={ao.lien_source}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      Voir sur BOAMP
+                    </a>
+                  </ReminderRow>
+                ) : null}
               </ReminderSheetSection>
 
               <ReminderSheetSection title="Dates">

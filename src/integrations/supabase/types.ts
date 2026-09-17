@@ -337,6 +337,7 @@ export type Database = {
           donneur_ordre_libre: string | null
           handoff_at: string | null
           id: string
+          lien_source: string | null
           lieu: string | null
           marche_pluriannuel: boolean
           montant_estime: number | null
@@ -358,6 +359,7 @@ export type Database = {
           donneur_ordre_libre?: string | null
           handoff_at?: string | null
           id?: string
+          lien_source?: string | null
           lieu?: string | null
           marche_pluriannuel?: boolean
           montant_estime?: number | null
@@ -379,6 +381,7 @@ export type Database = {
           donneur_ordre_libre?: string | null
           handoff_at?: string | null
           id?: string
+          lien_source?: string | null
           lieu?: string | null
           marche_pluriannuel?: boolean
           montant_estime?: number | null
