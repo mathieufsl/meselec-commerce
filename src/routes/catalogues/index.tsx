@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useBpuCatalogues, useImportBpuLignes } from "@/hooks/useCommerceData";
+import { useCommerceAuth } from "@/hooks/useCommerceAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { catalogueRowsOnly } from "@/lib/bpuExcelImport";
 import { parseBpuTextImport } from "@/lib/bpuEngine";
@@ -34,6 +35,8 @@ export const Route = createFileRoute("/catalogues/")({
 
 function CataloguesPage() {
   const navigate = useNavigate();
+  const { hasEditorAccess } = useCommerceAuth();
+  const canEdit = hasEditorAccess("catalogues");
   const { data: catalogues = [] } = useBpuCatalogues();
   const importBpu = useImportBpuLignes();
   const qc = useQueryClient();
@@ -59,7 +62,7 @@ function CataloguesPage() {
   }, [catalogues, search]);
 
   async function createCatalogue() {
-    if (!form.nom.trim()) return;
+    if (!canEdit || !form.nom.trim()) return;
     await supabase.from("bpu_catalogues").insert({
       nom: form.nom.trim(),
       type: form.type,
@@ -95,6 +98,7 @@ function CataloguesPage() {
     <AppShell
       title="Catalogues BPU / DPGF"
       actions={
+        canEdit ? (
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
             <Button size="sm" variant="outline" className="gap-2">
@@ -203,6 +207,9 @@ function CataloguesPage() {
             </div>
           </SheetContent>
         </Sheet>
+        ) : (
+          <span className="text-xs text-muted-foreground">Lecture seule</span>
+        )
       }
     >
       <div className="mb-4 flex items-center gap-2">

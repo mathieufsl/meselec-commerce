@@ -254,6 +254,80 @@ export interface ProspectionSuivi {
   notes: string;
 }
 
+export type CeSituationJuridique =
+  | "in_bonis"
+  | "sauvegarde"
+  | "redressement"
+  | "liquidation";
+
+export type CeStatut =
+  | "detection"
+  | "analyse"
+  | "offre"
+  | "negociation"
+  | "closing"
+  | "acquis"
+  | "abandonne";
+
+export const CE_SITUATIONS: CeSituationJuridique[] = [
+  "in_bonis",
+  "sauvegarde",
+  "redressement",
+  "liquidation",
+];
+
+export const CE_SITUATION_LABELS: Record<CeSituationJuridique, string> = {
+  in_bonis: "In bonis",
+  sauvegarde: "Sauvegarde",
+  redressement: "Redressement",
+  liquidation: "Liquidation",
+};
+
+export const CE_STATUTS: CeStatut[] = [
+  "detection",
+  "analyse",
+  "offre",
+  "negociation",
+  "closing",
+  "acquis",
+  "abandonne",
+];
+
+export const CE_STATUT_LABELS: Record<CeStatut, string> = {
+  detection: "Détection",
+  analyse: "Analyse",
+  offre: "Offre",
+  negociation: "Négociation",
+  closing: "Closing",
+  acquis: "Acquis",
+  abandonne: "Abandonné",
+};
+
+export interface CeDossier {
+  id: string;
+  reference: string;
+  titre: string;
+  nom_cible: string;
+  situation_juridique: CeSituationJuridique;
+  statut: CeStatut;
+  lieu: string | null;
+  activite: string | null;
+  ca_estime: number | null;
+  ebitda_estime: number | null;
+  valorisation_estimee: number | null;
+  effectif: number | null;
+  interlocuteur: string | null;
+  societe_acheteuse_id: string | null;
+  date_detection: string | null;
+  date_echeance_offre: string | null;
+  date_closing_cible: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  societes_exploitation?: SocieteExploitation | null;
+}
+
 export interface ErpEmploye {
   id: string;
   nom: string;

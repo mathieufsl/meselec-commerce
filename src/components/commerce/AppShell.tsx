@@ -9,6 +9,7 @@ import {
   RotateCw,
   Plus,
   ChevronLeft,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,21 +25,31 @@ import { MeselecAppLogoSwitcher } from "@/components/MeselecAppLogoSwitcher";
 import { ThemeSegmentToggle } from "@/components/ThemeSegmentToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommerceProfileMenu } from "@/components/commerce/CommerceProfileMenu";
+import { useCommerceAuth } from "@/hooks/useCommerceAuth";
+import type { CommerceModule } from "@/lib/commerceModuleRoles";
 import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
 import type { AoStatut } from "@/lib/commerceTypes";
 
-const NAV: Array<{ to: string; label: string; icon: LucideIcon; exact?: boolean }> = [
-  { to: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
-  { to: "/appels-offres", label: "Appels d'offres", icon: Briefcase },
-  { to: "/catalogues", label: "Catalogues BPU", icon: BookOpen },
-  { to: "/fournisseurs", label: "Fournisseurs", icon: Users },
-  { to: "/prospection", label: "Prospection", icon: MapPin },
-  { to: "/admin", label: "Administration", icon: Settings },
+const NAV: Array<{
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+  module: CommerceModule;
+}> = [
+  { to: "/", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true, module: "dashboard" },
+  { to: "/appels-offres", label: "Appels d'offres", icon: Briefcase, module: "appels_offres" },
+  { to: "/ce", label: "Croissance externe", icon: TrendingUp, module: "ce" },
+  { to: "/catalogues", label: "Catalogues BPU", icon: BookOpen, module: "catalogues" },
+  { to: "/fournisseurs", label: "Fournisseurs", icon: Users, module: "fournisseurs" },
+  { to: "/prospection", label: "Prospection", icon: MapPin, module: "prospection" },
+  { to: "/admin", label: "Administration", icon: Settings, module: "admin" },
 ];
 
 const MOBILE_LABELS: Record<string, string> = {
   "/": "Accueil",
   "/appels-offres": "AO",
+  "/ce": "CE",
   "/catalogues": "BPU",
   "/fournisseurs": "Fourn.",
   "/prospection": "Prospect",
@@ -89,6 +100,8 @@ export function AppShell({
   mobileFooter?: React.ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { hasModule } = useCommerceAuth();
+  const visibleNav = NAV.filter((item) => hasModule(item.module));
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -101,7 +114,7 @@ export function AppShell({
               </div>
               <ScrollArea className="flex-1 px-1.5 py-3">
                 <nav className="flex flex-col items-center space-y-2.5">
-                  {NAV.map((item) => {
+                  {visibleNav.map((item) => {
                     const active = item.exact
                       ? pathname === item.to
                       : pathname.startsWith(item.to);
@@ -264,8 +277,11 @@ export function AppShell({
           </main>
         </div>
 
-        <nav className="grid shrink-0 grid-cols-6 gap-0 border-t border-border/60 bg-card/95 px-0.5 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">
-          {NAV.map((item) => {
+        <nav
+          className="grid shrink-0 gap-0 border-t border-border/60 bg-card/95 px-0.5 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden"
+          style={{ gridTemplateColumns: `repeat(${Math.max(visibleNav.length, 1)}, minmax(0, 1fr))` }}
+        >
+          {visibleNav.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
             const short = MOBILE_LABELS[item.to] ?? item.label;

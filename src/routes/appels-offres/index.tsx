@@ -32,6 +32,7 @@ import {
   useUpsertAppelOffre,
 } from "@/hooks/useCommerceData";
 import { matchesAoSocieteFilter, useAoSocieteFilter } from "@/hooks/useAoSocieteFilter";
+import { useCommerceAuth } from "@/hooks/useCommerceAuth";
 import { AO_STATUT_LABELS, AO_STATUTS, type AoSecteurCode, type AoStatut } from "@/lib/commerceTypes";
 import { AO_STATUT_STYLES } from "@/lib/aoStatusStyles";
 import { matchesAoDateFilter, matchesAoSecteurFilter, type AoDateFilterPreset } from "@/lib/aoFilters";
@@ -51,6 +52,8 @@ export const Route = createFileRoute("/appels-offres/")({
 function AppelsOffresPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { hasEditorAccess } = useCommerceAuth();
+  const canEdit = hasEditorAccess("appels_offres");
   const { data: aos = [], isLoading } = useAppelsOffres();
   const { data: docCounts = {} } = useAoDocumentCounts();
   const { data: societes = [] } = useSocietes();
@@ -149,6 +152,7 @@ function AppelsOffresPage() {
     : null;
 
   async function moveAoStatut(aoId: string, statut: AoStatut) {
+    if (!canEdit) return;
     await upsert.mutateAsync({ id: aoId, statut });
   }
 
@@ -185,7 +189,9 @@ function AppelsOffresPage() {
         titleIcon={Briefcase}
         flush
         syncLabel={syncLabel}
-        primaryAction={{ label: "Créer un AO", onClick: () => setWizardOpen(true) }}
+        primaryAction={
+          canEdit ? { label: "Créer un AO", onClick: () => setWizardOpen(true) } : undefined
+        }
         inlineAction={
           <Button variant="outline" size="sm" className="h-9 gap-2 px-3 sm:h-8" asChild>
             <Link to="/veille">

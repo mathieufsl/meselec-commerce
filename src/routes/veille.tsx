@@ -15,6 +15,7 @@ import {
   useSetVeilleStatut,
   useVeilleAnnonces,
 } from "@/hooks/useVeille";
+import { useCommerceAuth } from "@/hooks/useCommerceAuth";
 
 export const Route = createFileRoute("/veille")({
   head: () => ({
@@ -52,6 +53,8 @@ function formatDate(value: string | null) {
 
 function VeillePage() {
   const navigate = useNavigate();
+  const { hasEditorAccess } = useCommerceAuth();
+  const canEdit = hasEditorAccess("appels_offres");
   const [filtre, setFiltre] = useState<VeilleStatut | "tous">("nouveau");
   const [idfSeulement, setIdfSeulement] = useState(true);
   const { data: annonces = [], isLoading } = useVeilleAnnonces();
@@ -96,7 +99,7 @@ function VeillePage() {
       titleIcon={Radar}
       actions={
         <div className="flex items-center gap-2">
-          <VeilleRecipientsDialog />
+          {canEdit ? <VeilleRecipientsDialog /> : null}
           <Button
             variant="outline"
             size="sm"
@@ -105,14 +108,16 @@ function VeillePage() {
           >
             {idfSeulement ? "Île-de-France" : "France entière"}
           </Button>
-          <Button size="sm" onClick={lancerVeille} disabled={refresh.isPending}>
-            {refresh.isPending ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-            )}
-            Lancer la veille
-          </Button>
+          {canEdit ? (
+            <Button size="sm" onClick={lancerVeille} disabled={refresh.isPending}>
+              {refresh.isPending ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-1.5 h-4 w-4" />
+              )}
+              Lancer la veille
+            </Button>
+          ) : null}
         </div>
       }
     >
@@ -186,21 +191,23 @@ function VeillePage() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Button
-                    size="sm"
-                    disabled={a.statut === "importe" || importAo.isPending}
-                    onClick={() =>
-                      importAo.mutate(a, {
-                        onSuccess: () =>
-                          toast.success("Appel d'offres créé dans les AO"),
-                        onError: (e: unknown) =>
-                          toast.error(e instanceof Error ? e.message : "Échec de l'import"),
-                      })
-                    }
-                  >
-                    <Send className="mr-1.5 h-4 w-4" />
-                    {a.statut === "importe" ? "Déjà dans les AO" : "Envoyer vers les AO"}
-                  </Button>
+                  {canEdit ? (
+                    <Button
+                      size="sm"
+                      disabled={a.statut === "importe" || importAo.isPending}
+                      onClick={() =>
+                        importAo.mutate(a, {
+                          onSuccess: () =>
+                            toast.success("Appel d'offres créé dans les AO"),
+                          onError: (e: unknown) =>
+                            toast.error(e instanceof Error ? e.message : "Échec de l'import"),
+                        })
+                      }
+                    >
+                      <Send className="mr-1.5 h-4 w-4" />
+                      {a.statut === "importe" ? "Déjà dans les AO" : "Envoyer vers les AO"}
+                    </Button>
+                  ) : null}
                   {a.statut === "importe" && a.ao_id ? (
                     <Button
                       size="sm"
@@ -223,7 +230,7 @@ function VeillePage() {
                       </a>
                     </Button>
                   ) : null}
-                  {a.statut !== "importe" ? (
+                  {canEdit && a.statut !== "importe" ? (
                     <Button
                       size="sm"
                       variant="ghost"

@@ -326,6 +326,86 @@ export type Database = {
           },
         ]
       }
+      ce_dossiers: {
+        Row: {
+          activite: string | null
+          ca_estime: number | null
+          created_at: string
+          created_by: string | null
+          date_closing_cible: string | null
+          date_detection: string | null
+          date_echeance_offre: string | null
+          ebitda_estime: number | null
+          effectif: number | null
+          id: string
+          interlocuteur: string | null
+          lieu: string | null
+          nom_cible: string
+          notes: string | null
+          reference: string
+          situation_juridique: string
+          societe_acheteuse_id: string | null
+          statut: string
+          titre: string
+          updated_at: string
+          valorisation_estimee: number | null
+        }
+        Insert: {
+          activite?: string | null
+          ca_estime?: number | null
+          created_at?: string
+          created_by?: string | null
+          date_closing_cible?: string | null
+          date_detection?: string | null
+          date_echeance_offre?: string | null
+          ebitda_estime?: number | null
+          effectif?: number | null
+          id?: string
+          interlocuteur?: string | null
+          lieu?: string | null
+          nom_cible: string
+          notes?: string | null
+          reference: string
+          situation_juridique?: string
+          societe_acheteuse_id?: string | null
+          statut?: string
+          titre: string
+          updated_at?: string
+          valorisation_estimee?: number | null
+        }
+        Update: {
+          activite?: string | null
+          ca_estime?: number | null
+          created_at?: string
+          created_by?: string | null
+          date_closing_cible?: string | null
+          date_detection?: string | null
+          date_echeance_offre?: string | null
+          ebitda_estime?: number | null
+          effectif?: number | null
+          id?: string
+          interlocuteur?: string | null
+          lieu?: string | null
+          nom_cible?: string
+          notes?: string | null
+          reference?: string
+          situation_juridique?: string
+          societe_acheteuse_id?: string | null
+          statut?: string
+          titre?: string
+          updated_at?: string
+          valorisation_estimee?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ce_dossiers_societe_acheteuse_id_fkey"
+            columns: ["societe_acheteuse_id"]
+            isOneToOne: false
+            referencedRelation: "societes_exploitation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appels_offres: {
         Row: {
           chantier_erp_id: string | null
@@ -570,6 +650,45 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string
+        }
+        Relationships: []
+      }
+      commerce_account_manager_emails: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
+      commerce_user_module_access: {
+        Row: {
+          created_at: string
+          id: string
+          module: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          module: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          module?: string
+          role?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1044,7 +1163,52 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      commerce_can_edit_module: {
+        Args: { _module: string; _user_id: string }
+        Returns: boolean
+      }
+      commerce_can_manage_accounts: {
+        Args: { _user_id?: string }
+        Returns: boolean
+      }
+      commerce_can_read_module: {
+        Args: { _module: string; _user_id: string }
+        Returns: boolean
+      }
+      commerce_get_my_editor_modules: { Args: never; Returns: string[] }
+      commerce_get_my_modules: { Args: never; Returns: string[] }
+      commerce_get_my_session: { Args: never; Returns: Json }
       commerce_has_access: { Args: never; Returns: boolean }
+      commerce_has_module_access: {
+        Args: { _module: string; _user_id: string }
+        Returns: boolean
+      }
+      commerce_has_module_restriction: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      commerce_is_account_manager: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      commerce_list_accounts: {
+        Args: never
+        Returns: {
+          allowed_at: string
+          email: string
+          has_auth_user: boolean
+          last_sign_in_at: string | null
+          module_roles: Json
+          nom: string | null
+          prenom: string | null
+          telephone: string | null
+          user_id: string | null
+        }[]
+      }
+      commerce_set_user_module_roles: {
+        Args: { p_module_roles: Json; p_user_id: string }
+        Returns: undefined
+      }
       get_ao_comments: {
         Args: { p_ao_id: string; p_limit?: number }
         Returns: {

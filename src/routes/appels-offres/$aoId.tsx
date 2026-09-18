@@ -49,6 +49,7 @@ import {
 } from "@/lib/bpuEngine";
 import { catalogueRowsOnly, parseBpuExcelFile } from "@/lib/bpuExcelImport";
 import { filterAoDocumentsByAllowedTypes } from "@/lib/aoDocuments";
+import { useCommerceAuth } from "@/hooks/useCommerceAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { cleanDisplaySeparators } from "@/lib/displayText";
@@ -70,6 +71,8 @@ function AoDetailPage() {
   const { aoId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { hasEditorAccess } = useCommerceAuth();
+  const canEdit = hasEditorAccess("appels_offres");
   const { data: ao } = useAppelOffre(aoId);
   const { data: allAos = [] } = useAppelsOffres();
   const { data: documents = [] } = useAoDocuments(aoId);
@@ -370,34 +373,42 @@ function AoDetailPage() {
       contentClassName="flex min-h-0 flex-col px-3 py-3 sm:px-6 sm:py-4"
       mobileFooter={
         <div className="flex items-center gap-2 px-3 py-2">
-          {isDirty ? (
+          {canEdit && isDirty ? (
             <span className="shrink-0 rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-[10px] font-medium text-warning">
               Non enregistré
             </span>
           ) : null}
-          <Button
-            size="sm"
-            className="min-w-0 flex-1"
-            onClick={() => void handleSave()}
-            disabled={!isDirty || saving}
-          >
-            {saving ? "Enregistrement…" : "Enregistrer"}
-          </Button>
+          {canEdit ? (
+            <Button
+              size="sm"
+              className="min-w-0 flex-1"
+              onClick={() => void handleSave()}
+              disabled={!isDirty || saving}
+            >
+              {saving ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+          ) : (
+            <span className="flex-1 text-center text-xs text-muted-foreground">Lecture seule</span>
+          )}
           <AoCommentsSheet aoId={aoId} className="h-9 w-9 shrink-0 p-0 [&_span]:sr-only" />
         </div>
       }
       actions={
         <div className="hidden items-center gap-2 lg:flex">
-          {isDirty ? (
+          {canEdit && isDirty ? (
             <span className="rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs font-medium text-warning">
               Non enregistré
             </span>
           ) : null}
-          <Button size="sm" onClick={() => void handleSave()} disabled={!isDirty || saving}>
-            {saving ? "Enregistrement…" : "Enregistrer"}
-          </Button>
+          {canEdit ? (
+            <Button size="sm" onClick={() => void handleSave()} disabled={!isDirty || saving}>
+              {saving ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground">Lecture seule</span>
+          )}
           <AoCommentsSheet aoId={aoId} />
-          {ao.statut !== "gagne" && reponse ? (
+          {canEdit && ao.statut !== "gagne" && reponse ? (
             <Button size="sm" variant="outline" onClick={runHandoff} disabled={busy || lignes.length === 0}>
               {busy ? "Handoff…" : "Attribuer & créer chantier ERP"}
             </Button>

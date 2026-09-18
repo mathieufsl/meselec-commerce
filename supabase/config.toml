@@ -18,3 +18,6 @@ additional_redirect_urls = [
 
 [auth.email]
 max_frequency = "5s"
+
+[functions.commerce-manage-accounts]
+verify_jwt = true

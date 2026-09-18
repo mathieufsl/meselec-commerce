@@ -4,11 +4,25 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import { useCommerceAuth } from "@/hooks/useCommerceAuth";
 import { Button } from "@/components/ui/button";
 import { saveRedirectPath } from "@/lib/authRedirect";
+import {
+  COMMERCE_MODULE_LABELS,
+  commerceModuleForPath,
+  getCommerceDefaultLandingPath,
+  isCommerceModuleFreePath,
+} from "@/lib/commerceModuleRoles";
 
 export function CommerceAuthGate({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const href = useRouterState({ select: (s) => s.location.href });
-  const { booting, session, hasAccess, checkingAccess, signOut } = useCommerceAuth();
+  const {
+    booting,
+    session,
+    hasAccess,
+    checkingAccess,
+    hasModule,
+    modules,
+    signOut,
+  } = useCommerceAuth();
 
   // Mémorise la page protégée demandée pour y revenir après connexion.
   useEffect(() => {
@@ -68,6 +82,35 @@ export function CommerceAuthGate({ children }: { children: React.ReactNode }) {
           <Button variant="outline" onClick={() => void signOut()}>
             Changer de compte
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const requiredModule =
+    isCommerceModuleFreePath(pathname) ? null : commerceModuleForPath(pathname);
+  if (requiredModule && !hasModule(requiredModule)) {
+    const fallback = getCommerceDefaultLandingPath(modules);
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background px-4">
+        <div className="max-w-md space-y-4 rounded-xl border border-warning/30 bg-card p-6 text-center shadow-sm">
+          <ShieldAlert className="mx-auto h-10 w-10 text-warning" />
+          <div>
+            <h1 className="text-lg font-semibold">Module non autorisé</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Vous n&apos;avez pas accès à{" "}
+              <strong>{COMMERCE_MODULE_LABELS[requiredModule]}</strong>. Demandez l&apos;ouverture du
+              module à un gestionnaire de comptes.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button asChild>
+              <Link to={fallback}>Retour</Link>
+            </Button>
+            <Button variant="outline" onClick={() => void signOut()}>
+              Changer de compte
+            </Button>
+          </div>
         </div>
       </div>
     );
