@@ -19,7 +19,8 @@ import {
   type SocieteExploitation,
 } from "@/lib/commerceTypes";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2 } from "lucide-react";
+import { extractAoAnnonceUrl } from "@/lib/aoNotes";
+import { ExternalLink, Plus, Trash2 } from "lucide-react";
 
 type FormState = AoCreateFormState | AoDetailFormState;
 
@@ -193,6 +194,8 @@ export function AoIdentityCard({
   };
 
   const updateSecteurs = (secteurs: AoSecteurDraft[]) => onChange({ secteurs });
+  const annonceUrl =
+    mode === "detail" && "notes" in form ? extractAoAnnonceUrl(form.notes) : null;
 
   return (
     <div className={cn("space-y-4", compact && "space-y-3")}>
@@ -326,14 +329,27 @@ export function AoIdentityCard({
       </div>
 
       {mode === "detail" && "notes" in form && showFields === "all" ? (
-        <label className="block space-y-1 text-sm">
-          <span className="text-xs font-medium text-muted-foreground">Notes internes</span>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Notes internes</span>
+            {annonceUrl ? (
+              <a
+                href={annonceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Ouvrir l&apos;annonce
+              </a>
+            ) : null}
+          </div>
           <Textarea
             rows={3}
             value={form.notes}
             onChange={(e) => onChange({ notes: e.target.value })}
           />
-        </label>
+        </div>
       ) : null}
     </div>
   );

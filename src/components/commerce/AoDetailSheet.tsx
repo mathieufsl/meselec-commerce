@@ -49,7 +49,9 @@ import {
   MapPin,
   Tag,
   X,
+  ExternalLink,
 } from "lucide-react";
+import { extractAoAnnonceUrl } from "@/lib/aoNotes";
 
 export function AoDetailSheet({
   aoId,
@@ -78,6 +80,7 @@ export function AoDetailSheet({
     () => (form && baseline ? isFormDirty(baseline, form) : false),
     [form, baseline],
   );
+  const annonceUrl = useMemo(() => extractAoAnnonceUrl(form?.notes), [form?.notes]);
 
   useEffect(() => {
     if (!open) setPreviewDoc(null);
@@ -260,6 +263,17 @@ export function AoDetailSheet({
                     rows={2}
                     className="mt-1 w-full resize-none border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
                   />
+                  {annonceUrl ? (
+                    <a
+                      href={annonceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Ouvrir l&apos;annonce
+                    </a>
+                  ) : null}
                 </div>
               </ReminderSheetSection>
 
