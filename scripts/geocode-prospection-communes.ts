@@ -1,0 +1,169 @@
+/**
+ * Génère src/data/prospectionCommunesGeo.ts et public/prospection-contours/{dept}.json
+ * Usage: npm run geocode:prospection
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { PROSPECTION_COMMUNES } from "../src/data/prospectionCommunes";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const GEO_OUT = path.join(__dirname, "../src/data/prospectionCommunesGeo.ts");
+const CONTOURS_DIR = path.join(__dirname, "../public/prospection-contours");
+
+function extractDeptCode(departement: string): string {
+  const m = departement.match(/\((\d{2,3}[AB]?)\)$/);
+  return m?.[1] ?? "";
+}
+
+function normalizeName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/['']/g, "'")
+    .trim();
+}
+
+type GeoJsonFeature = {
+  type: "Feature";
+  properties: { nom: string; code?: string };
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.Point | null;
+};
+
+type GeoJsonCollection = {
+  type: "FeatureCollection";
+  features: GeoJsonFeature[];
+};
+
+function roundCoord(value: number): number {
+  return Math.round(value * 1e4) / 1e4;
+}
+
+function simplifyRing(ring: [number, number][]): [number, number][] {
+  if (ring.length <= 2) return ring;
+  const maxPoints = 120;
+  const step = ring.length > maxPoints ? Math.ceil(ring.length / maxPoints) : 1;
+  const sampled: [number, number][] = [];
+  for (let i = 0; i < ring.length; i += step) {
+    const [lng, lat] = ring[i];
+    sampled.push([roundCoord(lng), roundCoord(lat)]);
+  }
+  const first = sampled[0];
+  const last = sampled[sampled.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) {
+    sampled.push(first);
+  }
+  return sampled;
+}
+
+function simplifyGeometry(
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon,
+): GeoJSON.Polygon | GeoJSON.MultiPolygon {
+  if (geometry.type === "Polygon") {
+    return {
+      type: "Polygon",
+      coordinates: geometry.coordinates.map((ring) => simplifyRing(ring as [number, number][])),
+    };
+  }
+  return {
+    type: "MultiPolygon",
+    coordinates: geometry.coordinates.map((poly) =>
+      poly.map((ring) => simplifyRing(ring as [number, number][])),
+    ),
+  };
+}
+
+function centroidFromGeometry(geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon): { lat: number; lng: number } | null {
+  const ring =
+    geometry.type === "Polygon"
+      ? geometry.coordinates[0]
+      : geometry.coordinates[0]?.[0];
+  if (!ring?.length) return null;
+  let lngSum = 0;
+  let latSum = 0;
+  for (const [lng, lat] of ring) {
+    lngSum += lng;
+    latSum += lat;
+  }
+  return { lat: latSum / ring.length, lng: lngSum / ring.length };
+}
+
+async function fetchDeptContours(code: string): Promise<GeoJsonCollection> {
+  const url = `https://geo.api.gouv.fr/communes?codeDepartement=${code}&fields=nom,code&format=geojson&geometry=contour`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`geo.api.gouv.fr ${code}: ${res.status}`);
+  return (await res.json()) as GeoJsonCollection;
+}
+
+async function main() {
+  fs.mkdirSync(CONTOURS_DIR, { recursive: true });
+
+  const deptCodes = [...new Set(PROSPECTION_COMMUNES.map((c) => extractDeptCode(c.departement)))].filter(
+    Boolean,
+  );
+
+  const byDeptName = new Map<
+    string,
+    { lat: number; lng: number; geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon }
+  >();
+
+  for (const code of deptCodes) {
+    console.log(`Fetching contours for department ${code}...`);
+    const collection = await fetchDeptContours(code);
+    for (const feature of collection.features) {
+      const geometry = feature.geometry;
+      if (!geometry || geometry.type === "Point") continue;
+      const simplified = simplifyGeometry(geometry);
+      const centroid = centroidFromGeometry(simplified);
+      if (!centroid) continue;
+      byDeptName.set(`${code}::${normalizeName(feature.properties.nom)}`, {
+        ...centroid,
+        geometry: simplified,
+      });
+    }
+  }
+
+  const geo: Record<string, { lat: number; lng: number }> = {};
+  const contoursByDept: Record<string, Record<string, GeoJSON.Polygon | GeoJSON.MultiPolygon>> = {};
+  const missing: string[] = [];
+
+  for (const commune of PROSPECTION_COMMUNES) {
+    const code = extractDeptCode(commune.departement);
+    const key = `${code}::${normalizeName(commune.ville)}`;
+    const match = byDeptName.get(key);
+    if (match) {
+      geo[commune.key] = { lat: match.lat, lng: match.lng };
+      if (!contoursByDept[code]) contoursByDept[code] = {};
+      contoursByDept[code][commune.key] = match.geometry;
+    } else {
+      missing.push(commune.key);
+    }
+  }
+
+  for (const [code, contours] of Object.entries(contoursByDept)) {
+    const outPath = path.join(CONTOURS_DIR, `${code}.json`);
+    fs.writeFileSync(outPath, JSON.stringify(contours), "utf8");
+    console.log(`  ${code}.json — ${Object.keys(contours).length} communes (${(fs.statSync(outPath).size / 1024).toFixed(0)} Ko)`);
+  }
+
+  const geoContent = `/** Auto-generated by scripts/geocode-prospection-communes.ts — do not edit manually */
+export type ProspectionCommuneGeo = { lat: number; lng: number };
+
+export const PROSPECTION_COMMUNES_GEO: Record<string, ProspectionCommuneGeo> = ${JSON.stringify(geo, null, 2)};
+
+export const PROSPECTION_CONTOUR_DEPARTEMENTS = ${JSON.stringify(Object.keys(contoursByDept).sort())} as const;
+`;
+
+  fs.writeFileSync(GEO_OUT, geoContent, "utf8");
+  console.log(`Written ${Object.keys(geo).length}/${PROSPECTION_COMMUNES.length} communes to ${GEO_OUT}`);
+  if (missing.length > 0) {
+    console.warn(`Missing ${missing.length} communes:`);
+    missing.slice(0, 20).forEach((k) => console.warn(`  - ${k}`));
+  }
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

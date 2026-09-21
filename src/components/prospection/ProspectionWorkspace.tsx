@@ -1,22 +1,19 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PROSPECTION_COMMUNES, PROSPECTION_DEPARTEMENTS } from "@/data/prospectionCommunes";
 import {
-  fetchProspectionState,
   saveProspectionStateMap,
   type ProspectionCommuneState,
   type ProspectionStateMap,
 } from "@/lib/prospection/api";
 import { summarizeContacts } from "@/lib/prospection/contacts";
 import { ProspectionCommuneDetailSheet } from "@/components/prospection/ProspectionCommuneDetailSheet";
-import { ProspectionCommuneMobileCard } from "@/components/prospection/ProspectionCommuneMobileCard";
 import { ProspectionScriptsModal } from "@/components/prospection/ProspectionScriptsModal";
-import { ProspectionCommuneRow } from "@/components/prospection/ProspectionCommuneRow";
 import { ProspectionFiltersBar } from "@/components/prospection/ProspectionFiltersBar";
+import { ProspectionVirtualMobileList } from "@/components/prospection/ProspectionVirtualMobileList";
+import { ProspectionVirtualTable } from "@/components/prospection/ProspectionVirtualTable";
 import {
   buildProspectionStatusTabs,
   ProspectionStatusTabsDesktop,
   ProspectionStatusTabsMobileScroll,
-  type ProspectionStatusTab,
 } from "@/components/prospection/ProspectionStatusTabs";
 import type { ProspectionCommune } from "@/data/prospectionCommunes";
 import { Button } from "@/components/ui/button";
@@ -35,14 +32,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -50,9 +39,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useProspectionCommunes } from "@/hooks/useProspectionCommunes";
+import { useProspectionFilters } from "@/hooks/useProspectionFilters";
+import { useProspectionStateQuery } from "@/hooks/useProspectionStateQuery";
+import {
+  computeProspectionStats,
+  computeProspectionStatusCounts,
+  filterProspectionCommunes,
+} from "@/lib/prospection/filterCommunes";
 import { cn } from "@/lib/utils";
 import { Download, FileText, Loader2, MoreVertical, RefreshCw, RotateCcw, Save } from "lucide-react";
-import { useProspectionSearchParams } from "@/hooks/useProspectionSearchParams";
 
 const DEFAULT_ROW: ProspectionCommuneState = {
   status: "todo",
@@ -62,65 +58,17 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   contacts: [],
   notes: "",
 };
-const STATUS_TABS: ProspectionStatusTab[] = ["all", "todo", "inprogress", "done", "callback", "refused"];
-const POP_FILTERS = new Set(["", "big", "med", "small"]);
-
-type ProspectionListFilters = {
-  search: string;
-  filterDepartement: string;
-  filterAgglo: string;
-  filterPop: string;
-  statusTab: ProspectionStatusTab;
-};
-
-function parseProspectionFilters(params: URLSearchParams): ProspectionListFilters {
-  const pop = params.get("pop") ?? "";
-  const status = params.get("status") as ProspectionStatusTab | null;
-  return {
-    search: params.get("q") ?? "",
-    filterDepartement: params.get("dep") ?? "",
-    filterAgglo: params.get("agglo") ?? "",
-    filterPop: POP_FILTERS.has(pop) ? pop : "",
-    statusTab: status && STATUS_TABS.includes(status) ? status : "all",
-  };
-}
-
-function buildProspectionSearchParams(filters: ProspectionListFilters): URLSearchParams {
-  const next = new URLSearchParams();
-  if (filters.search.trim()) next.set("q", filters.search.trim());
-  if (filters.filterDepartement) next.set("dep", filters.filterDepartement);
-  if (filters.filterAgglo) next.set("agglo", filters.filterAgglo);
-  if (filters.filterPop) next.set("pop", filters.filterPop);
-  if (filters.statusTab !== "all") next.set("status", filters.statusTab);
-  return next;
-}
-
-function prospectionFiltersEqual(a: ProspectionListFilters, b: ProspectionListFilters): boolean {
-  return (
-    a.search === b.search &&
-    a.filterDepartement === b.filterDepartement &&
-    a.filterAgglo === b.filterAgglo &&
-    a.filterPop === b.filterPop &&
-    a.statusTab === b.statusTab
-  );
-}
-
 function rowKey(row: ProspectionCommuneState): string {
   return `${row.status}|${row.gestion}|${row.prestataire}|${summarizeContacts(row.contacts)}|${row.notes}`;
 }
 
-function getChangedRows(
+function getChangedRowsFromDirtyKeys(
   current: ProspectionStateMap,
-  saved: ProspectionStateMap,
-  communes: typeof PROSPECTION_COMMUNES,
+  dirtyKeys: Set<string>,
 ): ProspectionStateMap {
   const changed: ProspectionStateMap = {};
-  for (const commune of communes) {
-    const cur = current[commune.key] ?? DEFAULT_ROW;
-    const prev = saved[commune.key] ?? DEFAULT_ROW;
-    if (rowKey(cur) !== rowKey(prev)) {
-      changed[commune.key] = cur;
-    }
+  for (const communeKey of dirtyKeys) {
+    changed[communeKey] = current[communeKey] ?? DEFAULT_ROW;
   }
   return changed;
 }
@@ -128,120 +76,102 @@ function getChangedRows(
 type ScriptTarget = { ville: string; agglo: string; maire: string } | null;
 
 export function ProspectionWorkspace() {
-  const [searchParams, setSearchParams] = useProspectionSearchParams();
-  const initialFilters = useRef(parseProspectionFilters(searchParams));
-  const syncedFiltersRef = useRef(initialFilters.current);
+  const { data: communesBundle, isLoading: communesLoading } = useProspectionCommunes();
+  const communes = communesBundle?.communes ?? [];
+  const departements = communesBundle?.departements ?? [];
+
+  const {
+    search,
+    setSearch,
+    filterDepartement,
+    filterAgglo,
+    setFilterAgglo,
+    filterPop,
+    setFilterPop,
+    statusTab,
+    setStatusTab,
+    agglos,
+    handleFilterDepartementChange,
+  } = useProspectionFilters(communes);
+
+  const {
+    data: serverState = {},
+    isLoading: stateLoading,
+    isFetching: stateFetching,
+    error: stateError,
+    refetch,
+  } = useProspectionStateQuery();
+
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [state, setState] = useState<ProspectionStateMap>({});
   const [savedState, setSavedState] = useState<ProspectionStateMap>({});
+  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(() => new Set());
   const stateRef = useRef(state);
+  const savedStateRef = useRef(savedState);
+  const dirtyKeysRef = useRef(dirtyKeys);
   stateRef.current = state;
-  const [loading, setLoading] = useState(true);
+  savedStateRef.current = savedState;
+  dirtyKeysRef.current = dirtyKeys;
   const [saving, setSaving] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [search, setSearch] = useState(initialFilters.current.search);
-  const [filterDepartement, setFilterDepartement] = useState(initialFilters.current.filterDepartement);
-  const [filterAgglo, setFilterAgglo] = useState(initialFilters.current.filterAgglo);
-  const [filterPop, setFilterPop] = useState(initialFilters.current.filterPop);
-  const [statusTab, setStatusTab] = useState<ProspectionStatusTab>(initialFilters.current.statusTab);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [scriptsOpen, setScriptsOpen] = useState(false);
   const [scriptTarget, setScriptTarget] = useState<ScriptTarget>(null);
   const [detailCommune, setDetailCommune] = useState<ProspectionCommune | null>(null);
-
-  const agglos = useMemo(() => {
-    const source = filterDepartement
-      ? PROSPECTION_COMMUNES.filter((c) => c.departement === filterDepartement)
-      : PROSPECTION_COMMUNES;
-    return [...new Set(source.map((c) => c.agglo).filter(Boolean))].sort();
-  }, [filterDepartement]);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    if (filterAgglo && !agglos.includes(filterAgglo)) {
-      setFilterAgglo("");
-    }
-  }, [filterAgglo, agglos]);
-
-  const currentFilters = useMemo(
-    (): ProspectionListFilters => ({
-      search,
-      filterDepartement,
-      filterAgglo,
-      filterPop,
-      statusTab,
-    }),
-    [search, filterDepartement, filterAgglo, filterPop, statusTab],
-  );
-
-  useEffect(() => {
-    if (prospectionFiltersEqual(currentFilters, syncedFiltersRef.current)) return;
-
-    syncedFiltersRef.current = currentFilters;
-    setSearchParams(buildProspectionSearchParams(currentFilters), { replace: true });
-  }, [currentFilters, setSearchParams]);
-
-  useEffect(() => {
-    const fromUrl = parseProspectionFilters(searchParams);
-    if (prospectionFiltersEqual(fromUrl, syncedFiltersRef.current)) return;
-
-    syncedFiltersRef.current = fromUrl;
-    setSearch(fromUrl.search);
-    setFilterDepartement(fromUrl.filterDepartement);
-    setFilterAgglo(fromUrl.filterAgglo);
-    setFilterPop(fromUrl.filterPop);
-    setStatusTab(fromUrl.statusTab);
-  }, [searchParams]);
-
-  const handleFilterDepartementChange = useCallback((value: string) => {
-    setFilterDepartement(value);
-    setFilterAgglo("");
-  }, []);
+    if (stateLoading || hydrated) return;
+    setState(serverState);
+    setSavedState(serverState);
+    setDirtyKeys(new Set());
+    setHydrated(true);
+  }, [serverState, stateLoading, hydrated]);
 
   const loadFromServer = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const data = await fetchProspectionState();
-      setState(data);
-      setSavedState(data);
-    } catch (err) {
-      setLoadError(
-        err instanceof Error ? err.message : "Impossible de charger les données prospection.",
-      );
-    } finally {
-      setLoading(false);
+    const result = await refetch();
+    if (result.data) {
+      setState(result.data);
+      setSavedState(result.data);
+      setDirtyKeys(new Set());
+      setHydrated(true);
     }
-  }, []);
+  }, [refetch]);
 
-  useEffect(() => {
-    void loadFromServer();
-  }, [loadFromServer]);
-
-  const updateRow = useCallback((communeKey: string, patch: Partial<ProspectionCommuneState>) => {
-    setState((prev) => {
-      const next = { ...DEFAULT_ROW, ...prev[communeKey], ...patch };
-      if (patch.contacts) {
-        next.contact = summarizeContacts(patch.contacts);
-      }
-      return { ...prev, [communeKey]: next };
+  const syncDirtyForKey = useCallback((communeKey: string, nextRow: ProspectionCommuneState) => {
+    setDirtyKeys((prev) => {
+      const next = new Set(prev);
+      const saved = savedStateRef.current[communeKey] ?? DEFAULT_ROW;
+      if (rowKey(nextRow) === rowKey(saved)) next.delete(communeKey);
+      else next.add(communeKey);
+      return next;
     });
   }, []);
 
-  const changedRows = useMemo(
-    () => getChangedRows(state, savedState, PROSPECTION_COMMUNES),
-    [state, savedState],
+  const updateRow = useCallback(
+    (communeKey: string, patch: Partial<ProspectionCommuneState>) => {
+      setState((prev) => {
+        const next = { ...DEFAULT_ROW, ...prev[communeKey], ...patch };
+        if (patch.contacts) {
+          next.contact = summarizeContacts(patch.contacts);
+        }
+        syncDirtyForKey(communeKey, next);
+        return { ...prev, [communeKey]: next };
+      });
+    },
+    [syncDirtyForKey],
   );
-  const dirtyKeys = useMemo(() => new Set(Object.keys(changedRows)), [changedRows]);
+
   const dirty = dirtyKeys.size > 0;
 
   const handleSave = async () => {
     if (!dirty || saving) return;
     setSaving(true);
     try {
-      const toSave = getChangedRows(stateRef.current, savedState, PROSPECTION_COMMUNES);
+      const toSave = getChangedRowsFromDirtyKeys(stateRef.current, dirtyKeysRef.current);
       await saveProspectionStateMap(toSave);
       setSavedState((prev) => ({ ...prev, ...toSave }));
+      setDirtyKeys(new Set());
       toast({ title: "Enregistré", description: "Les modifications ont été sauvegardées." });
     } catch (err) {
       console.error("Prospection save failed:", err);
@@ -256,55 +186,36 @@ export function ProspectionWorkspace() {
     }
   };
 
-  const matchesBaseFilters = useCallback(
-    (c: ProspectionCommune) => {
-      const s = state[c.key] ?? DEFAULT_ROW;
-      const q = search.toLowerCase();
-      if (
-        q &&
-        !c.ville.toLowerCase().includes(q) &&
-        !c.maire.toLowerCase().includes(q) &&
-        !c.agglo.toLowerCase().includes(q) &&
-        !c.departement.toLowerCase().includes(q) &&
-        !(s.prestataire || "").toLowerCase().includes(q)
-      ) {
-        return false;
-      }
-      if (filterDepartement && c.departement !== filterDepartement) return false;
-      if (filterAgglo && c.agglo !== filterAgglo) return false;
-      if (filterPop === "big" && c.habitants < 5000) return false;
-      if (filterPop === "med" && (c.habitants < 1000 || c.habitants >= 5000)) return false;
-      if (filterPop === "small" && c.habitants >= 1000) return false;
-      return true;
-    },
-    [search, filterDepartement, filterAgglo, filterPop, state],
+  const listFilters = useMemo(
+    () => ({
+      search,
+      filterDepartement,
+      filterAgglo,
+      filterPop,
+      statusTab,
+    }),
+    [search, filterDepartement, filterAgglo, filterPop, statusTab],
   );
 
-  const baseFiltered = useMemo(
-    () => PROSPECTION_COMMUNES.filter(matchesBaseFilters),
-    [matchesBaseFilters],
+  const baseListFilters = useMemo(
+    () => ({
+      search,
+      filterDepartement,
+      filterAgglo,
+      filterPop,
+    }),
+    [search, filterDepartement, filterAgglo, filterPop],
   );
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<ProspectionStatusTab, number> = {
-      all: baseFiltered.length,
-      todo: 0,
-      inprogress: 0,
-      done: 0,
-      callback: 0,
-      refused: 0,
-    };
-    for (const c of baseFiltered) {
-      const status = (state[c.key] ?? DEFAULT_ROW).status;
-      counts[status] += 1;
-    }
-    return counts;
-  }, [baseFiltered, state]);
+  const filtered = useMemo(
+    () => filterProspectionCommunes(communes, state, listFilters),
+    [communes, state, listFilters],
+  );
 
-  const filtered = useMemo(() => {
-    if (statusTab === "all") return baseFiltered;
-    return baseFiltered.filter((c) => (state[c.key] ?? DEFAULT_ROW).status === statusTab);
-  }, [baseFiltered, statusTab, state]);
+  const statusCounts = useMemo(
+    () => computeProspectionStatusCounts(communes, state, baseListFilters),
+    [communes, state, baseListFilters],
+  );
 
   const statusTabs = useMemo(
     () =>
@@ -316,12 +227,13 @@ export function ProspectionWorkspace() {
     [statusCounts, statusTab],
   );
 
-  const stats = useMemo(() => {
-    const done = baseFiltered.filter((c) => (state[c.key] ?? DEFAULT_ROW).status === "done").length;
-    const todo = baseFiltered.filter((c) => (state[c.key] ?? DEFAULT_ROW).status === "todo").length;
-    const pct = baseFiltered.length > 0 ? Math.round((done / baseFiltered.length) * 100) : 0;
-    return { done, todo, pct, total: baseFiltered.length };
-  }, [baseFiltered, state]);
+  const stats = useMemo(
+    () => computeProspectionStats(communes, state, baseListFilters),
+    [communes, state, baseListFilters],
+  );
+
+  const loadError = stateError instanceof Error ? stateError.message : stateError ? String(stateError) : null;
+  const isInitialLoad = communesLoading || (stateLoading && !hydrated);
 
   const handleOpenScript = useCallback((target: ScriptTarget) => {
     setScriptTarget(target);
@@ -335,7 +247,7 @@ export function ProspectionWorkspace() {
   const exportCsv = () => {
     const rows = stateRef.current;
     let csv = "Departement;Commune;Habitants;Agglo;Maire;Qui gere EP;Statut;Prestataire EP;Contact;Notes\n";
-    for (const c of baseFiltered) {
+    for (const c of filterProspectionCommunes(communes, rows, { ...baseListFilters, statusTab: "all" })) {
       const s = rows[c.key] ?? DEFAULT_ROW;
       const contactSummary = summarizeContacts(s.contacts) || s.contact || "";
       csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${s.gestion || ""}";"${s.status}";"${s.prestataire || ""}";"${contactSummary}";"${s.notes || ""}"\n`;
@@ -435,16 +347,7 @@ export function ProspectionWorkspace() {
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="flex h-full min-h-[320px] items-center justify-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Chargement des données…
-      </div>
-    );
-  }
-
-  if (loadError) {
+  if (loadError && !hydrated) {
     return (
       <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 px-4 text-center">
         <p className="text-sm text-destructive">{loadError}</p>
@@ -469,7 +372,7 @@ export function ProspectionWorkspace() {
             onSearchChange={setSearch}
             filterDepartement={filterDepartement}
             onFilterDepartementChange={handleFilterDepartementChange}
-            departements={PROSPECTION_DEPARTEMENTS}
+            departements={departements}
             filterAgglo={filterAgglo}
             onFilterAggloChange={setFilterAgglo}
             agglos={agglos}
@@ -492,7 +395,7 @@ export function ProspectionWorkspace() {
             onSearchChange={setSearch}
             filterDepartement={filterDepartement}
             onFilterDepartementChange={handleFilterDepartementChange}
-            departements={PROSPECTION_DEPARTEMENTS}
+            departements={departements}
             filterAgglo={filterAgglo}
             onFilterAggloChange={setFilterAgglo}
             agglos={agglos}
@@ -528,7 +431,7 @@ export function ProspectionWorkspace() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Tous départements</SelectItem>
-                  {PROSPECTION_DEPARTEMENTS.map((dep) => (
+                  {departements.map((dep) => (
                     <SelectItem key={dep} value={dep}>
                       {dep}
                     </SelectItem>
@@ -576,63 +479,37 @@ export function ProspectionWorkspace() {
         </SheetContent>
       </Sheet>
 
-      <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
-        {isMobile ? (
-          <div className="space-y-2 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
-            {filtered.length === 0 ? (
-              <p className="py-16 text-center text-sm text-muted-foreground">Aucune commune trouvée.</p>
-            ) : (
-              filtered.map((c) => (
-                <ProspectionCommuneMobileCard
-                  key={c.key}
-                  commune={c}
-                  row={state[c.key] ?? DEFAULT_ROW}
-                  isDirty={dirtyKeys.has(c.key)}
-                  onOpenDetail={handleOpenDetail}
-                />
-              ))
-            )}
+      {(stateFetching || isInitialLoad) && (
+        <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {isInitialLoad ? "Chargement du référentiel communes…" : "Synchronisation des données…"}
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 lg:overflow-hidden">
+        {isInitialLoad ? (
+          <div className="flex h-full min-h-[320px] items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Préparation de la liste…
           </div>
+        ) : isMobile ? (
+          <ProspectionVirtualMobileList
+            communes={filtered}
+            state={state}
+            defaultRow={DEFAULT_ROW}
+            dirtyKeys={dirtyKeys}
+            onOpenDetail={handleOpenDetail}
+          />
         ) : (
-          <Table className="table-fixed">
-            <TableHeader className="sticky top-0 z-10 bg-muted">
-              <TableRow>
-                <TableHead className="w-9 px-2">#</TableHead>
-                <TableHead className="w-[4%] px-2">Dép.</TableHead>
-                <TableHead className="w-[11%] px-2">Commune</TableHead>
-                <TableHead className="w-[13%] px-2">Agglomération</TableHead>
-                <TableHead className="w-[10%] px-2">Maire</TableHead>
-                <TableHead className="w-[8%] px-2">Qui gère EP ?</TableHead>
-                <TableHead className="w-[8%] px-2">Statut</TableHead>
-                <TableHead className="w-[10%] px-2">Prestataire</TableHead>
-                <TableHead className="w-[10%] px-2">Contact</TableHead>
-                <TableHead className="w-[11%] px-2">Notes</TableHead>
-                <TableHead className="w-10 px-2">Script</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={11} className="py-16 text-center text-muted-foreground">
-                    Aucune commune trouvée.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((c, i) => (
-                  <ProspectionCommuneRow
-                    key={c.key}
-                    index={i + 1}
-                    commune={c}
-                    row={state[c.key] ?? DEFAULT_ROW}
-                    isDirty={dirtyKeys.has(c.key)}
-                    onPatch={updateRow}
-                    onOpenScript={handleOpenScript}
-                    onOpenDetail={handleOpenDetail}
-                  />
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <ProspectionVirtualTable
+            communes={filtered}
+            state={state}
+            defaultRow={DEFAULT_ROW}
+            dirtyKeys={dirtyKeys}
+            onPatch={updateRow}
+            onOpenScript={handleOpenScript}
+            onOpenDetail={handleOpenDetail}
+          />
         )}
       </div>
 

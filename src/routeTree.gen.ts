@@ -22,6 +22,8 @@ import { Route as CataloguesIndexRouteImport } from './routes/catalogues/index'
 import { Route as CataloguesCatalogueIdRouteImport } from './routes/catalogues/$catalogueId'
 import { Route as CeIndexRouteImport } from './routes/ce/index'
 import { Route as CeDossierIdRouteImport } from './routes/ce/$dossierId'
+import { Route as ProspectionIndexRouteImport } from './routes/prospection.index'
+import { Route as ProspectionCartesRouteImport } from './routes/prospection.cartes'
 import { Route as ApiPublicCronVeilleDailyRouteImport } from './routes/api/public/cron/veille-daily'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
@@ -90,6 +92,16 @@ const CeDossierIdRoute = CeDossierIdRouteImport.update({
   path: '/ce/$dossierId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProspectionIndexRoute = ProspectionIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProspectionRoute,
+} as any)
+const ProspectionCartesRoute = ProspectionCartesRouteImport.update({
+  id: '/cartes',
+  path: '/cartes',
+  getParentRoute: () => ProspectionRoute,
+} as any)
 const ApiPublicCronVeilleDailyRoute =
   ApiPublicCronVeilleDailyRouteImport.update({
     id: '/api/public/cron/veille-daily',
@@ -109,14 +121,16 @@ export interface FileRoutesByFullPath {
   '/fournisseurs': typeof FournisseursRoute
   '/login': typeof LoginRoute
   '/profil': typeof ProfilRoute
-  '/prospection': typeof ProspectionRoute
+  '/prospection': typeof ProspectionRouteWithChildren
   '/veille': typeof VeilleRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/ce/$dossierId': typeof CeDossierIdRoute
+  '/prospection/cartes': typeof ProspectionCartesRoute
   '/appels-offres/': typeof AppelsOffresIndexRoute
   '/catalogues/': typeof CataloguesIndexRoute
   '/ce/': typeof CeIndexRoute
+  '/prospection/': typeof ProspectionIndexRoute
   '/api/public/cron/veille-daily': typeof ApiPublicCronVeilleDailyRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -126,14 +140,15 @@ export interface FileRoutesByTo {
   '/fournisseurs': typeof FournisseursRoute
   '/login': typeof LoginRoute
   '/profil': typeof ProfilRoute
-  '/prospection': typeof ProspectionRoute
   '/veille': typeof VeilleRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/ce/$dossierId': typeof CeDossierIdRoute
+  '/prospection/cartes': typeof ProspectionCartesRoute
   '/appels-offres': typeof AppelsOffresIndexRoute
   '/catalogues': typeof CataloguesIndexRoute
   '/ce': typeof CeIndexRoute
+  '/prospection': typeof ProspectionIndexRoute
   '/api/public/cron/veille-daily': typeof ApiPublicCronVeilleDailyRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -144,14 +159,16 @@ export interface FileRoutesById {
   '/fournisseurs': typeof FournisseursRoute
   '/login': typeof LoginRoute
   '/profil': typeof ProfilRoute
-  '/prospection': typeof ProspectionRoute
+  '/prospection': typeof ProspectionRouteWithChildren
   '/veille': typeof VeilleRoute
   '/appels-offres/$aoId': typeof AppelsOffresAoIdRoute
   '/catalogues/$catalogueId': typeof CataloguesCatalogueIdRoute
   '/ce/$dossierId': typeof CeDossierIdRoute
+  '/prospection/cartes': typeof ProspectionCartesRoute
   '/appels-offres/': typeof AppelsOffresIndexRoute
   '/catalogues/': typeof CataloguesIndexRoute
   '/ce/': typeof CeIndexRoute
+  '/prospection/': typeof ProspectionIndexRoute
   '/api/public/cron/veille-daily': typeof ApiPublicCronVeilleDailyRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -168,9 +185,11 @@ export interface FileRouteTypes {
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
     | '/ce/$dossierId'
+    | '/prospection/cartes'
     | '/appels-offres/'
     | '/catalogues/'
     | '/ce/'
+    | '/prospection/'
     | '/api/public/cron/veille-daily'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
@@ -180,14 +199,15 @@ export interface FileRouteTypes {
     | '/fournisseurs'
     | '/login'
     | '/profil'
-    | '/prospection'
     | '/veille'
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
     | '/ce/$dossierId'
+    | '/prospection/cartes'
     | '/appels-offres'
     | '/catalogues'
     | '/ce'
+    | '/prospection'
     | '/api/public/cron/veille-daily'
     | '/lovable/email/transactional/preview'
   id:
@@ -202,9 +222,11 @@ export interface FileRouteTypes {
     | '/appels-offres/$aoId'
     | '/catalogues/$catalogueId'
     | '/ce/$dossierId'
+    | '/prospection/cartes'
     | '/appels-offres/'
     | '/catalogues/'
     | '/ce/'
+    | '/prospection/'
     | '/api/public/cron/veille-daily'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
@@ -215,7 +237,7 @@ export interface RootRouteChildren {
   FournisseursRoute: typeof FournisseursRoute
   LoginRoute: typeof LoginRoute
   ProfilRoute: typeof ProfilRoute
-  ProspectionRoute: typeof ProspectionRoute
+  ProspectionRoute: typeof ProspectionRouteWithChildren
   VeilleRoute: typeof VeilleRoute
   AppelsOffresAoIdRoute: typeof AppelsOffresAoIdRoute
   CataloguesCatalogueIdRoute: typeof CataloguesCatalogueIdRoute
@@ -320,6 +342,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CeDossierIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/prospection/': {
+      id: '/prospection/'
+      path: '/'
+      fullPath: '/prospection/'
+      preLoaderRoute: typeof ProspectionIndexRouteImport
+      parentRoute: typeof ProspectionRoute
+    }
+    '/prospection/cartes': {
+      id: '/prospection/cartes'
+      path: '/cartes'
+      fullPath: '/prospection/cartes'
+      preLoaderRoute: typeof ProspectionCartesRouteImport
+      parentRoute: typeof ProspectionRoute
+    }
     '/api/public/cron/veille-daily': {
       id: '/api/public/cron/veille-daily'
       path: '/api/public/cron/veille-daily'
@@ -337,13 +373,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ProspectionRouteChildren {
+  ProspectionCartesRoute: typeof ProspectionCartesRoute
+  ProspectionIndexRoute: typeof ProspectionIndexRoute
+}
+
+const ProspectionRouteChildren: ProspectionRouteChildren = {
+  ProspectionCartesRoute: ProspectionCartesRoute,
+  ProspectionIndexRoute: ProspectionIndexRoute,
+}
+
+const ProspectionRouteWithChildren = ProspectionRoute._addFileChildren(
+  ProspectionRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   FournisseursRoute: FournisseursRoute,
   LoginRoute: LoginRoute,
   ProfilRoute: ProfilRoute,
-  ProspectionRoute: ProspectionRoute,
+  ProspectionRoute: ProspectionRouteWithChildren,
   VeilleRoute: VeilleRoute,
   AppelsOffresAoIdRoute: AppelsOffresAoIdRoute,
   CataloguesCatalogueIdRoute: CataloguesCatalogueIdRoute,
