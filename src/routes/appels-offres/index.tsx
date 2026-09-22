@@ -108,6 +108,7 @@ function AppelsOffresPage() {
       gagne: 0,
       perdu: 0,
       abandonne: 0,
+      supprime: 0,
     };
     for (const ao of scopedAos) counts[ao.statut as AoStatut]++;
     return counts;

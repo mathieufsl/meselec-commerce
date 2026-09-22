@@ -48,6 +48,7 @@ import {
   ListTree,
   MapPin,
   Tag,
+  Trash2,
   X,
   ExternalLink,
 } from "lucide-react";
@@ -110,6 +111,27 @@ export function AoDetailSheet({
   function requestClose() {
     if (isDirty && !window.confirm("Des modifications ne sont pas enregistrées. Fermer ?")) return;
     onOpenChange(false);
+  }
+
+  async function handleDelete() {
+    if (!ao) return;
+    if (
+      !window.confirm(
+        `Supprimer l'appel d'offres « ${ao.reference} » ? Il sera retiré du pipeline.`,
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    try {
+      await upsertAo.mutateAsync({ id: ao.id, statut: "supprime" });
+      onOpenChange(false);
+    } catch (err) {
+      setMsg(`Échec de la suppression : ${(err as Error).message}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleSave() {
@@ -421,6 +443,16 @@ export function AoDetailSheet({
               >
                 Fiche complète
                 <ChevronRight className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={saving}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/5 py-3 text-sm font-medium text-destructive shadow-sm transition-colors hover:bg-destructive/10 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Supprimer cet AO
               </button>
             </div>
           </div>
