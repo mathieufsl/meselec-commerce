@@ -71,6 +71,7 @@ export function useAppelsOffres() {
       const { data, error } = await supabase
         .from("appels_offres")
         .select(AO_SELECT)
+        .neq("statut", "supprime")
         .order("date_limite_depot", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data ?? []) as AppelOffre[];

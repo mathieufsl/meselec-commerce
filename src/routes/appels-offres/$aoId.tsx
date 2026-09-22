@@ -54,6 +54,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { cleanDisplaySeparators } from "@/lib/displayText";
 import { cn } from "@/lib/utils";
+import { Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/appels-offres/$aoId")({
   component: AoDetailPage,
@@ -196,6 +197,27 @@ function AoDetailPage() {
       return;
     }
     void navigate({ to: "/appels-offres" });
+  }
+
+  async function handleDelete() {
+    if (!ao) return;
+    if (
+      !window.confirm(
+        `Supprimer l'appel d'offres « ${ao.reference} » ? Il sera retiré du pipeline.`,
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    try {
+      await upsertAo.mutateAsync({ id: ao.id, statut: "supprime" });
+      await refresh();
+      void navigate({ to: "/appels-offres" });
+    } catch (err) {
+      setMsg(`Échec de la suppression : ${(err as Error).message}`);
+      setSaving(false);
+    }
   }
 
   async function nextReponseVersion(): Promise<number> {
@@ -391,6 +413,18 @@ function AoDetailPage() {
             <span className="flex-1 text-center text-xs text-muted-foreground">Lecture seule</span>
           )}
           <AoCommentsSheet aoId={aoId} className="h-9 w-9 shrink-0 p-0 [&_span]:sr-only" />
+          {canEdit ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-9 w-9 shrink-0 p-0 text-destructive hover:text-destructive"
+              onClick={() => void handleDelete()}
+              disabled={saving}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Supprimer</span>
+            </Button>
+          ) : null}
         </div>
       }
       actions={
@@ -411,6 +445,18 @@ function AoDetailPage() {
           {canEdit && ao.statut !== "gagne" && reponse ? (
             <Button size="sm" variant="outline" onClick={runHandoff} disabled={busy || lignes.length === 0}>
               {busy ? "Handoff…" : "Attribuer & créer chantier ERP"}
+            </Button>
+          ) : null}
+          {canEdit ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => void handleDelete()}
+              disabled={saving}
+            >
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              Supprimer
             </Button>
           ) : null}
         </div>

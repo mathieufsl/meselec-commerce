@@ -75,8 +75,22 @@ export function AoDocumentFullscreenViewer({
         {!doc.storage_path ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
             <FileText className="h-12 w-12 opacity-30" />
-            <p>Référence seule — pas de fichier à afficher.</p>
+            <p>
+              {doc.fichier_url
+                ? "Document hébergé sur SharePoint — pas d'aperçu intégré."
+                : "Référence seule — pas de fichier à afficher."}
+            </p>
             {doc.notes ? <p className="text-xs">{doc.notes}</p> : null}
+            {doc.fichier_url ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => window.open(doc.fichier_url!, "_blank", "noopener,noreferrer")}
+              >
+                <ExternalLink className="mr-1.5 h-4 w-4" />
+                Ouvrir sur SharePoint
+              </Button>
+            ) : null}
           </div>
         ) : preview.loading ? (
           <div className="flex h-full items-center justify-center">

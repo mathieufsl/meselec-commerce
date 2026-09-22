@@ -5,7 +5,8 @@ export type AoStatut =
   | "depose"
   | "gagne"
   | "perdu"
-  | "abandonne";
+  | "abandonne"
+  | "supprime";
 
 export type BpuType = "bpu" | "dpgf";
 export type BpuNiveau = "section" | "sous_section" | "ligne";
@@ -80,6 +81,7 @@ export const AO_STATUT_LABELS: Record<AoStatut, string> = {
   gagne: "Gagné",
   perdu: "Perdu",
   abandonne: "Abandonné",
+  supprime: "Supprimé",
 };
 
 export const AO_PIPELINE_COLUMNS: AoStatut[] = [

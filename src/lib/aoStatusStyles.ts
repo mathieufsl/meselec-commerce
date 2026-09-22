@@ -47,4 +47,10 @@ export const AO_STATUT_STYLES: Record<
     tab: "data-[selected=true]:bg-muted-foreground data-[selected=true]:text-white",
     bar: "bg-muted-foreground/60",
   },
+  supprime: {
+    badge: "bg-error-subtle text-error border-error/20",
+    dot: "bg-error",
+    tab: "data-[selected=true]:bg-error data-[selected=true]:text-white",
+    bar: "bg-error",
+  },
 };

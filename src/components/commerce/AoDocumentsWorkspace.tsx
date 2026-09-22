@@ -66,8 +66,24 @@ function DocumentPreviewPane({
       <div className="flex h-full min-h-0 flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
         <div>
           <Paperclip className="mx-auto mb-2 h-10 w-10 opacity-30" />
-          <p>Référence seule — pas de fichier à prévisualiser</p>
+          <p>
+            {doc.fichier_url
+              ? "Document hébergé sur SharePoint — pas d'aperçu intégré"
+              : "Référence seule — pas de fichier à prévisualiser"}
+          </p>
           {doc.notes ? <p className="mt-2 text-xs">{doc.notes}</p> : null}
+          {doc.fichier_url ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              onClick={() => window.open(doc.fichier_url!, "_blank", "noopener,noreferrer")}
+            >
+              <ExternalLink className="mr-1.5 h-4 w-4" />
+              Ouvrir sur SharePoint
+            </Button>
+          ) : null}
         </div>
       </div>
     );
@@ -173,6 +189,21 @@ function DocumentDetailsPane({
           <dt className="text-muted-foreground">Taille</dt>
           <dd className="font-medium">{formatFileSize(doc.taille_octets)}</dd>
         </div>
+        {doc.fichier_url && !doc.storage_path ? (
+          <div>
+            <dt className="text-muted-foreground">Lien</dt>
+            <dd className="truncate font-medium">
+              <a
+                href={doc.fichier_url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline"
+              >
+                {doc.fichier_url}
+              </a>
+            </dd>
+          </div>
+        ) : null}
         {doc.notes ? (
           <div>
             <dt className="text-muted-foreground">Note</dt>
@@ -182,17 +213,30 @@ function DocumentDetailsPane({
       </dl>
 
       <div className="flex flex-wrap gap-2 pt-1">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 flex-1"
-          disabled={!doc.storage_path || busyId === doc.id}
-          onClick={() => onDownload(doc)}
-        >
-          <Download className="mr-1 h-3.5 w-3.5" />
-          Télécharger
-        </Button>
+        {doc.storage_path ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 flex-1"
+            disabled={busyId === doc.id}
+            onClick={() => onDownload(doc)}
+          >
+            <Download className="mr-1 h-3.5 w-3.5" />
+            Télécharger
+          </Button>
+        ) : doc.fichier_url ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 flex-1"
+            onClick={() => window.open(doc.fichier_url!, "_blank", "noopener,noreferrer")}
+          >
+            <ExternalLink className="mr-1 h-3.5 w-3.5" />
+            Ouvrir sur SharePoint
+          </Button>
+        ) : null}
         {(preview.previewSrc) ? (
           <Button type="button" size="sm" variant="ghost" className="h-8" onClick={openInNewTab}>
             <ExternalLink className="h-3.5 w-3.5" />
@@ -415,10 +459,10 @@ export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      <Panel title="Référence rapide (sans fichier)" bodyClassName="space-y-3">
+      <Panel title="Lien SharePoint / référence rapide" bodyClassName="space-y-3">
         <p className="text-xs text-muted-foreground">
-          Signaler un lien externe vers le mémoire technique, le CCTP ou la DPGF sans uploader le
-          fichier.
+          Pointer vers un mémoire technique, un CCTP ou une DPGF hébergé sur SharePoint (ou tout
+          autre lien externe) sans uploader le fichier.
         </p>
         <QuickReferenceForm aoId={aoId} onDone={refresh} />
       </Panel>
@@ -429,22 +473,36 @@ export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
 function QuickReferenceForm({ aoId, onDone }: { aoId: string; onDone: () => Promise<void> }) {
   const [type, setType] = useState<AoDocumentType>("cctp");
   const [nom, setNom] = useState("");
+  const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!nom.trim()) return;
     if (!isAoUploadAllowedType(type)) return;
+    const trimmedUrl = url.trim();
+    if (trimmedUrl) {
+      try {
+        new URL(trimmedUrl);
+      } catch {
+        setError("Lien invalide — il doit commencer par http:// ou https://");
+        return;
+      }
+    }
+    setError(null);
     setSaving(true);
     try {
       await supabase.from("ao_documents").insert({
         ao_id: aoId,
         type,
         nom_fichier: nom.trim(),
+        fichier_url: trimmedUrl || null,
         notes: note.trim() || null,
       });
       setNom("");
+      setUrl("");
       setNote("");
       await onDone();
     } finally {
@@ -466,9 +524,16 @@ function QuickReferenceForm({ aoId, onDone }: { aoId: string; onDone: () => Prom
         ))}
       </select>
       <Input
-        placeholder="Libellé / lien"
+        placeholder="Libellé"
         value={nom}
         onChange={(e) => setNom(e.target.value)}
+        className="max-w-xs flex-1"
+      />
+      <Input
+        type="url"
+        placeholder="Lien SharePoint (https://…)"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
         className="max-w-xs flex-1"
       />
       <Input
@@ -480,6 +545,7 @@ function QuickReferenceForm({ aoId, onDone }: { aoId: string; onDone: () => Prom
       <Button type="submit" size="sm" disabled={saving || !nom.trim()}>
         Ajouter
       </Button>
+      {error ? <p className="w-full text-xs text-destructive">{error}</p> : null}
     </form>
   );
 }
