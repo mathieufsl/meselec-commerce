@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell, StatusBadge } from "@/components/commerce/AppShell";
 import { AoCreateWizard } from "@/components/commerce/AoCreateWizard";
@@ -45,6 +45,27 @@ import { Briefcase, Columns3, LayoutList, Paperclip, Radar, Search, SlidersHoriz
 
 type AoViewMode = "liste" | "kanban";
 
+/** État de vue conservé pendant la session (retour depuis le détail d'un AO). */
+function useSessionState<T>(key: string, initial: T) {
+  const storageKey = `ao-list:${key}`;
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      return raw === null ? initial : (JSON.parse(raw) as T);
+    } catch {
+      return initial;
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(value));
+    } catch {
+      /* stockage indisponible */
+    }
+  }, [storageKey, value]);
+  return [value, setValue] as const;
+}
+
 export const Route = createFileRoute("/appels-offres/")({
   component: AppelsOffresPage,
 });
@@ -60,13 +81,13 @@ function AppelsOffresPage() {
   const { selectedSocieteId } = useAoSocieteFilter();
   const { data: settings } = useCommerceSettings();
   const upsert = useUpsertAppelOffre();
-  const [filter, setFilter] = useState("");
-  const [statutTab, setStatutTab] = useState<AoStatutTab>("all");
-  const [kpiFilter, setKpiFilter] = useState<CommerceKpiKey | null>(null);
-  const [viewMode, setViewMode] = useState<AoViewMode>("liste");
-  const [dateMax, setDateMax] = useState("");
-  const [datePreset, setDatePreset] = useState<AoDateFilterPreset | null>(null);
-  const [secteurFilter, setSecteurFilter] = useState<AoSecteurCode[]>([]);
+  const [filter, setFilter] = useSessionState("filter", "");
+  const [statutTab, setStatutTab] = useSessionState<AoStatutTab>("statutTab", "all");
+  const [kpiFilter, setKpiFilter] = useSessionState<CommerceKpiKey | null>("kpiFilter", null);
+  const [viewMode, setViewMode] = useSessionState<AoViewMode>("viewMode", "liste");
+  const [dateMax, setDateMax] = useSessionState("dateMax", "");
+  const [datePreset, setDatePreset] = useSessionState<AoDateFilterPreset | null>("datePreset", null);
+  const [secteurFilter, setSecteurFilter] = useSessionState<AoSecteurCode[]>("secteurFilter", []);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [detailAoId, setDetailAoId] = useState<string | null>(null);
@@ -226,7 +247,7 @@ function AppelsOffresPage() {
           </div>
 
           <div className="sticky top-0 z-10 shrink-0 border-b border-border/70 bg-background px-3 pb-0 pt-1 shadow-[0_1px_0_0_hsl(var(--border))] sm:px-6">
-            <div className="mb-2 flex items-center gap-2">
+            <div className="mb-2 flex items-center gap-2 md:hidden">
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
