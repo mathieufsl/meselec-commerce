@@ -218,7 +218,7 @@ export function ProspectionCartesMap({
   }
 
   return (
-    <div className="relative h-full min-h-[420px] w-full overflow-hidden rounded-lg border border-border/70">
+    <div className="relative isolate z-0 h-full min-h-[420px] w-full overflow-hidden rounded-lg border border-border/70">
       <MapContainer
         center={IDF_CENTER}
         zoom={9}
