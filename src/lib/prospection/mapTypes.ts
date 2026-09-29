@@ -1,6 +1,6 @@
 export type ProspectionMapSecteur = "EP" | "VRD";
 
-export type ProspectionMapColorMode = "prestataire" | "gestion" | "statut";
+export type ProspectionMapColorMode = "prestataire" | "gestion" | "statut" | "nuance";
 
 export type ProspectionMapDataSource = {
   secteur: ProspectionMapSecteur;
@@ -17,4 +17,5 @@ export const PROSPECTION_MAP_COLOR_MODES: { value: ProspectionMapColorMode; labe
   { value: "prestataire", label: "Prestataire EP" },
   { value: "gestion", label: "Qui gère EP" },
   { value: "statut", label: "Statut prospection" },
+  { value: "nuance", label: "Nuance politique" },
 ];

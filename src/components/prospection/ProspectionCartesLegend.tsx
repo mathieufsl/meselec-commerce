@@ -6,6 +6,7 @@ import {
   statutLegendItems,
   UNSET_COLOR,
 } from "@/lib/prospection/mapColors";
+import { NUANCE_NONE, nuanceColor, nuanceLabel } from "@/lib/prospection/nuances";
 import type { PrestataireStat } from "@/lib/prospection/mapStats";
 import { formatPercent } from "@/lib/prospection/mapStats";
 import type { ProspectionMapColorMode } from "@/lib/prospection/mapTypes";
@@ -15,6 +16,9 @@ import { Search } from "lucide-react";
 
 type Props = {
   colorMode: ProspectionMapColorMode;
+  nuanceStats: { code: string; count: number; percent: number }[];
+  selectedNuances: Set<string>;
+  onToggleNuance: (code: string) => void;
   prestataireStats: PrestataireStat[];
   highlightedPrestataires: Set<string>;
   onTogglePrestataire: (name: string, multi: boolean) => void;
@@ -34,6 +38,9 @@ function LegendSwatch({ color }: { color: string }) {
 
 export function ProspectionCartesLegend({
   colorMode,
+  nuanceStats,
+  selectedNuances,
+  onToggleNuance,
   prestataireStats,
   highlightedPrestataires,
   onTogglePrestataire,
@@ -41,6 +48,42 @@ export function ProspectionCartesLegend({
   companySearch,
   onCompanySearchChange,
 }: Props) {
+  if (colorMode === "nuance") {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="border-b border-border/60 px-3 py-3">
+          <h3 className="text-sm font-semibold">Nuances politiques</h3>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Cliquez pour ne garder que ces nuances sur la carte
+          </p>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="space-y-1 p-2">
+            {nuanceStats.map((stat) => (
+              <button
+                key={stat.code}
+                type="button"
+                onClick={() => onToggleNuance(stat.code)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-muted",
+                  selectedNuances.has(stat.code) && "bg-primary/10 ring-1 ring-primary/30",
+                )}
+              >
+                <LegendSwatch color={nuanceColor(stat.code)} />
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  {stat.code === NUANCE_NONE ? "Non renseigné" : `${stat.code} · ${nuanceLabel(stat.code)}`}
+                </span>
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  {stat.count} · {formatPercent(stat.percent)}%
+                </span>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
+
   if (colorMode === "prestataire") {
     const q = companySearch.trim().toLowerCase();
     const filtered = q

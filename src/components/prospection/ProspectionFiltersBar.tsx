@@ -3,11 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { nuanceColor, nuanceLabel, parseNuanceFilter, serializeNuanceFilter } from "@/lib/prospection/nuances";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 
@@ -30,6 +33,9 @@ export type ProspectionFiltersBarProps = {
   agglos: string[];
   filterPop: string;
   onFilterPopChange: (value: string) => void;
+  filterNuance?: string;
+  onFilterNuanceChange?: (value: string) => void;
+  nuances?: string[];
   mobileFiltersOpen?: boolean;
   onMobileFiltersOpenChange?: (open: boolean) => void;
   className?: string;
@@ -48,6 +54,9 @@ export function ProspectionFiltersBar({
   agglos,
   filterPop,
   onFilterPopChange,
+  filterNuance = "",
+  onFilterNuanceChange,
+  nuances = [],
   mobileFiltersOpen,
   onMobileFiltersOpenChange,
   className,
@@ -161,7 +170,67 @@ export function ProspectionFiltersBar({
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {onFilterNuanceChange && nuances.length > 0 ? (
+        <NuanceFilterMenu value={filterNuance} onChange={onFilterNuanceChange} nuances={nuances} />
+      ) : null}
+
       {children}
     </div>
+  );
+}
+
+export function NuanceFilterMenu({
+  value,
+  onChange,
+  nuances,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  nuances: string[];
+  }) {
+  const selected = parseNuanceFilter(value);
+  const toggle = (code: string) => {
+    const next = new Set(selected);
+    if (next.has(code)) next.delete(code);
+    else next.add(code);
+    onChange(serializeNuanceFilter(next));
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 gap-1.5 font-normal">
+          Nuance politique
+          {selected.size > 0 ? (
+            <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">
+              {selected.size}
+            </Badge>
+          ) : null}
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-[min(60vh,420px)] w-72 overflow-y-auto">
+        <DropdownMenuItem disabled={selected.size === 0} onClick={() => onChange("")}>
+          Toutes les nuances
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {nuances.map((code) => (
+          <DropdownMenuCheckboxItem
+            key={code}
+            checked={selected.has(code)}
+            onSelect={(e) => e.preventDefault()}
+            onCheckedChange={() => toggle(code)}
+          >
+            <span
+              className="mr-2 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: nuanceColor(code) }}
+            />
+            <span className="truncate">
+              {code === "__none__" ? "Non renseigné" : `${code} · ${nuanceLabel(code)}`}
+            </span>
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

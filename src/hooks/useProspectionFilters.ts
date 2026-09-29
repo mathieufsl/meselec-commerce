@@ -7,6 +7,7 @@ import {
   prospectionFiltersEqual,
   type ProspectionListFilters,
 } from "@/lib/prospection/filters";
+import { nuanceKey, sortNuances } from "@/lib/prospection/nuances";
 import { useProspectionSearchParams } from "@/hooks/useProspectionSearchParams";
 
 export function useProspectionFilters(communes: ProspectionCommune[] = []) {
@@ -18,6 +19,7 @@ export function useProspectionFilters(communes: ProspectionCommune[] = []) {
   const [filterDepartement, setFilterDepartement] = useState(initialFilters.current.filterDepartement);
   const [filterAgglo, setFilterAgglo] = useState(initialFilters.current.filterAgglo);
   const [filterPop, setFilterPop] = useState(initialFilters.current.filterPop);
+  const [filterNuance, setFilterNuance] = useState(initialFilters.current.filterNuance);
   const [statusTab, setStatusTab] = useState<ProspectionStatusTab>(initialFilters.current.statusTab);
 
   const agglos = useMemo(() => {
@@ -33,15 +35,21 @@ export function useProspectionFilters(communes: ProspectionCommune[] = []) {
     }
   }, [filterAgglo, agglos]);
 
+  const nuances = useMemo(
+    () => sortNuances([...new Set(communes.map((c) => nuanceKey(c.nuance)))]),
+    [communes],
+  );
+
   const currentFilters = useMemo(
     (): ProspectionListFilters => ({
       search,
       filterDepartement,
       filterAgglo,
       filterPop,
+      filterNuance,
       statusTab,
     }),
-    [search, filterDepartement, filterAgglo, filterPop, statusTab],
+    [search, filterDepartement, filterAgglo, filterPop, filterNuance, statusTab],
   );
 
   useEffect(() => {
@@ -58,6 +66,7 @@ export function useProspectionFilters(communes: ProspectionCommune[] = []) {
     setFilterDepartement(fromUrl.filterDepartement);
     setFilterAgglo(fromUrl.filterAgglo);
     setFilterPop(fromUrl.filterPop);
+    setFilterNuance(fromUrl.filterNuance);
     setStatusTab(fromUrl.statusTab);
   }, [searchParams]);
 
@@ -75,6 +84,9 @@ export function useProspectionFilters(communes: ProspectionCommune[] = []) {
     setFilterAgglo,
     filterPop,
     setFilterPop,
+    filterNuance,
+    setFilterNuance,
+    nuances,
     statusTab,
     setStatusTab,
     agglos,

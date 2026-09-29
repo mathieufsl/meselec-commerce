@@ -1,3 +1,4 @@
+import { NUANCE_NONE, nuanceColor, nuanceKey, nuanceLabel } from "@/lib/prospection/nuances";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -190,10 +191,13 @@ export function ProspectionCartesMap({
       return {
         ...commune,
         state,
-        color: colorForMapValue(colorMode, state),
+        color: colorMode === "nuance" ? nuanceColor(commune.nuance) : colorForMapValue(colorMode, state),
         dimmed,
         selected: commune.key === selectedCommuneKey,
-        label: mapValueLabel(colorMode, state),
+        label:
+          colorMode === "nuance"
+            ? `${nuanceKey(commune.nuance) === NUANCE_NONE ? "Non renseigné" : nuanceLabel(commune.nuance)}${commune.maire ? ` · ${commune.maire}` : ""}`
+            : mapValueLabel(colorMode, state),
       };
     });
   }, [geocodedCommunes, stateMap, colorMode, highlightedPrestataires, selectedCommuneKey]);

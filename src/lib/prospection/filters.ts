@@ -5,6 +5,7 @@ export type ProspectionListFilters = {
   filterDepartement: string;
   filterAgglo: string;
   filterPop: string;
+  filterNuance: string;
   statusTab: ProspectionStatusTab;
 };
 
@@ -27,6 +28,7 @@ export function parseProspectionFilters(params: URLSearchParams): ProspectionLis
     filterDepartement: params.get("dep") ?? "",
     filterAgglo: params.get("agglo") ?? "",
     filterPop: PROSPECTION_POP_FILTERS.has(pop) ? pop : "",
+    filterNuance: params.get("nuance") ?? "",
     statusTab: status && PROSPECTION_STATUS_TABS.includes(status) ? status : "all",
   };
 }
@@ -37,6 +39,7 @@ export function buildProspectionSearchParams(filters: ProspectionListFilters): U
   if (filters.filterDepartement) next.set("dep", filters.filterDepartement);
   if (filters.filterAgglo) next.set("agglo", filters.filterAgglo);
   if (filters.filterPop) next.set("pop", filters.filterPop);
+  if (filters.filterNuance) next.set("nuance", filters.filterNuance);
   if (filters.statusTab !== "all") next.set("status", filters.statusTab);
   return next;
 }
@@ -47,6 +50,7 @@ export function prospectionFiltersEqual(a: ProspectionListFilters, b: Prospectio
     a.filterDepartement === b.filterDepartement &&
     a.filterAgglo === b.filterAgglo &&
     a.filterPop === b.filterPop &&
+    a.filterNuance === b.filterNuance &&
     a.statusTab === b.statusTab
   );
 }

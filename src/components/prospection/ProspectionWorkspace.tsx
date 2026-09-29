@@ -7,7 +7,7 @@ import {
 import { summarizeContacts } from "@/lib/prospection/contacts";
 import { ProspectionCommuneDetailSheet } from "@/components/prospection/ProspectionCommuneDetailSheet";
 import { ProspectionScriptsModal } from "@/components/prospection/ProspectionScriptsModal";
-import { ProspectionFiltersBar } from "@/components/prospection/ProspectionFiltersBar";
+import { NuanceFilterMenu, ProspectionFiltersBar } from "@/components/prospection/ProspectionFiltersBar";
 import { ProspectionVirtualMobileList } from "@/components/prospection/ProspectionVirtualMobileList";
 import { ProspectionVirtualTable } from "@/components/prospection/ProspectionVirtualTable";
 import {
@@ -88,6 +88,9 @@ export function ProspectionWorkspace() {
     setFilterAgglo,
     filterPop,
     setFilterPop,
+    filterNuance,
+    setFilterNuance,
+    nuances,
     statusTab,
     setStatusTab,
     agglos,
@@ -192,9 +195,10 @@ export function ProspectionWorkspace() {
       filterDepartement,
       filterAgglo,
       filterPop,
+      filterNuance,
       statusTab,
     }),
-    [search, filterDepartement, filterAgglo, filterPop, statusTab],
+    [search, filterDepartement, filterAgglo, filterPop, filterNuance, statusTab],
   );
 
   const baseListFilters = useMemo(
@@ -203,8 +207,9 @@ export function ProspectionWorkspace() {
       filterDepartement,
       filterAgglo,
       filterPop,
+      filterNuance,
     }),
-    [search, filterDepartement, filterAgglo, filterPop],
+    [search, filterDepartement, filterAgglo, filterPop, filterNuance],
   );
 
   const filtered = useMemo(
@@ -378,6 +383,9 @@ export function ProspectionWorkspace() {
             agglos={agglos}
             filterPop={filterPop}
             onFilterPopChange={setFilterPop}
+            filterNuance={filterNuance}
+            onFilterNuanceChange={setFilterNuance}
+            nuances={nuances}
           />
           <ProspectionStatsRow stats={stats} />
         </div>
@@ -471,6 +479,10 @@ export function ProspectionWorkspace() {
                   <SelectItem value="small">- 1 000 hab.</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nuance politique</Label>
+              <NuanceFilterMenu value={filterNuance} onChange={setFilterNuance} nuances={nuances} />
             </div>
             <Button type="button" className="w-full" onClick={() => setMobileFiltersOpen(false)}>
               Appliquer

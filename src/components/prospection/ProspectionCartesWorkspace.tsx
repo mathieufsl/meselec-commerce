@@ -1,3 +1,4 @@
+import { nuanceKey, parseNuanceFilter, serializeNuanceFilter, sortNuances } from "@/lib/prospection/nuances";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProspectionCartesCommuneEditor } from "@/components/prospection/ProspectionCartesCommuneEditor";
@@ -38,7 +39,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   notes: "",
 };
 
-const COLOR_MODES = new Set<ProspectionMapColorMode>(["prestataire", "gestion", "statut"]);
+const COLOR_MODES = new Set<ProspectionMapColorMode>(["prestataire", "gestion", "statut", "nuance"]);
 
 function parseMapParams(params: URLSearchParams) {
   const mode = params.get("mode") as ProspectionMapColorMode | null;
@@ -73,6 +74,9 @@ export function ProspectionCartesWorkspace() {
     setFilterAgglo,
     filterPop,
     setFilterPop,
+    filterNuance,
+    setFilterNuance,
+    nuances,
     statusTab,
     agglos,
     handleFilterDepartementChange,
@@ -140,9 +144,10 @@ export function ProspectionCartesWorkspace() {
       filterDepartement,
       filterAgglo,
       filterPop,
+      filterNuance,
       statusTab,
     }),
-    [search, filterDepartement, filterAgglo, filterPop, statusTab],
+    [search, filterDepartement, filterAgglo, filterPop, filterNuance, statusTab],
   );
 
   const effectiveStateMap = useMemo(() => {
@@ -166,6 +171,30 @@ export function ProspectionCartesWorkspace() {
         })),
       ),
     [baseFiltered, effectiveStateMap],
+  );
+
+  const nuanceStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of baseFiltered) {
+      const key = nuanceKey(c.nuance);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const total = baseFiltered.length || 1;
+    return sortNuances([...counts.keys()]).map((code) => ({
+      code,
+      count: counts.get(code) ?? 0,
+      percent: ((counts.get(code) ?? 0) / total) * 100,
+    }));
+  }, [baseFiltered]);
+
+  const handleToggleNuance = useCallback(
+    (code: string) => {
+      const next = parseNuanceFilter(filterNuance);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      setFilterNuance(serializeNuanceFilter(next));
+    },
+    [filterNuance, setFilterNuance],
   );
 
   const selectedCommune = useMemo(
@@ -237,6 +266,9 @@ export function ProspectionCartesWorkspace() {
         onFilterAggloChange={setFilterAgglo}
         filterPop={filterPop}
         onFilterPopChange={setFilterPop}
+        filterNuance={filterNuance}
+        onFilterNuanceChange={setFilterNuance}
+        nuances={nuances}
         agglos={agglos}
         secteur={secteur}
         onSecteurChange={() => undefined}
@@ -300,6 +332,9 @@ export function ProspectionCartesWorkspace() {
         <aside className="min-h-[240px] border-t border-border/60 bg-card lg:min-h-0 lg:border-l lg:border-t-0">
           <ProspectionCartesLegend
             colorMode={colorMode}
+            nuanceStats={nuanceStats}
+            selectedNuances={parseNuanceFilter(filterNuance)}
+            onToggleNuance={handleToggleNuance}
             prestataireStats={prestataireStats}
             highlightedPrestataires={highlightedPrestataires}
             onTogglePrestataire={handleTogglePrestataire}

@@ -24,6 +24,9 @@ type Props = {
   onFilterAggloChange: (value: string) => void;
   filterPop: string;
   onFilterPopChange: (value: string) => void;
+  filterNuance: string;
+  onFilterNuanceChange: (value: string) => void;
+  nuances: string[];
   agglos: string[];
   secteur: ProspectionMapSecteur;
   onSecteurChange: (value: ProspectionMapSecteur) => void;
@@ -42,6 +45,9 @@ export function ProspectionCartesControls({
   onFilterAggloChange,
   filterPop,
   onFilterPopChange,
+  filterNuance,
+  onFilterNuanceChange,
+  nuances,
   agglos,
   secteur,
   onSecteurChange,
@@ -64,6 +70,9 @@ export function ProspectionCartesControls({
         agglos={agglos}
         filterPop={filterPop}
         onFilterPopChange={onFilterPopChange}
+        filterNuance={filterNuance}
+        onFilterNuanceChange={onFilterNuanceChange}
+        nuances={nuances}
       >
         <div className="ml-auto text-xs text-muted-foreground">
           {visibleCount} commune{visibleCount > 1 ? "s" : ""} · coloration par contour communal

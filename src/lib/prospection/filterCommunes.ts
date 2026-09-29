@@ -1,3 +1,4 @@
+import { nuanceKey, parseNuanceFilter } from "@/lib/prospection/nuances";
 import type { ProspectionStatusTab } from "@/components/prospection/ProspectionStatusTabs";
 import type { ProspectionCommune } from "@/data/prospectionCommunes";
 import type { ProspectionCommuneState, ProspectionStateMap } from "@/lib/prospection/api";
@@ -7,6 +8,7 @@ export type ProspectionCommuneFilters = {
   filterDepartement: string;
   filterAgglo: string;
   filterPop: string;
+  filterNuance?: string;
   statusTab: ProspectionStatusTab;
 };
 
@@ -25,6 +27,7 @@ export function filterProspectionCommunes(
   filters: ProspectionCommuneFilters,
 ): ProspectionCommune[] {
   const q = filters.search.toLowerCase();
+  const nuances = parseNuanceFilter(filters.filterNuance ?? "");
   const result: ProspectionCommune[] = [];
 
   for (const c of communes) {
@@ -44,6 +47,7 @@ export function filterProspectionCommunes(
     if (filters.filterPop === "big" && c.habitants < 5000) continue;
     if (filters.filterPop === "med" && (c.habitants < 1000 || c.habitants >= 5000)) continue;
     if (filters.filterPop === "small" && c.habitants >= 1000) continue;
+    if (nuances.size > 0 && !nuances.has(nuanceKey(c.nuance))) continue;
     if (filters.statusTab !== "all" && s.status !== filters.statusTab) continue;
     result.push(c);
   }
