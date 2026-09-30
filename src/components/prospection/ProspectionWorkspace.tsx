@@ -41,6 +41,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useProspectionCommunes } from "@/hooks/useProspectionCommunes";
 import { useProspectionFilters } from "@/hooks/useProspectionFilters";
+import { PROSPECTION_REFERENCE_SEED } from "@/data/prospectionReferenceSeed";
+import { mergeProspectionState } from "@/lib/prospection/referenceState";
 import { useProspectionStateQuery } from "@/hooks/useProspectionStateQuery";
 import {
   computeProspectionStats,
@@ -60,6 +62,15 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   contacts: [],
   notes: "",
 };
+/** Complète l'état serveur avec le référentiel CSV (comme la vue Cartes), pour que Liste et Cartes affichent la même chose. */
+function withReferenceSeed(server: ProspectionStateMap): ProspectionStateMap {
+  const merged: ProspectionStateMap = { ...server };
+  for (const key of Object.keys(PROSPECTION_REFERENCE_SEED)) {
+    merged[key] = mergeProspectionState(key, server[key]);
+  }
+  return merged;
+}
+
 function rowKey(row: ProspectionCommuneState): string {
   return `${row.status}|${row.gestion}|${row.gestionVoirie}|${row.porteEntree}|${row.prestataire}|${summarizeContacts(row.contacts)}|${row.notes}`;
 }
@@ -127,7 +138,7 @@ export function ProspectionWorkspace() {
 
   useEffect(() => {
     if (stateLoading || hydrated) return;
-    setState(serverState);
+    setState(withReferenceSeed(serverState));
     setSavedState(serverState);
     setDirtyKeys(new Set());
     setHydrated(true);
@@ -136,7 +147,7 @@ export function ProspectionWorkspace() {
   const loadFromServer = useCallback(async () => {
     const result = await refetch();
     if (result.data) {
-      setState(result.data);
+      setState(withReferenceSeed(result.data));
       setSavedState(result.data);
       setDirtyKeys(new Set());
       setHydrated(true);
