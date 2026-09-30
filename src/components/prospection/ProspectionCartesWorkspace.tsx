@@ -42,7 +42,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   notes: "",
 };
 
-const COLOR_MODES = new Set<ProspectionMapColorMode>(["prestataire", "gestion", "statut", "nuance"]);
+const COLOR_MODES = new Set<ProspectionMapColorMode>(["prestataire", "prestataireVoirie", "gestion", "gestionVoirie", "porte", "statut", "nuance"]);
 
 function parseMapParams(params: URLSearchParams) {
   const mode = params.get("mode") as ProspectionMapColorMode | null;
@@ -172,6 +172,18 @@ export function ProspectionCartesWorkspace() {
         baseFiltered.map((commune) => ({
           state: effectiveStateMap[commune.key] ?? DEFAULT_ROW,
         })),
+      ),
+    [baseFiltered, effectiveStateMap],
+  );
+
+  const prestataireVoirieStats = useMemo(
+    () =>
+      aggregatePrestataires(
+        baseFiltered.map((commune) => ({
+          state: effectiveStateMap[commune.key] ?? DEFAULT_ROW,
+        })),
+        15,
+        "prestataireVoirie",
       ),
     [baseFiltered, effectiveStateMap],
   );
@@ -338,7 +350,7 @@ export function ProspectionCartesWorkspace() {
             nuanceStats={nuanceStats}
             selectedNuances={parseNuanceFilter(filterNuance)}
             onToggleNuance={handleToggleNuance}
-            prestataireStats={prestataireStats}
+            prestataireStats={colorMode === "prestataireVoirie" ? prestataireVoirieStats : prestataireStats}
             highlightedPrestataires={highlightedPrestataires}
             onTogglePrestataire={handleTogglePrestataire}
             onClearHighlight={handleClearHighlight}

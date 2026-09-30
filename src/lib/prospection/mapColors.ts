@@ -34,6 +34,12 @@ const GESTION_COLORS: Record<ProspectionCommuneState["gestion"], string> = {
   aucun: "#64748b",
 };
 
+const PORTE_COLORS: Record<ProspectionCommuneState["porteEntree"], string> = {
+  "": "#cbd5e1",
+  oui: "#16a34a",
+  non: "#dc2626",
+};
+
 const STATUS_COLORS: Record<ProspectionCommuneState["status"], string> = {
   todo: "#94a3b8",
   inprogress: "#2563eb",
@@ -72,8 +78,14 @@ export function colorForMapValue(
   switch (mode) {
     case "prestataire":
       return prestataireColor(state.prestataire);
+    case "prestataireVoirie":
+      return prestataireColor(state.prestataireVoirie);
     case "gestion":
       return GESTION_COLORS[state.gestion];
+    case "gestionVoirie":
+      return GESTION_COLORS[state.gestionVoirie];
+    case "porte":
+      return PORTE_COLORS[state.porteEntree];
     case "statut":
       return STATUS_COLORS[state.status];
     default:
@@ -88,8 +100,14 @@ export function mapValueLabel(
   switch (mode) {
     case "prestataire":
       return normalizePrestataireName(state.prestataire) || "Non renseigné";
+    case "prestataireVoirie":
+      return normalizePrestataireName(state.prestataireVoirie) || "Non renseigné";
     case "gestion":
       return GESTION_OPTIONS.find((o) => o.value === state.gestion)?.label ?? "?";
+    case "gestionVoirie":
+      return GESTION_OPTIONS.find((o) => o.value === state.gestionVoirie)?.label ?? "?";
+    case "porte":
+      return state.porteEntree === "oui" ? "Porte d'entrée : oui" : state.porteEntree === "non" ? "Porte d'entrée : non" : "Non renseigné";
     case "statut":
       return state.status;
     default:
@@ -102,6 +120,13 @@ export function gestionLegendItems() {
     label: o.label,
     color: GESTION_COLORS[o.value],
   }));
+}
+
+export function porteLegendItems() {
+  return [
+    { label: "Oui", color: PORTE_COLORS.oui },
+    { label: "Non", color: PORTE_COLORS.non },
+  ];
 }
 
 export function statutLegendItems() {

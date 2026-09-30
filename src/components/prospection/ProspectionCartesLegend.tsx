@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   gestionLegendItems,
+  porteLegendItems,
   prestataireColor,
   statutLegendItems,
   UNSET_COLOR,
@@ -84,7 +85,7 @@ export function ProspectionCartesLegend({
     );
   }
 
-  if (colorMode === "prestataire") {
+  if (colorMode === "prestataire" || colorMode === "prestataireVoirie") {
     const q = companySearch.trim().toLowerCase();
     const filtered = q
       ? prestataireStats.filter((s) => s.name.toLowerCase().includes(q))
@@ -94,7 +95,9 @@ export function ProspectionCartesLegend({
       <div className="flex h-full min-h-0 flex-col">
         <div className="border-b border-border/60 px-3 py-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Entreprises</h3>
+            <h3 className="text-sm font-semibold">
+              {colorMode === "prestataireVoirie" ? "Entreprises voirie" : "Entreprises"}
+            </h3>
             {highlightedPrestataires.size > 0 ? (
               <button
                 type="button"
@@ -153,9 +156,11 @@ export function ProspectionCartesLegend({
   }
 
   const items =
-    colorMode === "gestion"
+    colorMode === "gestion" || colorMode === "gestionVoirie"
       ? gestionLegendItems()
-      : statutLegendItems().map((item) => ({
+      : colorMode === "porte"
+        ? porteLegendItems()
+        : statutLegendItems().map((item) => ({
           label: STATUS_OPTIONS.find((o) => o.value === item.label)?.label ?? item.label,
           color: item.color,
         }));
@@ -172,7 +177,7 @@ export function ProspectionCartesLegend({
             <span>{item.label}</span>
           </div>
         ))}
-        {colorMode === "gestion" ? (
+        {colorMode === "gestion" || colorMode === "gestionVoirie" || colorMode === "porte" ? (
           <div className="flex items-center gap-2 text-sm">
             <LegendSwatch color={UNSET_COLOR} />
             <span>Non renseigné</span>

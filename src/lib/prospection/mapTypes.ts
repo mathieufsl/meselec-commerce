@@ -1,6 +1,6 @@
 export type ProspectionMapSecteur = "EP" | "VRD";
 
-export type ProspectionMapColorMode = "prestataire" | "gestion" | "statut" | "nuance";
+export type ProspectionMapColorMode = "prestataire" | "prestataireVoirie" | "gestion" | "gestionVoirie" | "porte" | "statut" | "nuance";
 
 export type ProspectionMapDataSource = {
   secteur: ProspectionMapSecteur;
@@ -16,6 +16,9 @@ export const PROSPECTION_MAP_SECTEURS: ProspectionMapDataSource[] = [
 export const PROSPECTION_MAP_COLOR_MODES: { value: ProspectionMapColorMode; label: string }[] = [
   { value: "prestataire", label: "Prestataire EP" },
   { value: "gestion", label: "Qui gère EP" },
+  { value: "prestataireVoirie", label: "Prestataire voirie" },
+  { value: "gestionVoirie", label: "Qui gère voirie" },
+  { value: "porte", label: "Porte d'entrée" },
   { value: "statut", label: "Statut prospection" },
   { value: "nuance", label: "Nuance politique" },
 ];

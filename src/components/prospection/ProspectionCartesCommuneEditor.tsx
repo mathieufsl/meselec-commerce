@@ -38,6 +38,7 @@ export function ProspectionCartesCommuneEditor({
 }: Props) {
   const [prestataire, setPrestataire] = useState(state.prestataire);
   const [gestion, setGestion] = useState(state.gestion);
+  const [prestataireVoirie, setPrestataireVoirie] = useState(state.prestataireVoirie);
   const [gestionVoirie, setGestionVoirie] = useState(state.gestionVoirie);
   const [porteEntree, setPorteEntree] = useState(state.porteEntree);
   const [status, setStatus] = useState(state.status);
@@ -49,6 +50,7 @@ export function ProspectionCartesCommuneEditor({
   useEffect(() => {
     setPrestataire(state.prestataire);
     setGestion(state.gestion);
+    setPrestataireVoirie(state.prestataireVoirie);
     setGestionVoirie(state.gestionVoirie);
     setPorteEntree(state.porteEntree);
     setStatus(state.status);
@@ -69,6 +71,7 @@ export function ProspectionCartesCommuneEditor({
       await onSave({
         prestataire: canonicalizePrestataire(prestataire),
         gestion,
+        prestataireVoirie: canonicalizePrestataire(prestataireVoirie),
         gestionVoirie,
         porteEntree,
         status,
@@ -85,6 +88,7 @@ export function ProspectionCartesCommuneEditor({
   const dirty =
     canonicalizePrestataire(prestataire) !== canonicalizePrestataire(state.prestataire) ||
     gestion !== state.gestion ||
+    canonicalizePrestataire(prestataireVoirie) !== canonicalizePrestataire(state.prestataireVoirie) ||
     gestionVoirie !== state.gestionVoirie ||
     porteEntree !== state.porteEntree ||
     status !== state.status ||
@@ -144,6 +148,17 @@ export function ProspectionCartesCommuneEditor({
               ))}
             </div>
           ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`carte-prestataire-voirie-${commune.key}`}>Prestataire voirie</Label>
+          <Input
+            id={`carte-prestataire-voirie-${commune.key}`}
+            value={prestataireVoirie}
+            onChange={(e) => setPrestataireVoirie(e.target.value)}
+            placeholder="ex. Colas, Eurovia…"
+            autoComplete="off"
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

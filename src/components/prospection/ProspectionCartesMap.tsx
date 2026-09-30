@@ -185,10 +185,12 @@ export function ProspectionCartesMap({
         contacts: [],
         notes: "",
       };
-      const prestataire = normalizePrestataireName(state.prestataire);
+      const prestataire = normalizePrestataireName(
+        colorMode === "prestataireVoirie" ? state.prestataireVoirie : state.prestataire,
+      );
       const dimmed =
         hasHighlight &&
-        colorMode === "prestataire" &&
+        (colorMode === "prestataire" || colorMode === "prestataireVoirie") &&
         (!prestataire || !highlightedPrestataires.has(prestataire));
 
       return {

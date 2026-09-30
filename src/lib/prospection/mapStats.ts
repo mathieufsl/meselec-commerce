@@ -11,12 +11,13 @@ export type PrestataireStat = {
 export function aggregatePrestataires(
   entries: Array<{ state: ProspectionCommuneState }>,
   topN = 15,
+  field: "prestataire" | "prestataireVoirie" = "prestataire",
 ): PrestataireStat[] {
   const counts = new Map<string, number>();
   let withPrestataire = 0;
 
   for (const { state } of entries) {
-    const name = normalizePrestataireName(state.prestataire);
+    const name = normalizePrestataireName(state[field]);
     if (!name || !isValidPrestataire(name)) continue;
     withPrestataire++;
     counts.set(name, (counts.get(name) ?? 0) + 1);
