@@ -172,6 +172,7 @@ export function ProspectionCartesWorkspace() {
         baseFiltered.map((commune) => ({
           state: effectiveStateMap[commune.key] ?? DEFAULT_ROW,
         })),
+        Number.POSITIVE_INFINITY,
       ),
     [baseFiltered, effectiveStateMap],
   );
@@ -182,7 +183,7 @@ export function ProspectionCartesWorkspace() {
         baseFiltered.map((commune) => ({
           state: effectiveStateMap[commune.key] ?? DEFAULT_ROW,
         })),
-        15,
+        Number.POSITIVE_INFINITY,
         "prestataireVoirie",
       ),
     [baseFiltered, effectiveStateMap],
