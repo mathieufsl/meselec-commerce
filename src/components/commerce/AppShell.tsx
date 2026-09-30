@@ -76,6 +76,7 @@ export function AppShell({
   back,
   banner,
   belowHeader,
+  titleExtra,
   flush = false,
   syncLabel,
   primaryAction,
@@ -92,6 +93,8 @@ export function AppShell({
   back?: { to: string; label?: string; onNavigate?: () => void };
   banner?: React.ReactNode;
   belowHeader?: React.ReactNode;
+  /** Contenu affiché dans le header, juste après le titre (ex. onglets). */
+  titleExtra?: React.ReactNode;
   flush?: boolean;
   syncLabel?: string | null;
   primaryAction?: { label: string; onClick: () => void };
@@ -219,6 +222,7 @@ export function AppShell({
                         )}
                       </div>
                     </div>
+                    {titleExtra ? <div className="hidden shrink-0 sm:block">{titleExtra}</div> : null}
                   </div>
                   <div className="flex shrink-0 items-center justify-end gap-1.5 sm:min-w-0 sm:shrink sm:gap-2">
                     {headerExtra ? (

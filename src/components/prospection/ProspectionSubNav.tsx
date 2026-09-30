@@ -11,7 +11,7 @@ export function ProspectionSubNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="flex items-center gap-1 px-3 py-2 sm:px-6">
+    <div className="flex items-center gap-1 px-3 py-2 sm:p-0">
       {TABS.map((tab) => {
         const active = tab.match(pathname);
         const Icon = tab.icon;

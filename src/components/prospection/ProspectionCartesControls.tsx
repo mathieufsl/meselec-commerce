@@ -1,5 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -10,9 +8,7 @@ import {
 import { ProspectionFiltersBar } from "@/components/prospection/ProspectionFiltersBar";
 import {
   PROSPECTION_MAP_COLOR_MODES,
-  PROSPECTION_MAP_SECTEURS,
   type ProspectionMapColorMode,
-  type ProspectionMapSecteur,
 } from "@/lib/prospection/mapTypes";
 
 type Props = {
@@ -28,11 +24,8 @@ type Props = {
   onFilterNuanceChange: (value: string) => void;
   nuances: string[];
   agglos: string[];
-  secteur: ProspectionMapSecteur;
-  onSecteurChange: (value: ProspectionMapSecteur) => void;
   colorMode: ProspectionMapColorMode;
   onColorModeChange: (value: ProspectionMapColorMode) => void;
-  visibleCount: number;
   departements: string[];
 };
 
@@ -49,15 +42,12 @@ export function ProspectionCartesControls({
   onFilterNuanceChange,
   nuances,
   agglos,
-  secteur,
-  onSecteurChange,
   colorMode,
   onColorModeChange,
-  visibleCount,
   departements,
 }: Props) {
   return (
-    <div className="space-y-3 border-b border-border/60 px-3 py-3 sm:px-6">
+    <div className="sticky top-0 z-30 shrink-0 border-b border-border/60 bg-background px-3 py-3 sm:px-6">
       <ProspectionFiltersBar
         variant="desktop"
         search={search}
@@ -74,53 +64,24 @@ export function ProspectionCartesControls({
         onFilterNuanceChange={onFilterNuanceChange}
         nuances={nuances}
       >
-        <div className="ml-auto text-xs text-muted-foreground">
-          {visibleCount} commune{visibleCount > 1 ? "s" : ""} · coloration par contour communal
-        </div>
-      </ProspectionFiltersBar>
-
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Secteur</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {PROSPECTION_MAP_SECTEURS.map((item) => (
-              <button
-                key={item.secteur}
-                type="button"
-                disabled={!item.available}
-                onClick={() => item.available && onSecteurChange(item.secteur)}
-                className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[active=true]:border-primary data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
-                data-active={secteur === item.secteur}
-              >
-                {item.label}
-                {!item.available ? (
-                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-                    Bientôt
-                  </Badge>
-                ) : null}
-              </button>
+        <Select value={colorMode} onValueChange={(v) => onColorModeChange(v as ProspectionMapColorMode)}>
+          <SelectTrigger
+            id="prospection-map-color-mode"
+            aria-label="Colorer par"
+            className="ml-auto h-9 w-[190px] shrink-0"
+          >
+            <span className="mr-1 text-muted-foreground">Colorer :</span>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PROSPECTION_MAP_COLOR_MODES.map((mode) => (
+              <SelectItem key={mode.value} value={mode.value}>
+                {mode.label}
+              </SelectItem>
             ))}
-          </div>
-        </div>
-
-        <div className="min-w-[180px] space-y-1">
-          <Label htmlFor="prospection-map-color-mode" className="text-xs text-muted-foreground">
-            Colorer par
-          </Label>
-          <Select value={colorMode} onValueChange={(v) => onColorModeChange(v as ProspectionMapColorMode)}>
-            <SelectTrigger id="prospection-map-color-mode" className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PROSPECTION_MAP_COLOR_MODES.map((mode) => (
-                <SelectItem key={mode.value} value={mode.value}>
-                  {mode.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+          </SelectContent>
+        </Select>
+      </ProspectionFiltersBar>
     </div>
   );
 }

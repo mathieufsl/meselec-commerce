@@ -9,10 +9,15 @@ export const Route = createFileRoute("/prospection")({
 function ProspectionLayout() {
   return (
     <AppShell
-      title="Prospection EP"
+      title="Prospection"
       flush
       contentClassName="px-0 py-0"
-      belowHeader={<ProspectionSubNav />}
+      titleExtra={<ProspectionSubNav />}
+      belowHeader={
+        <div className="sm:hidden">
+          <ProspectionSubNav />
+        </div>
+      }
     >
       <Outlet />
     </AppShell>

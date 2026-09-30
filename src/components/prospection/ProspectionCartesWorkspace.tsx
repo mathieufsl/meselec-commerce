@@ -10,7 +10,7 @@ import type { ProspectionCommuneState } from "@/lib/prospection/api";
 import { upsertProspectionCommune } from "@/lib/prospection/api";
 import { filterProspectionCommunes } from "@/lib/prospection/filterCommunes";
 import { aggregatePrestataires } from "@/lib/prospection/mapStats";
-import type { ProspectionMapColorMode, ProspectionMapSecteur } from "@/lib/prospection/mapTypes";
+import type { ProspectionMapColorMode } from "@/lib/prospection/mapTypes";
 import { canonicalizePrestataire } from "@/lib/prospection/prestataireNomenclature";
 import { mergeProspectionState } from "@/lib/prospection/referenceState";
 import { useProspectionCommunes } from "@/hooks/useProspectionCommunes";
@@ -93,7 +93,6 @@ export function ProspectionCartesWorkspace() {
     refetch,
   } = useProspectionStateQuery();
 
-  const [secteur] = useState<ProspectionMapSecteur>("EP");
   const [colorMode, setColorMode] = useState<ProspectionMapColorMode>(initialMapParams.current.colorMode);
   const [highlightedPrestataires, setHighlightedPrestataires] = useState<Set<string>>(
     initialMapParams.current.highlightedPrestataires,
@@ -286,11 +285,8 @@ export function ProspectionCartesWorkspace() {
         onFilterNuanceChange={setFilterNuance}
         nuances={nuances}
         agglos={agglos}
-        secteur={secteur}
-        onSecteurChange={() => undefined}
         colorMode={colorMode}
         onColorModeChange={setColorMode}
-        visibleCount={baseFiltered.length}
         departements={departements}
       />
 
