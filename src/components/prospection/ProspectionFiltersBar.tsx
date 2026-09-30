@@ -92,8 +92,8 @@ export function ProspectionFiltersBar({
   }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-2", className)}>
-      <div className="relative w-full sm:w-[280px] lg:w-[320px] xl:w-[360px]">
+    <div className={cn("flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-2 lg:flex-nowrap [&>button]:shrink-0", className)}>
+      <div className="relative w-full min-w-[110px] sm:w-[280px] lg:w-auto lg:flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Rechercher une commune, maire, agglomération…"
@@ -105,7 +105,7 @@ export function ProspectionFiltersBar({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 font-normal">
+          <Button variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 font-normal">
             Département
             {filterDepartement ? (
               <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">
@@ -130,7 +130,7 @@ export function ProspectionFiltersBar({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 font-normal">
+          <Button variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 font-normal">
             Agglomération
             {filterAgglo ? (
               <Badge variant="secondary" className="ml-0.5 h-5 max-w-[120px] truncate px-1.5 text-xs">
@@ -155,7 +155,7 @@ export function ProspectionFiltersBar({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 font-normal">
+          <Button variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 font-normal">
             {filterPop ? popLabel : "Taille"}
             <ChevronDown className="h-3.5 w-3.5 opacity-60" />
           </Button>
@@ -199,8 +199,8 @@ export function NuanceFilterMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 gap-1.5 font-normal">
-          Nuance politique
+        <Button variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 font-normal">
+          Nuance
           {selected.size > 0 ? (
             <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">
               {selected.size}

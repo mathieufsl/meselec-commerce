@@ -571,7 +571,7 @@ const StatBox = memo(function StatBox({
   className?: string;
 }) {
   return (
-    <div className="min-w-[88px] rounded-lg border px-3 py-2 text-center">
+    <div className="min-w-[64px] rounded-lg border px-2 py-1.5 text-center">
       <div className={cn("text-lg font-bold leading-tight", className)}>{value}</div>
       <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
     </div>
@@ -589,7 +589,7 @@ function ProspectionStatsRow({
     <div
       className={cn(
         "shrink-0 gap-2",
-        mobile ? "grid grid-cols-2" : "flex flex-wrap items-stretch",
+        mobile ? "grid grid-cols-2" : "flex flex-nowrap items-stretch",
       )}
     >
       <StatBox label="Communes" value={stats.total} />
@@ -598,7 +598,7 @@ function ProspectionStatsRow({
       <div
         className={cn(
           "flex min-w-0 flex-col justify-center gap-1 rounded-lg border px-3 py-2",
-          mobile ? "col-span-2 sm:col-span-1" : "min-w-[140px]",
+          mobile ? "col-span-2 sm:col-span-1" : "min-w-[100px]",
         )}
       >
         <div className="flex items-center gap-2">
