@@ -271,7 +271,7 @@ export function ProspectionCartesWorkspace() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:h-full">
       <ProspectionCartesControls
         search={search}
         onSearchChange={setSearch}
@@ -300,11 +300,11 @@ export function ProspectionCartesWorkspace() {
       <div
         className={
           selectedCommune
-            ? "grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px_280px]"
-            : "grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px]"
+            ? "grid min-h-0 flex-1 grid-cols-1 lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_340px_280px]"
+            : "grid min-h-0 flex-1 grid-cols-1 lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_280px]"
         }
       >
-        <div className="min-h-[420px] p-3 sm:p-4 lg:min-h-0">
+        <div className="min-h-[420px] p-3 sm:p-4 lg:h-full lg:min-h-0">
           {isInitialLoad ? (
             <div className="flex h-full min-h-[420px] items-center justify-center rounded-lg border border-border/70 bg-muted/20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -330,7 +330,7 @@ export function ProspectionCartesWorkspace() {
         </div>
 
         {selectedCommune && selectedCommuneState ? (
-          <aside className="hidden min-h-0 min-w-0 flex-col border-t border-border/60 bg-card lg:flex lg:border-l lg:border-t-0">
+          <aside className="hidden min-h-0 min-w-0 flex-col overflow-hidden border-t border-border/60 bg-card lg:flex lg:border-l lg:border-t-0">
             <ProspectionCartesCommuneEditor
               commune={selectedCommune}
               state={selectedCommuneState}
@@ -341,7 +341,7 @@ export function ProspectionCartesWorkspace() {
           </aside>
         ) : null}
 
-        <aside className="min-h-[240px] border-t border-border/60 bg-card lg:min-h-0 lg:border-l lg:border-t-0">
+        <aside className="min-h-[240px] overflow-hidden border-t border-border/60 bg-card lg:h-full lg:min-h-0 lg:border-l lg:border-t-0">
           <ProspectionCartesLegend
             colorMode={colorMode}
             nuanceStats={nuanceStats}

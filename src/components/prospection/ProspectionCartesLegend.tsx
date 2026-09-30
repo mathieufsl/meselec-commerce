@@ -58,7 +58,7 @@ export function ProspectionCartesLegend({
             Cliquez pour ne garder que ces nuances sur la carte
           </p>
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-1 p-2">
             {nuanceStats.map((stat) => (
               <button
@@ -121,7 +121,7 @@ export function ProspectionCartesLegend({
             Cliquez pour surligner · Ctrl+clic pour comparer
           </p>
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-1 p-2">
             {filtered.length === 0 ? (
               <p className="px-2 py-4 text-center text-sm text-muted-foreground">
