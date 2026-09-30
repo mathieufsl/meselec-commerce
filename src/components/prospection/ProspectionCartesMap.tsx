@@ -179,6 +179,7 @@ export function ProspectionCartesMap({
         gestion: "" as const,
         gestionVoirie: "" as const,
         porteEntree: "" as const,
+        prestataireVoirie: "",
         prestataire: "",
         contact: "",
         contacts: [],

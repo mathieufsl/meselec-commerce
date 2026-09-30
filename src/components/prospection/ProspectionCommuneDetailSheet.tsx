@@ -61,6 +61,7 @@ export function ProspectionCommuneDetailSheet({
   const isMobile = useIsMobile();
   const [contacts, setContacts] = useState(row.contacts);
   const [prestataire, setPrestataire] = useState(row.prestataire);
+  const [prestataireVoirie, setPrestataireVoirie] = useState(row.prestataireVoirie);
   const [notes, setNotes] = useState(row.notes);
   const contactsRef = useRef(contacts);
   contactsRef.current = contacts;
@@ -68,8 +69,9 @@ export function ProspectionCommuneDetailSheet({
   useEffect(() => {
     setContacts(row.contacts);
     setPrestataire(row.prestataire);
+    setPrestataireVoirie(row.prestataireVoirie);
     setNotes(row.notes);
-  }, [row.contacts, row.prestataire, row.notes, commune?.key]);
+  }, [row.contacts, row.prestataire, row.prestataireVoirie, row.notes, commune?.key]);
 
   if (!commune) return null;
 
@@ -80,6 +82,7 @@ export function ProspectionCommuneDetailSheet({
   const commitTextFields = () => {
     const patch: Partial<ProspectionCommuneState> = {};
     if (prestataire !== row.prestataire) patch.prestataire = prestataire;
+    if (prestataireVoirie !== row.prestataireVoirie) patch.prestataireVoirie = prestataireVoirie;
     if (notes !== row.notes) patch.notes = notes;
     if (Object.keys(patch).length > 0) onPatch(communeKey, patch);
   };
@@ -349,6 +352,21 @@ export function ProspectionCommuneDetailSheet({
                 className={cn(
                   "h-10 w-full",
                   prestataire && "border-success/30 bg-success-subtle font-semibold text-success",
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="prospection-prestataire-voirie">Prestataire voirie</Label>
+              <Input
+                id="prospection-prestataire-voirie"
+                value={prestataireVoirie}
+                placeholder="ex: Colas"
+                onChange={(e) => setPrestataireVoirie(e.target.value)}
+                onBlur={commitTextFields}
+                className={cn(
+                  "h-10 w-full",
+                  prestataireVoirie && "border-success/30 bg-success-subtle font-semibold text-success",
                 )}
               />
             </div>

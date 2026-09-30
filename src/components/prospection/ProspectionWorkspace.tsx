@@ -7,7 +7,7 @@ import {
 import { summarizeContacts } from "@/lib/prospection/contacts";
 import { ProspectionCommuneDetailSheet } from "@/components/prospection/ProspectionCommuneDetailSheet";
 import { ProspectionScriptsModal } from "@/components/prospection/ProspectionScriptsModal";
-import { NuanceFilterMenu, ProspectionFiltersBar } from "@/components/prospection/ProspectionFiltersBar";
+import { NuanceFilterMenu, ProspectionFiltersBar, PorteFilterMenu } from "@/components/prospection/ProspectionFiltersBar";
 import { ProspectionVirtualMobileList } from "@/components/prospection/ProspectionVirtualMobileList";
 import { ProspectionVirtualTable } from "@/components/prospection/ProspectionVirtualTable";
 import {
@@ -57,6 +57,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   gestion: "",
   gestionVoirie: "",
   porteEntree: "",
+  prestataireVoirie: "",
   prestataire: "",
   contact: "",
   contacts: [],
@@ -72,7 +73,7 @@ function withReferenceSeed(server: ProspectionStateMap): ProspectionStateMap {
 }
 
 function rowKey(row: ProspectionCommuneState): string {
-  return `${row.status}|${row.gestion}|${row.gestionVoirie}|${row.porteEntree}|${row.prestataire}|${summarizeContacts(row.contacts)}|${row.notes}`;
+  return `${row.status}|${row.gestion}|${row.gestionVoirie}|${row.porteEntree}|${row.prestataire}|${row.prestataireVoirie}|${summarizeContacts(row.contacts)}|${row.notes}`;
 }
 
 function getChangedRowsFromDirtyKeys(
@@ -103,6 +104,8 @@ export function ProspectionWorkspace() {
     setFilterPop,
     filterNuance,
     setFilterNuance,
+    filterPorte,
+    setFilterPorte,
     nuances,
     statusTab,
     setStatusTab,
@@ -209,9 +212,10 @@ export function ProspectionWorkspace() {
       filterAgglo,
       filterPop,
       filterNuance,
+      filterPorte,
       statusTab,
     }),
-    [search, filterDepartement, filterAgglo, filterPop, filterNuance, statusTab],
+    [search, filterDepartement, filterAgglo, filterPop, filterNuance, filterPorte, statusTab],
   );
 
   const baseListFilters = useMemo(
@@ -221,8 +225,9 @@ export function ProspectionWorkspace() {
       filterAgglo,
       filterPop,
       filterNuance,
+      filterPorte,
     }),
-    [search, filterDepartement, filterAgglo, filterPop, filterNuance],
+    [search, filterDepartement, filterAgglo, filterPop, filterNuance, filterPorte],
   );
 
   const filtered = useMemo(
@@ -264,11 +269,11 @@ export function ProspectionWorkspace() {
 
   const exportCsv = () => {
     const rows = stateRef.current;
-    let csv = "Departement;Commune;Habitants;Agglo;Maire;Nuance;Qui gere EP;Qui gere voirie;Porte entree;Statut;Prestataire EP;Contact;Notes\n";
+    let csv = "Departement;Commune;Habitants;Agglo;Maire;Nuance;Qui gere EP;Qui gere voirie;Porte entree;Statut;Prestataire EP;Prestataire voirie;Contact;Notes\n";
     for (const c of filterProspectionCommunes(communes, rows, { ...baseListFilters, statusTab: "all" })) {
       const s = rows[c.key] ?? DEFAULT_ROW;
       const contactSummary = summarizeContacts(s.contacts) || s.contact || "";
-      csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${c.nuance || ""}";"${s.gestion || ""}";"${s.gestionVoirie || ""}";"${s.porteEntree || ""}";"${s.status}";"${s.prestataire || ""}";"${contactSummary}";"${s.notes || ""}"\n`;
+      csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${c.nuance || ""}";"${s.gestion || ""}";"${s.gestionVoirie || ""}";"${s.porteEntree || ""}";"${s.status}";"${s.prestataire || ""}";"${s.prestataireVoirie || ""}";"${contactSummary}";"${s.notes || ""}"\n`;
     }
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -398,6 +403,8 @@ export function ProspectionWorkspace() {
             onFilterPopChange={setFilterPop}
             filterNuance={filterNuance}
             onFilterNuanceChange={setFilterNuance}
+            filterPorte={filterPorte}
+            onFilterPorteChange={setFilterPorte}
             nuances={nuances}
           />
           <ProspectionStatsRow stats={stats} />
@@ -496,6 +503,10 @@ export function ProspectionWorkspace() {
             <div className="space-y-2">
               <Label>Nuance politique</Label>
               <NuanceFilterMenu value={filterNuance} onChange={setFilterNuance} nuances={nuances} />
+            </div>
+            <div className="space-y-2">
+              <Label>Porte d&apos;entrée</Label>
+              <PorteFilterMenu value={filterPorte} onChange={setFilterPorte} />
             </div>
             <Button type="button" className="w-full" onClick={() => setMobileFiltersOpen(false)}>
               Appliquer

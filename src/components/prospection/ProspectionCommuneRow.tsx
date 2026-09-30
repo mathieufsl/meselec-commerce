@@ -231,6 +231,17 @@ export const ProspectionCommuneRow = memo(
             )}
           />
         </TableCell>
+        <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
+          <ProspectionTextInput
+            value={row.prestataireVoirie}
+            placeholder="ex: Colas"
+            onCommit={(prestataireVoirie) => onPatch(communeKey, { prestataireVoirie })}
+            className={cn(
+              "h-8 w-full min-w-0 text-xs",
+              row.prestataireVoirie && "border-success/30 bg-success-subtle font-semibold text-success",
+            )}
+          />
+        </TableCell>
         <TableCell
           className="max-w-0 truncate px-2 py-1.5 text-xs text-muted-foreground"
           title={row.contact || "Ouvrir le détail pour gérer les contacts"}

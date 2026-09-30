@@ -9,6 +9,7 @@ export type ProspectionCommuneFilters = {
   filterAgglo: string;
   filterPop: string;
   filterNuance?: string;
+  filterPorte?: string;
   statusTab: ProspectionStatusTab;
 };
 
@@ -17,6 +18,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   gestion: "",
   gestionVoirie: "",
   porteEntree: "",
+  prestataireVoirie: "",
   prestataire: "",
   contact: "",
   contacts: [],
@@ -40,7 +42,8 @@ export function filterProspectionCommunes(
       !c.maire.toLowerCase().includes(q) &&
       !c.agglo.toLowerCase().includes(q) &&
       !c.departement.toLowerCase().includes(q) &&
-      !(s.prestataire || "").toLowerCase().includes(q)
+      !(s.prestataire || "").toLowerCase().includes(q) &&
+      !(s.prestataireVoirie || "").toLowerCase().includes(q)
     ) {
       continue;
     }
@@ -50,6 +53,7 @@ export function filterProspectionCommunes(
     if (filters.filterPop === "med" && (c.habitants < 1000 || c.habitants >= 5000)) continue;
     if (filters.filterPop === "small" && c.habitants >= 1000) continue;
     if (nuances.size > 0 && !nuances.has(nuanceKey(c.nuance))) continue;
+    if (filters.filterPorte && (s.porteEntree || "none") !== filters.filterPorte) continue;
     if (filters.statusTab !== "all" && s.status !== filters.statusTab) continue;
     result.push(c);
   }

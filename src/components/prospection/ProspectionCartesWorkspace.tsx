@@ -35,6 +35,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   gestion: "",
   gestionVoirie: "",
   porteEntree: "",
+  prestataireVoirie: "",
   prestataire: "",
   contact: "",
   contacts: [],

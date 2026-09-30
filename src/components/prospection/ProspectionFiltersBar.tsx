@@ -33,6 +33,8 @@ export type ProspectionFiltersBarProps = {
   agglos: string[];
   filterPop: string;
   onFilterPopChange: (value: string) => void;
+  filterPorte?: string;
+  onFilterPorteChange?: (value: string) => void;
   filterNuance?: string;
   onFilterNuanceChange?: (value: string) => void;
   nuances?: string[];
@@ -54,6 +56,8 @@ export function ProspectionFiltersBar({
   agglos,
   filterPop,
   onFilterPopChange,
+  filterPorte = "",
+  onFilterPorteChange,
   filterNuance = "",
   onFilterNuanceChange,
   nuances = [],
@@ -174,8 +178,39 @@ export function ProspectionFiltersBar({
         <NuanceFilterMenu value={filterNuance} onChange={onFilterNuanceChange} nuances={nuances} />
       ) : null}
 
+      {onFilterPorteChange ? <PorteFilterMenu value={filterPorte} onChange={onFilterPorteChange} /> : null}
+
       {children}
     </div>
+  );
+}
+
+const PORTE_FILTER_OPTIONS = [
+  { id: "", label: "Toutes" },
+  { id: "oui", label: "Porte d'entrée : oui" },
+  { id: "non", label: "Porte d'entrée : non" },
+  { id: "none", label: "Non renseigné" },
+] as const;
+
+export function PorteFilterMenu({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const current = PORTE_FILTER_OPTIONS.find((o) => o.id === value);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 font-normal">
+          {value && current ? current.label.replace("Porte d'entrée : ", "Porte : ") : "Porte d'entrée"}
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-52">
+        {PORTE_FILTER_OPTIONS.map((opt) => (
+          <DropdownMenuItem key={opt.id || "all"} onClick={() => onChange(opt.id)}>
+            {value === opt.id && "✓ "}
+            {opt.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

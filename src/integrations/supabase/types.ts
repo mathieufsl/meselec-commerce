@@ -932,6 +932,7 @@ export type Database = {
           porte_entree: string | null
           notes: string
           prestataire: string
+          prestataire_voirie: string | null
           status: string
           updated_at: string
           updated_by: string | null
@@ -945,6 +946,7 @@ export type Database = {
           porte_entree?: string | null
           notes?: string
           prestataire?: string
+          prestataire_voirie?: string | null
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -958,6 +960,7 @@ export type Database = {
           porte_entree?: string | null
           notes?: string
           prestataire?: string
+          prestataire_voirie?: string | null
           status?: string
           updated_at?: string
           updated_by?: string | null

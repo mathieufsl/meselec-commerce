@@ -27,6 +27,7 @@ export function useProspectionStateMutations() {
         gestion: "",
         gestionVoirie: "",
         porteEntree: "",
+        prestataireVoirie: "",
         prestataire: "",
         contact: "",
         contacts: [],

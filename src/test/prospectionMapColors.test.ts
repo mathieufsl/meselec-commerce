@@ -12,6 +12,7 @@ const baseState: ProspectionCommuneState = {
   gestion: "",
   gestionVoirie: "",
   porteEntree: "",
+  prestataireVoirie: "",
   prestataire: "",
   contact: "",
   contacts: [],

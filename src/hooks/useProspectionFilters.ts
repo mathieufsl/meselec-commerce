@@ -20,6 +20,7 @@ export function useProspectionFilters(communes: ProspectionCommune[] = []) {
   const [filterAgglo, setFilterAgglo] = useState(initialFilters.current.filterAgglo);
   const [filterPop, setFilterPop] = useState(initialFilters.current.filterPop);
   const [filterNuance, setFilterNuance] = useState(initialFilters.current.filterNuance);
+  const [filterPorte, setFilterPorte] = useState(initialFilters.current.filterPorte);
   const [statusTab, setStatusTab] = useState<ProspectionStatusTab>(initialFilters.current.statusTab);
 
   const agglos = useMemo(() => {
@@ -47,9 +48,10 @@ export function useProspectionFilters(communes: ProspectionCommune[] = []) {
       filterAgglo,
       filterPop,
       filterNuance,
+      filterPorte,
       statusTab,
     }),
-    [search, filterDepartement, filterAgglo, filterPop, filterNuance, statusTab],
+    [search, filterDepartement, filterAgglo, filterPop, filterNuance, filterPorte, statusTab],
   );
 
   useEffect(() => {
@@ -67,6 +69,7 @@ export function useProspectionFilters(communes: ProspectionCommune[] = []) {
     setFilterAgglo(fromUrl.filterAgglo);
     setFilterPop(fromUrl.filterPop);
     setFilterNuance(fromUrl.filterNuance);
+    setFilterPorte(fromUrl.filterPorte);
     setStatusTab(fromUrl.statusTab);
   }, [searchParams]);
 
@@ -86,6 +89,8 @@ export function useProspectionFilters(communes: ProspectionCommune[] = []) {
     setFilterPop,
     filterNuance,
     setFilterNuance,
+    filterPorte,
+    setFilterPorte,
     nuances,
     statusTab,
     setStatusTab,

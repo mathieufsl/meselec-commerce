@@ -12,6 +12,7 @@ export type ProspectionCommuneState = {
   gestion: "" | "commune" | "agglo" | "syndicat" | "aucun";
   gestionVoirie: "" | "commune" | "agglo" | "syndicat" | "aucun";
   porteEntree: "" | "oui" | "non";
+  prestataireVoirie: string;
   prestataire: string;
   /** Résumé lisible (table / CSV), synchronisé depuis `contacts`. */
   contact: string;
@@ -26,6 +27,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   gestion: "",
   gestionVoirie: "",
   porteEntree: "",
+  prestataireVoirie: "",
   prestataire: "",
   contact: "",
   contacts: [],
@@ -42,6 +44,7 @@ type ProspectionSuiviRow = {
   gestion: string | null;
   gestion_voirie?: string | null;
   porte_entree?: string | null;
+  prestataire_voirie?: string | null;
   prestataire: string | null;
   contact: string | null;
   contacts_json?: unknown;
@@ -62,6 +65,7 @@ function stateFromRow(row: ProspectionSuiviRow): ProspectionCommuneState {
     gestionVoirie: (row.gestion_voirie as ProspectionCommuneState["gestionVoirie"]) || "",
     porteEntree: (row.porte_entree as ProspectionCommuneState["porteEntree"]) || "",
     prestataire: row.prestataire ?? "",
+    prestataireVoirie: row.prestataire_voirie ?? "",
     contacts,
     contact: summarizeContacts(contacts) || (row.contact ?? ""),
     notes: row.notes ?? "",
@@ -127,6 +131,7 @@ export async function upsertProspectionCommune(
     gestion_voirie: current.gestionVoirie || null,
     porte_entree: current.porteEntree || null,
     prestataire: current.prestataire,
+    prestataire_voirie: current.prestataireVoirie,
     contact: current.contact,
     contacts_json: current.contacts,
     notes: current.notes,
@@ -163,7 +168,7 @@ async function readCurrentRow(
   communeKey: string,
   patch: Partial<ProspectionCommuneState>,
 ): Promise<ProspectionCommuneState> {
-  const selectCols = "status, gestion, gestion_voirie, porte_entree, prestataire, contact, contacts_json, notes";
+  const selectCols = "status, gestion, gestion_voirie, porte_entree, prestataire, prestataire_voirie, contact, contacts_json, notes";
   const { data: byKey, error: byKeyError } = await (supabase as any)
     .from("prospection_commune_suivi")
     .select(selectCols)
