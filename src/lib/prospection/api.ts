@@ -9,7 +9,9 @@ export type { ProspectionContact, ProspectionContactType } from "@/lib/prospecti
 
 export type ProspectionCommuneState = {
   status: "todo" | "inprogress" | "done" | "callback" | "refused";
-  gestion: "" | "commune" | "agglo" | "syndicat";
+  gestion: "" | "commune" | "agglo" | "syndicat" | "aucun";
+  gestionVoirie: "" | "commune" | "agglo" | "syndicat" | "aucun";
+  porteEntree: "" | "oui" | "non";
   prestataire: string;
   /** Résumé lisible (table / CSV), synchronisé depuis `contacts`. */
   contact: string;
@@ -22,6 +24,8 @@ export type ProspectionStateMap = Record<string, ProspectionCommuneState>;
 const DEFAULT_ROW: ProspectionCommuneState = {
   status: "todo",
   gestion: "",
+  gestionVoirie: "",
+  porteEntree: "",
   prestataire: "",
   contact: "",
   contacts: [],
@@ -36,6 +40,8 @@ type ProspectionSuiviRow = {
   ville?: string | null;
   status: string;
   gestion: string | null;
+  gestion_voirie?: string | null;
+  porte_entree?: string | null;
   prestataire: string | null;
   contact: string | null;
   contacts_json?: unknown;
@@ -53,6 +59,8 @@ function stateFromRow(row: ProspectionSuiviRow): ProspectionCommuneState {
   return {
     status: (row.status as ProspectionCommuneState["status"]) || "todo",
     gestion: (row.gestion as ProspectionCommuneState["gestion"]) || "",
+    gestionVoirie: (row.gestion_voirie as ProspectionCommuneState["gestionVoirie"]) || "",
+    porteEntree: (row.porte_entree as ProspectionCommuneState["porteEntree"]) || "",
     prestataire: row.prestataire ?? "",
     contacts,
     contact: summarizeContacts(contacts) || (row.contact ?? ""),
@@ -116,6 +124,8 @@ export async function upsertProspectionCommune(
     commune_key: communeKey,
     status: current.status,
     gestion: current.gestion || null,
+    gestion_voirie: current.gestionVoirie || null,
+    porte_entree: current.porteEntree || null,
     prestataire: current.prestataire,
     contact: current.contact,
     contacts_json: current.contacts,
@@ -153,7 +163,7 @@ async function readCurrentRow(
   communeKey: string,
   patch: Partial<ProspectionCommuneState>,
 ): Promise<ProspectionCommuneState> {
-  const selectCols = "status, gestion, prestataire, contact, contacts_json, notes";
+  const selectCols = "status, gestion, gestion_voirie, porte_entree, prestataire, contact, contacts_json, notes";
   const { data: byKey, error: byKeyError } = await (supabase as any)
     .from("prospection_commune_suivi")
     .select(selectCols)

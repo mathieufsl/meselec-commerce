@@ -10,6 +10,8 @@ import type { ProspectionCommuneState } from "@/lib/prospection/api";
 const baseState: ProspectionCommuneState = {
   status: "todo",
   gestion: "",
+  gestionVoirie: "",
+  porteEntree: "",
   prestataire: "",
   contact: "",
   contacts: [],

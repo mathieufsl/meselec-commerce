@@ -33,6 +33,8 @@ const ProspectionCartesMap = lazy(() =>
 const DEFAULT_ROW: ProspectionCommuneState = {
   status: "todo",
   gestion: "",
+  gestionVoirie: "",
+  porteEntree: "",
   prestataire: "",
   contact: "",
   contacts: [],

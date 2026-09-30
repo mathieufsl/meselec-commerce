@@ -928,6 +928,8 @@ export type Database = {
           contact: string
           contacts_json: Json
           gestion: string | null
+          gestion_voirie: string | null
+          porte_entree: string | null
           notes: string
           prestataire: string
           status: string
@@ -939,6 +941,8 @@ export type Database = {
           contact?: string
           contacts_json?: Json
           gestion?: string | null
+          gestion_voirie?: string | null
+          porte_entree?: string | null
           notes?: string
           prestataire?: string
           status?: string
@@ -950,6 +954,8 @@ export type Database = {
           contact?: string
           contacts_json?: Json
           gestion?: string | null
+          gestion_voirie?: string | null
+          porte_entree?: string | null
           notes?: string
           prestataire?: string
           status?: string

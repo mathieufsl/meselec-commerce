@@ -67,7 +67,10 @@ export function ProspectionVirtualTable({
             <TableHead className="w-[11%] px-2">Commune</TableHead>
             <TableHead className="w-[13%] px-2">Agglomération</TableHead>
             <TableHead className="w-[10%] px-2">Maire</TableHead>
+            <TableHead className="w-[6%] px-2">Nuance</TableHead>
             <TableHead className="w-[8%] px-2">Qui gère EP ?</TableHead>
+            <TableHead className="w-[8%] px-2">Qui gère voirie ?</TableHead>
+            <TableHead className="w-[6%] px-2">Porte d'entrée</TableHead>
             <TableHead className="w-[8%] px-2">Statut</TableHead>
             <TableHead className="w-[10%] px-2">Prestataire</TableHead>
             <TableHead className="w-[10%] px-2">Contact</TableHead>
@@ -78,7 +81,7 @@ export function ProspectionVirtualTable({
         <TableBody>
           {paddingTop > 0 ? (
             <TableRow aria-hidden className="border-0 hover:bg-transparent">
-              <TableCell colSpan={11} className="p-0" style={{ height: paddingTop }} />
+              <TableCell colSpan={14} className="p-0" style={{ height: paddingTop }} />
             </TableRow>
           ) : null}
           {virtualItems.map((virtualRow) => {
@@ -99,7 +102,7 @@ export function ProspectionVirtualTable({
           })}
           {paddingBottom > 0 ? (
             <TableRow aria-hidden className="border-0 hover:bg-transparent">
-              <TableCell colSpan={11} className="p-0" style={{ height: paddingBottom }} />
+              <TableCell colSpan={14} className="p-0" style={{ height: paddingBottom }} />
             </TableRow>
           ) : null}
         </TableBody>

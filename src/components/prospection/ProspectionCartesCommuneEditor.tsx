@@ -6,7 +6,7 @@ import {
   suggestPrestataires,
 } from "@/lib/prospection/prestataireNomenclature";
 import { hasReferenceSeed } from "@/lib/prospection/referenceState";
-import { GESTION_OPTIONS, STATUS_OPTIONS, statusLabel } from "@/lib/prospection/ui";
+import { GESTION_OPTIONS, PORTE_ENTREE_OPTIONS, STATUS_OPTIONS, statusLabel } from "@/lib/prospection/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,8 @@ export function ProspectionCartesCommuneEditor({
 }: Props) {
   const [prestataire, setPrestataire] = useState(state.prestataire);
   const [gestion, setGestion] = useState(state.gestion);
+  const [gestionVoirie, setGestionVoirie] = useState(state.gestionVoirie);
+  const [porteEntree, setPorteEntree] = useState(state.porteEntree);
   const [status, setStatus] = useState(state.status);
   const [contact, setContact] = useState(state.contact);
   const [notes, setNotes] = useState(state.notes);
@@ -47,6 +49,8 @@ export function ProspectionCartesCommuneEditor({
   useEffect(() => {
     setPrestataire(state.prestataire);
     setGestion(state.gestion);
+    setGestionVoirie(state.gestionVoirie);
+    setPorteEntree(state.porteEntree);
     setStatus(state.status);
     setContact(state.contact);
     setNotes(state.notes);
@@ -65,6 +69,8 @@ export function ProspectionCartesCommuneEditor({
       await onSave({
         prestataire: canonicalizePrestataire(prestataire),
         gestion,
+        gestionVoirie,
+        porteEntree,
         status,
         contact: contact.trim(),
         notes: notes.trim(),
@@ -79,6 +85,8 @@ export function ProspectionCartesCommuneEditor({
   const dirty =
     canonicalizePrestataire(prestataire) !== canonicalizePrestataire(state.prestataire) ||
     gestion !== state.gestion ||
+    gestionVoirie !== state.gestionVoirie ||
+    porteEntree !== state.porteEntree ||
     status !== state.status ||
     contact.trim() !== state.contact ||
     notes.trim() !== state.notes;
@@ -152,6 +160,46 @@ export function ProspectionCartesCommuneEditor({
               </SelectTrigger>
               <SelectContent>
                 {GESTION_OPTIONS.map((o) => (
+                  <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Qui gère la voirie</Label>
+            <Select
+              value={gestionVoirie || "__none__"}
+              onValueChange={(v) =>
+                setGestionVoirie((v === "__none__" ? "" : v) as ProspectionCommuneState["gestionVoirie"])
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GESTION_OPTIONS.map((o) => (
+                  <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Porte d&apos;entrée</Label>
+            <Select
+              value={porteEntree || "__none__"}
+              onValueChange={(v) =>
+                setPorteEntree((v === "__none__" ? "" : v) as ProspectionCommuneState["porteEntree"])
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PORTE_ENTREE_OPTIONS.map((o) => (
                   <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
                     {o.label}
                   </SelectItem>

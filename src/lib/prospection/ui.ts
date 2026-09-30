@@ -13,6 +13,13 @@ export const GESTION_OPTIONS: { value: ProspectionCommuneState["gestion"]; label
   { value: "commune", label: "Commune" },
   { value: "agglo", label: "Agglo" },
   { value: "syndicat", label: "Syndicat" },
+  { value: "aucun", label: "Aucun" },
+];
+
+export const PORTE_ENTREE_OPTIONS: { value: ProspectionCommuneState["porteEntree"]; label: string }[] = [
+  { value: "", label: "?" },
+  { value: "oui", label: "Oui" },
+  { value: "non", label: "Non" },
 ];
 
 export function aggloBadgeClass(agglo: string) {

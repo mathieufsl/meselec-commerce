@@ -53,13 +53,15 @@ import { Download, FileText, Loader2, MoreVertical, RefreshCw, RotateCcw, Save }
 const DEFAULT_ROW: ProspectionCommuneState = {
   status: "todo",
   gestion: "",
+  gestionVoirie: "",
+  porteEntree: "",
   prestataire: "",
   contact: "",
   contacts: [],
   notes: "",
 };
 function rowKey(row: ProspectionCommuneState): string {
-  return `${row.status}|${row.gestion}|${row.prestataire}|${summarizeContacts(row.contacts)}|${row.notes}`;
+  return `${row.status}|${row.gestion}|${row.gestionVoirie}|${row.porteEntree}|${row.prestataire}|${summarizeContacts(row.contacts)}|${row.notes}`;
 }
 
 function getChangedRowsFromDirtyKeys(
@@ -251,11 +253,11 @@ export function ProspectionWorkspace() {
 
   const exportCsv = () => {
     const rows = stateRef.current;
-    let csv = "Departement;Commune;Habitants;Agglo;Maire;Qui gere EP;Statut;Prestataire EP;Contact;Notes\n";
+    let csv = "Departement;Commune;Habitants;Agglo;Maire;Nuance;Qui gere EP;Qui gere voirie;Porte entree;Statut;Prestataire EP;Contact;Notes\n";
     for (const c of filterProspectionCommunes(communes, rows, { ...baseListFilters, statusTab: "all" })) {
       const s = rows[c.key] ?? DEFAULT_ROW;
       const contactSummary = summarizeContacts(s.contacts) || s.contact || "";
-      csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${s.gestion || ""}";"${s.status}";"${s.prestataire || ""}";"${contactSummary}";"${s.notes || ""}"\n`;
+      csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${c.nuance || ""}";"${s.gestion || ""}";"${s.gestionVoirie || ""}";"${s.porteEntree || ""}";"${s.status}";"${s.prestataire || ""}";"${contactSummary}";"${s.notes || ""}"\n`;
     }
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);

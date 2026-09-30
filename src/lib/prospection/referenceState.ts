@@ -5,6 +5,8 @@ import { canonicalizePrestataire } from "@/lib/prospection/prestataireNomenclatu
 const DEFAULT_ROW: ProspectionCommuneState = {
   status: "todo",
   gestion: "",
+  gestionVoirie: "",
+  porteEntree: "",
   prestataire: "",
   contact: "",
   contacts: [],
@@ -34,6 +36,8 @@ export function mergeProspectionState(
     ...DEFAULT_ROW,
     status: server.status !== "todo" ? server.status : seedStatus ?? server.status,
     gestion: server.gestion || seed.gestion || "",
+    gestionVoirie: server.gestionVoirie || seed.gestionVoirie || "",
+    porteEntree: server.porteEntree || seed.porteEntree || "",
     prestataire: server.prestataire || (seed.prestataire ? canonicalizePrestataire(seed.prestataire) : ""),
     contact: server.contact || seed.contact || "",
     contacts: server.contacts.length > 0 ? server.contacts : [],

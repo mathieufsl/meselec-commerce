@@ -177,6 +177,8 @@ export function ProspectionCartesMap({
       const state = stateMap[commune.key] ?? {
         status: "todo" as const,
         gestion: "" as const,
+        gestionVoirie: "" as const,
+        porteEntree: "" as const,
         prestataire: "",
         contact: "",
         contacts: [],

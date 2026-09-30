@@ -25,6 +25,8 @@ export function useProspectionStateMutations() {
       const next: ProspectionCommuneState = {
         status: "todo",
         gestion: "",
+        gestionVoirie: "",
+        porteEntree: "",
         prestataire: "",
         contact: "",
         contacts: [],

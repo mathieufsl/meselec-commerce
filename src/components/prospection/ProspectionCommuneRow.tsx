@@ -4,11 +4,13 @@ import type { ProspectionCommuneState } from "@/lib/prospection/api";
 import { departementShortLabel } from "@/lib/prospection/crmUi";
 import {
   GESTION_OPTIONS,
+  PORTE_ENTREE_OPTIONS,
   STATUS_OPTIONS,
   aggloBadgeClass,
   statusRowClass,
   statusSelectClass,
 } from "@/lib/prospection/ui";
+import { nuanceColor, nuanceLabel } from "@/lib/prospection/nuances";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -120,6 +122,22 @@ export const ProspectionCommuneRow = memo(
         <TableCell className="max-w-0 truncate px-2 py-1.5 text-xs" title={commune.maire}>
           {commune.maire}
         </TableCell>
+        <TableCell className="max-w-0 px-2 py-1.5">
+          {commune.nuance ? (
+            <span
+              className="inline-flex max-w-full items-center gap-1.5 truncate text-[10px] font-semibold"
+              title={nuanceLabel(commune.nuance)}
+            >
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: nuanceColor(commune.nuance) }}
+              />
+              {commune.nuance}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </TableCell>
         <TableCell className="px-2 py-1.5" onClick={stopRowClick}>
           <Select
             value={row.gestion || "__none__"}
@@ -134,6 +152,48 @@ export const ProspectionCommuneRow = memo(
             </SelectTrigger>
             <SelectContent>
               {GESTION_OPTIONS.map((o) => (
+                <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell className="px-2 py-1.5" onClick={stopRowClick}>
+          <Select
+            value={row.gestionVoirie || "__none__"}
+            onValueChange={(v) =>
+              onPatch(communeKey, {
+                gestionVoirie: (v === "__none__" ? "" : v) as ProspectionCommuneState["gestionVoirie"],
+              })
+            }
+          >
+            <SelectTrigger className="h-8 w-full min-w-0 text-[10px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {GESTION_OPTIONS.map((o) => (
+                <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell className="px-2 py-1.5" onClick={stopRowClick}>
+          <Select
+            value={row.porteEntree || "__none__"}
+            onValueChange={(v) =>
+              onPatch(communeKey, {
+                porteEntree: (v === "__none__" ? "" : v) as ProspectionCommuneState["porteEntree"],
+              })
+            }
+          >
+            <SelectTrigger className="h-8 w-full min-w-0 text-[10px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PORTE_ENTREE_OPTIONS.map((o) => (
                 <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
                   {o.label}
                 </SelectItem>

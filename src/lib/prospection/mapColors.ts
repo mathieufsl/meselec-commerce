@@ -31,6 +31,7 @@ const GESTION_COLORS: Record<ProspectionCommuneState["gestion"], string> = {
   commune: "#2563eb",
   agglo: "#16a34a",
   syndicat: "#9333ea",
+  aucun: "#64748b",
 };
 
 const STATUS_COLORS: Record<ProspectionCommuneState["status"], string> = {

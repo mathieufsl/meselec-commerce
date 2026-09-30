@@ -11,6 +11,7 @@ import {
 } from "@/lib/prospection/contacts";
 import {
   GESTION_OPTIONS,
+  PORTE_ENTREE_OPTIONS,
   STATUS_OPTIONS,
   aggloBadgeClass,
   statusSelectClass,
@@ -259,6 +260,52 @@ export function ProspectionCommuneDetailSheet({
                 </SelectTrigger>
                 <SelectContent>
                   {GESTION_OPTIONS.map((o) => (
+                    <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="prospection-gestion-voirie">Qui gère la voirie ?</Label>
+              <Select
+                value={row.gestionVoirie || "__none__"}
+                onValueChange={(v) =>
+                  onPatch(communeKey, {
+                    gestionVoirie: (v === "__none__" ? "" : v) as ProspectionCommuneState["gestionVoirie"],
+                  })
+                }
+              >
+                <SelectTrigger id="prospection-gestion-voirie" className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GESTION_OPTIONS.map((o) => (
+                    <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="prospection-porte-entree">Porte d&apos;entrée ?</Label>
+              <Select
+                value={row.porteEntree || "__none__"}
+                onValueChange={(v) =>
+                  onPatch(communeKey, {
+                    porteEntree: (v === "__none__" ? "" : v) as ProspectionCommuneState["porteEntree"],
+                  })
+                }
+              >
+                <SelectTrigger id="prospection-porte-entree" className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PORTE_ENTREE_OPTIONS.map((o) => (
                     <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
                       {o.label}
                     </SelectItem>

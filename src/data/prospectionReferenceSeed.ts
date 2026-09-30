@@ -2,7 +2,7 @@
 import type { ProspectionCommuneState } from "@/lib/prospection/api";
 
 export type ProspectionReferenceSeed = Partial<
-  Pick<ProspectionCommuneState, "gestion" | "status" | "prestataire" | "contact" | "notes">
+  Pick<ProspectionCommuneState, "gestion" | "gestionVoirie" | "porteEntree" | "status" | "prestataire" | "contact" | "notes">
 >;
 
 export const PROSPECTION_REFERENCE_SEED: Record<string, ProspectionReferenceSeed> = {

@@ -15,6 +15,8 @@ export type ProspectionCommuneFilters = {
 const DEFAULT_ROW: ProspectionCommuneState = {
   status: "todo",
   gestion: "",
+  gestionVoirie: "",
+  porteEntree: "",
   prestataire: "",
   contact: "",
   contacts: [],
