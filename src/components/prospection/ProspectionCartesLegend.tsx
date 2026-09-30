@@ -1,17 +1,13 @@
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  gestionLegendItems,
-  porteLegendItems,
   prestataireColor,
-  statutLegendItems,
   UNSET_COLOR,
 } from "@/lib/prospection/mapColors";
 import { NUANCE_NONE, nuanceColor, nuanceLabel } from "@/lib/prospection/nuances";
 import type { PrestataireStat } from "@/lib/prospection/mapStats";
 import { formatPercent } from "@/lib/prospection/mapStats";
 import type { ProspectionMapColorMode } from "@/lib/prospection/mapTypes";
-import { STATUS_OPTIONS } from "@/lib/prospection/ui";
 import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 
@@ -20,6 +16,7 @@ type Props = {
   nuanceStats: { code: string; count: number; percent: number }[];
   selectedNuances: Set<string>;
   onToggleNuance: (code: string) => void;
+  categoryStats: { key: string; label: string; color: string; count: number; percent: number }[];
   prestataireStats: PrestataireStat[];
   highlightedPrestataires: Set<string>;
   onTogglePrestataire: (name: string, multi: boolean) => void;
@@ -42,6 +39,7 @@ export function ProspectionCartesLegend({
   nuanceStats,
   selectedNuances,
   onToggleNuance,
+  categoryStats,
   prestataireStats,
   highlightedPrestataires,
   onTogglePrestataire,
@@ -155,35 +153,45 @@ export function ProspectionCartesLegend({
     );
   }
 
-  const items =
-    colorMode === "gestion" || colorMode === "gestionVoirie"
-      ? gestionLegendItems()
-      : colorMode === "porte"
-        ? porteLegendItems()
-        : statutLegendItems().map((item) => ({
-          label: STATUS_OPTIONS.find((o) => o.value === item.label)?.label ?? item.label,
-          color: item.color,
-        }));
-
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-b border-border/60 px-3 py-3">
-        <h3 className="text-sm font-semibold">Légende</h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Légende</h3>
+          {highlightedPrestataires.size > 0 ? (
+            <button type="button" className="text-xs text-primary hover:underline" onClick={onClearHighlight}>
+              Tout afficher
+            </button>
+          ) : null}
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Cliquez pour surligner · Ctrl+clic pour comparer
+        </p>
       </div>
-      <div className="space-y-1 p-3">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center gap-2 text-sm">
-            <LegendSwatch color={item.color} />
-            <span>{item.label}</span>
-          </div>
-        ))}
-        {colorMode === "gestion" || colorMode === "gestionVoirie" || colorMode === "porte" ? (
-          <div className="flex items-center gap-2 text-sm">
-            <LegendSwatch color={UNSET_COLOR} />
-            <span>Non renseigné</span>
-          </div>
-        ) : null}
-      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-1 p-2">
+          {categoryStats.map((cat) => {
+            const selected = highlightedPrestataires.has(cat.key);
+            return (
+              <button
+                key={cat.key}
+                type="button"
+                onClick={(e) => onTogglePrestataire(cat.key, e.metaKey || e.ctrlKey)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-muted",
+                  selected && "bg-primary/10 ring-1 ring-primary/30",
+                )}
+              >
+                <LegendSwatch color={cat.color} />
+                <span className="min-w-0 flex-1 truncate font-medium">{cat.label}</span>
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  {cat.count} · {formatPercent(cat.percent)}%
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

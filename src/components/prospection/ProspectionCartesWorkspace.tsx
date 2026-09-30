@@ -10,6 +10,7 @@ import type { ProspectionCommuneState } from "@/lib/prospection/api";
 import { upsertProspectionCommune } from "@/lib/prospection/api";
 import { filterProspectionCommunes } from "@/lib/prospection/filterCommunes";
 import { aggregatePrestataires } from "@/lib/prospection/mapStats";
+import { mapCategories, mapCategoryKey } from "@/lib/prospection/mapColors";
 import type { ProspectionMapColorMode } from "@/lib/prospection/mapTypes";
 import { canonicalizePrestataire } from "@/lib/prospection/prestataireNomenclature";
 import { mergeProspectionState } from "@/lib/prospection/referenceState";
@@ -188,6 +189,27 @@ export function ProspectionCartesWorkspace() {
     [baseFiltered, effectiveStateMap],
   );
 
+  const categoryStats = useMemo(() => {
+    const categories = mapCategories(colorMode);
+    if (categories.length === 0) return [];
+    const counts = new Map<string, number>();
+    for (const c of baseFiltered) {
+      const key = mapCategoryKey(colorMode, effectiveStateMap[c.key] ?? DEFAULT_ROW);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const total = baseFiltered.length || 1;
+    return categories.map((cat) => ({
+      ...cat,
+      count: counts.get(cat.key) ?? 0,
+      percent: ((counts.get(cat.key) ?? 0) / total) * 100,
+    }));
+  }, [colorMode, baseFiltered, effectiveStateMap]);
+
+  const handleColorModeChange = useCallback((mode: ProspectionMapColorMode) => {
+    setColorMode(mode);
+    setHighlightedPrestataires(new Set());
+  }, []);
+
   const nuanceStats = useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of baseFiltered) {
@@ -286,7 +308,7 @@ export function ProspectionCartesWorkspace() {
         nuances={nuances}
         agglos={agglos}
         colorMode={colorMode}
-        onColorModeChange={setColorMode}
+        onColorModeChange={handleColorModeChange}
         departements={departements}
       />
 
@@ -347,6 +369,7 @@ export function ProspectionCartesWorkspace() {
             nuanceStats={nuanceStats}
             selectedNuances={parseNuanceFilter(filterNuance)}
             onToggleNuance={handleToggleNuance}
+            categoryStats={categoryStats}
             prestataireStats={colorMode === "prestataireVoirie" ? prestataireVoirieStats : prestataireStats}
             highlightedPrestataires={highlightedPrestataires}
             onTogglePrestataire={handleTogglePrestataire}

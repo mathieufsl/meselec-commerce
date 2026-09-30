@@ -11,7 +11,7 @@ import {
   DIMMED_COLOR,
   HIGHLIGHT_RING,
   mapValueLabel,
-  normalizePrestataireName,
+  mapCategoryKey,
 } from "@/lib/prospection/mapColors";
 import type { ProspectionMapColorMode } from "@/lib/prospection/mapTypes";
 import { Loader2 } from "lucide-react";
@@ -185,13 +185,10 @@ export function ProspectionCartesMap({
         contacts: [],
         notes: "",
       };
-      const prestataire = normalizePrestataireName(
-        colorMode === "prestataireVoirie" ? state.prestataireVoirie : state.prestataire,
-      );
       const dimmed =
         hasHighlight &&
-        (colorMode === "prestataire" || colorMode === "prestataireVoirie") &&
-        (!prestataire || !highlightedPrestataires.has(prestataire));
+        colorMode !== "nuance" &&
+        !highlightedPrestataires.has(mapCategoryKey(colorMode, state));
 
       return {
         ...commune,

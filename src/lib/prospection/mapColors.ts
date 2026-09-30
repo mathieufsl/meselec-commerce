@@ -1,7 +1,7 @@
 import type { ProspectionCommuneState } from "@/lib/prospection/api";
 import type { ProspectionMapColorMode } from "@/lib/prospection/mapTypes";
 import { canonicalizePrestataire } from "@/lib/prospection/prestataireNomenclature";
-import { GESTION_OPTIONS } from "@/lib/prospection/ui";
+import { GESTION_OPTIONS, STATUS_OPTIONS } from "@/lib/prospection/ui";
 
 const PRESTATAIRE_PALETTE = [
   "#2563eb",
@@ -133,4 +133,64 @@ export function statutLegendItems() {
   return (
     Object.entries(STATUS_COLORS) as [ProspectionCommuneState["status"], string][]
   ).map(([status, color]) => ({ label: status, color }));
+}
+
+export const CATEGORY_NONE = "__none__";
+
+export type MapCategory = { key: string; label: string; color: string };
+
+/** Clé de catégorie d'une commune pour les modes « à catégories » (clic dans la légende). */
+export function mapCategoryKey(
+  mode: ProspectionMapColorMode,
+  state: ProspectionCommuneState,
+): string {
+  switch (mode) {
+    case "prestataire":
+      return normalizePrestataireName(state.prestataire) || CATEGORY_NONE;
+    case "prestataireVoirie":
+      return normalizePrestataireName(state.prestataireVoirie) || CATEGORY_NONE;
+    case "gestion":
+      return state.gestion || CATEGORY_NONE;
+    case "gestionVoirie":
+      return state.gestionVoirie || CATEGORY_NONE;
+    case "porte":
+      return state.porteEntree || CATEGORY_NONE;
+    case "statut":
+      return state.status;
+    default:
+      return CATEGORY_NONE;
+  }
+}
+
+/** Catégories fixes affichées (et cliquables) dans la légende, dans l'ordre. */
+export function mapCategories(mode: ProspectionMapColorMode): MapCategory[] {
+  const unset = { key: CATEGORY_NONE, label: "Non renseigné", color: UNSET_COLOR };
+  switch (mode) {
+    case "gestion":
+    case "gestionVoirie":
+      return [
+        ...GESTION_OPTIONS.filter((o) => o.value !== "").map((o) => ({
+          key: o.value,
+          label: o.label,
+          color: GESTION_COLORS[o.value],
+        })),
+        unset,
+      ];
+    case "porte":
+      return [
+        { key: "oui", label: "Oui", color: PORTE_COLORS.oui },
+        { key: "non", label: "Non", color: PORTE_COLORS.non },
+        unset,
+      ];
+    case "statut":
+      return (Object.entries(STATUS_COLORS) as [ProspectionCommuneState["status"], string][]).map(
+        ([status, color]) => ({
+          key: status,
+          label: STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status,
+          color,
+        }),
+      );
+    default:
+      return [];
+  }
 }
