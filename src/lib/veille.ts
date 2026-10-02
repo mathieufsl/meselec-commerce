@@ -5,7 +5,8 @@ export type VeilleDomaine =
   | "Illuminations"
   | "Réseaux électriques"
   | "CFO / installations électriques"
-  | "VRD / voirie";
+  | "VRD / voirie"
+  | "Hydraulique";
 
 export type VeilleStatut = "nouveau" | "ignore" | "importe";
 
@@ -23,6 +24,7 @@ export const CPV_PREFIXES: Record<VeilleDomaine, string[]> = {
   "Réseaux électriques": ["45231400", "45232210", "45314300"],
   "CFO / installations électriques": ["45310000", "45311000", "45315000"],
   "VRD / voirie": ["45233140", "45232000", "45112500", "45231000"],
+  Hydraulique: ["45232150", "45232400", "45232420", "45252100", "45240000"],
 };
 
 export const MOTS_CLES: Record<VeilleDomaine, string[]> = {
@@ -61,6 +63,20 @@ export const MOTS_CLES: Record<VeilleDomaine, string[]> = {
     "reseaux secs",
     "amenagement urbain",
   ],
+  Hydraulique: [
+    "aep",
+    "alimentation en eau potable",
+    "assainissement",
+    "epuration",
+    "step",
+    "station de pompage",
+    "adduction en eau",
+    "inondation",
+    "innondation",
+    "bassin d'orage",
+    "dessalement",
+    "eaux usees",
+  ],
 };
 
 export const DOMAINE_TO_SECTEUR: Record<VeilleDomaine, AoSecteurCode> = {
@@ -69,6 +85,7 @@ export const DOMAINE_TO_SECTEUR: Record<VeilleDomaine, AoSecteurCode> = {
   "Réseaux électriques": "Enedis",
   "CFO / installations électriques": "CFO_CFA",
   "VRD / voirie": "VRD",
+  Hydraulique: "VRD",
 };
 
 const DOMAINES = Object.keys(CPV_PREFIXES) as VeilleDomaine[];
