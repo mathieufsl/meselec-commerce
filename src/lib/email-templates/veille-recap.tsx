@@ -20,6 +20,9 @@ export interface VeilleRecapAnnonce {
   date_limite: string | null
   lien: string | null
   domaines: string[]
+  url_dce?: string | null
+  /** Lignes courtes : visite, certifications… (analyse DCE ou indices de l'avis). */
+  points?: string[]
 }
 
 interface Props {
@@ -80,6 +83,18 @@ const Email = ({ date, annonces = [], collectees = 0, retenues = 0, appUrl }: Pr
                 {formatDate(a.date_limite)}
                 {a.domaines.length > 0 ? ` · ${a.domaines.join(', ')}` : ''}
               </Text>
+              {(a.points ?? []).map((p, j) => (
+                <Text key={j} style={cardPoint}>
+                  {p}
+                </Text>
+              ))}
+              {a.url_dce ? (
+                <Text style={cardMeta}>
+                  <Link href={a.url_dce} style={cardLink}>
+                    Documents du marché (DCE)
+                  </Link>
+                </Text>
+              ) : null}
             </Section>
           ))
         )}
@@ -125,6 +140,11 @@ export const template = {
         date_limite: '2026-09-25',
         lien: 'https://www.boamp.fr/',
         domaines: ['Éclairage public'],
+        url_dce: 'https://marches.maximilien.fr/entreprise/consultation/123456',
+        points: [
+          'Visite obligatoire (14/09/2026, 10h)',
+          'Certifications : Qualifelec EP2 ou équivalent, AIPR exigée',
+        ],
       },
       {
         intitule: 'Travaux VRD et réseaux — opération logements',
@@ -160,6 +180,7 @@ const card = {
 const cardTitle = { fontSize: '14px', fontWeight: 'bold' as const, margin: '0 0 4px' }
 const cardLink = { color: '#1d4ed8', textDecoration: 'none' }
 const cardMeta = { fontSize: '12px', color: '#6b7280', margin: '2px 0' }
+const cardPoint = { fontSize: '12px', color: '#92400e', margin: '2px 0' }
 const ctaSection = { textAlign: 'center' as const, margin: '20px 0' }
 const ctaButton = {
   backgroundColor: '#1d4ed8',

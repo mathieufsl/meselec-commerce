@@ -5,6 +5,7 @@ import {
   secteursFromDomaines,
   type VeilleAnnonce,
 } from "@/lib/veille";
+import { lireAvis } from "@/lib/veilleAvis";
 
 const BASE_URL =
   "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
@@ -39,6 +40,7 @@ function normaliser(record: OdsRecord): VeilleAnnonce | null {
   const descripteur = texte(record, "descripteur", "descripteur_libelle");
 
   const domaines = domainesDetectes(cpv, [intitule, acheteur, descripteur].join(" "));
+  const avis = lireAvis(record);
 
   return {
     source: "BOAMP",
@@ -52,6 +54,10 @@ function normaliser(record: OdsRecord): VeilleAnnonce | null {
     lien: idweb ? `https://www.boamp.fr/avis/detail/${idweb}` : null,
     domaines,
     secteurs: secteursFromDomaines(domaines),
+    url_dce: avis.url_dce,
+    plateforme: avis.plateforme,
+    avis_indices: avis.indices,
+    raw: record,
   };
 }
 
@@ -160,6 +166,10 @@ export async function collecterVeille(
     lien: a.lien,
     domaines: a.domaines,
     secteurs: a.secteurs,
+    url_dce: a.url_dce ?? null,
+    plateforme: a.plateforme ?? null,
+    avis_indices: a.avis_indices ?? {},
+    raw: a.raw ?? {},
   }));
 
   const { error } = await client

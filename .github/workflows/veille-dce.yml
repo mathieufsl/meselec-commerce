@@ -1,0 +1,82 @@
+# Robot DCE de la veille AO : collecte BOAMP, téléchargement des DCE sur les
+# plateformes acheteurs, lecture du RC/CCTP et analyse IA (visite, certifications).
+# Les résultats apparaissent dans la page Veille et dans le mail de 10h.
+name: Veille AO — analyse des DCE
+
+on:
+  schedule:
+    # Jours ouvrés, avant le mail récapitulatif de 10h (8h UTC).
+    - cron: "17 6 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      annonce:
+        description: "Une seule annonce (id ou n° BOAMP), vide = toutes celles à analyser"
+        required: false
+        default: ""
+      limite:
+        description: "Nombre maximum d'annonces"
+        required: false
+        default: "15"
+      diagnostic:
+        description: "Garder captures d'écran et pages (artefact dce-diagnostic)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: veille-dce
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Outils d'extraction (7z, pdftotext)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq p7zip-full poppler-utils unzip
+
+      # --force : le package-lock contient des binaires macOS (poste de dev).
+      - name: Dépendances
+        run: npm ci --force --no-audit --no-fund
+
+      - name: Navigateur
+        run: npx playwright install --with-deps chromium
+
+      - name: Collecte, DCE et analyse
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          VEILLE_DCE_MODEL: ${{ vars.VEILLE_DCE_MODEL }}
+          PLACE_LOGIN: ${{ secrets.PLACE_LOGIN }}
+          PLACE_PASSWORD: ${{ secrets.PLACE_PASSWORD }}
+          MAXIMILIEN_LOGIN: ${{ secrets.MAXIMILIEN_LOGIN }}
+          MAXIMILIEN_PASSWORD: ${{ secrets.MAXIMILIEN_PASSWORD }}
+          AWS_LOGIN: ${{ secrets.AWS_LOGIN }}
+          AWS_PASSWORD: ${{ secrets.AWS_PASSWORD }}
+          ACHATPUBLIC_LOGIN: ${{ secrets.ACHATPUBLIC_LOGIN }}
+          ACHATPUBLIC_PASSWORD: ${{ secrets.ACHATPUBLIC_PASSWORD }}
+          MARCHES_SECURISES_LOGIN: ${{ secrets.MARCHES_SECURISES_LOGIN }}
+          MARCHES_SECURISES_PASSWORD: ${{ secrets.MARCHES_SECURISES_PASSWORD }}
+          VEILLE_DCE_ANNONCE: ${{ github.event.inputs.annonce }}
+          VEILLE_DCE_LIMIT: ${{ github.event.inputs.limite || '15' }}
+          VEILLE_DCE_DIAGNOSTIC: ${{ github.event.inputs.diagnostic == 'true' && '1' || '0' }}
+        run: npx tsx --tsconfig scripts/dce/tsconfig.json scripts/dce/run.ts
+
+      - name: Diagnostic
+        if: always() && github.event.inputs.diagnostic == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dce-diagnostic
+          path: dce-diagnostic/
+          retention-days: 7
+          if-no-files-found: ignore

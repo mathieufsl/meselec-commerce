@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ExternalLink, EyeOff, Loader2, RefreshCw, Send, Radar } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/commerce/AppShell";
+import { VeilleAnalysePanel } from "@/components/commerce/VeilleAnalysePanel";
 import { VeilleRecipientsDialog } from "@/components/commerce/VeilleRecipientsDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -189,6 +190,8 @@ function VeillePage() {
                   <span className="tabular-nums">Limite {formatDate(a.date_limite)}</span>
                   <span>{a.source}</span>
                 </div>
+
+                <VeilleAnalysePanel annonce={a} />
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {canEdit ? (

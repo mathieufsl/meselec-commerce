@@ -1,4 +1,6 @@
 import type { AoSecteurCode } from "@/lib/commerceTypes";
+import type { VeilleIndicesAvis, VeillePlateforme } from "@/lib/veilleAvis";
+import type { VeilleAnalyse, VeilleAnalyseStatut, VeilleDceFichier } from "@/lib/veilleAnalyse";
 
 export type VeilleDomaine =
   | "Éclairage public"
@@ -110,6 +112,10 @@ export type VeilleAnnonce = {
   domaines: VeilleDomaine[];
   secteurs: AoSecteurCode[];
   texte_recherche?: string;
+  url_dce?: string | null;
+  plateforme?: VeillePlateforme | null;
+  avis_indices?: VeilleIndicesAvis;
+  raw?: Record<string, unknown>;
 };
 
 export function domainesDetectes(cpv: string, texte: string): VeilleDomaine[] {
@@ -156,4 +162,16 @@ export interface VeilleAnnonceRow {
   ao_id: string | null;
   created_at: string;
   updated_at: string;
+  url_dce: string | null;
+  plateforme: VeillePlateforme | null;
+  avis_indices: Partial<VeilleIndicesAvis> | null;
+  analyse_statut: VeilleAnalyseStatut;
+  analyse_dce: VeilleAnalyse | null;
+  analyse_erreur: string | null;
+  analyse_at: string | null;
+  dce_fichiers: VeilleDceFichier[];
 }
+
+/** Colonnes lues par l'application (sans `raw`, l'avis brut, trop volumineux). */
+export const VEILLE_ANNONCE_COLONNES =
+  "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, ao_id, created_at, updated_at, url_dce, plateforme, avis_indices, analyse_statut, analyse_dce, analyse_erreur, analyse_at, dce_fichiers";

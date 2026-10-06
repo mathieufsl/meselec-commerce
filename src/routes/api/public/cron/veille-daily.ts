@@ -2,6 +2,7 @@ import * as React from "react";
 import { render } from "@react-email/render";
 import { createFileRoute } from "@tanstack/react-router";
 import { TEMPLATES } from "@/lib/email-templates/registry";
+import type { VeilleAnalyse } from "@/lib/veilleAnalyse";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 const FROM = "RMS Commerce <veille@meselec.fr>";
@@ -100,26 +101,47 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           year: "numeric",
           timeZone: "Europe/Paris",
         });
-        let annonces = collecte.annoncesNouvelles.map((a) => ({
-          intitule: a.intitule,
-          acheteur: a.acheteur,
-          departement: a.departement,
-          date_limite: a.date_limite,
-          lien: a.lien,
-          domaines: a.domaines as string[],
-        }));
-
-        if (opts.inclureExistantes) {
-          const depuis = new Date(Date.now() - fenetreJours * 86400000)
-            .toISOString()
-            .slice(0, 10);
-          const { data: rows } = await supabaseAdmin
-            .from("veille_annonces")
-            .select("intitule, acheteur, departement, date_limite, lien, domaines")
-            .gte("date_parution", depuis)
-            .order("date_parution", { ascending: false });
-          annonces = (rows ?? []) as typeof annonces;
+        // Annonces arrivées depuis le dernier mail (24 h), qu'elles viennent de
+        // cette collecte, du robot DCE du matin ou d'une collecte manuelle.
+        const { pointsRecap } = await import("@/lib/veilleAnalyse");
+        const depuis = opts.inclureExistantes
+          ? new Date(Date.now() - fenetreJours * 86400000).toISOString().slice(0, 10)
+          : null;
+        let requete = supabaseAdmin
+          .from("veille_annonces")
+          .select(
+            "intitule, acheteur, departement, date_limite, lien, domaines, url_dce, analyse_dce, analyse_statut, avis_indices",
+          )
+          .order("date_parution", { ascending: false });
+        requete = depuis
+          ? requete.gte("date_parution", depuis)
+          : requete.gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+        const { data: rows, error: rowsErr } = await requete;
+        if (rowsErr) {
+          return Response.json({ ok: false, error: rowsErr.message }, { status: 500 });
         }
+        type LigneRecap = {
+          intitule: string;
+          acheteur: string | null;
+          departement: string | null;
+          date_limite: string | null;
+          lien: string | null;
+          domaines: string[] | null;
+          url_dce: string | null;
+          analyse_dce: VeilleAnalyse | null;
+          analyse_statut: string | null;
+          avis_indices: NonNullable<Parameters<typeof pointsRecap>[0]["avis_indices"]> | null;
+        };
+        const annonces = ((rows ?? []) as unknown as LigneRecap[]).map((r) => ({
+          intitule: r.intitule,
+          acheteur: r.acheteur,
+          departement: r.departement,
+          date_limite: r.date_limite,
+          lien: r.lien,
+          domaines: (r.domaines ?? []) as string[],
+          url_dce: r.url_dce,
+          points: pointsRecap(r),
+        }));
 
         const templateData = {
           date: dateLabel,

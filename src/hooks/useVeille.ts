@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { refreshVeille } from "@/lib/veille.functions";
-import type { VeilleAnnonceRow, VeilleStatut } from "@/lib/veille";
+import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow, type VeilleStatut } from "@/lib/veille";
+import { resumeAnalyseLignes } from "@/lib/veilleAnalyse";
 import type { AoNatureMarche, AoSecteurCode } from "@/lib/commerceTypes";
 
 export function useVeilleAnnonces() {
@@ -11,7 +12,7 @@ export function useVeilleAnnonces() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("veille_annonces")
-        .select("*")
+        .select(VEILLE_ANNONCE_COLONNES)
         .order("date_parution", { ascending: false, nullsFirst: false })
         .limit(500);
       if (error) throw error;
@@ -66,6 +67,10 @@ export function useImportVeilleToAo() {
             annonce.lien ? `Annonce : ${annonce.lien}` : null,
             annonce.cpv ? `CPV : ${annonce.cpv}` : null,
             annonce.domaines.length ? `Domaines : ${annonce.domaines.join(", ")}` : null,
+            annonce.url_dce ? `DCE : ${annonce.url_dce}` : null,
+            ...(annonce.analyse_dce
+              ? ["", "Analyse DCE :", ...resumeAnalyseLignes(annonce.analyse_dce), annonce.analyse_dce.resume]
+              : []),
           ]
             .filter(Boolean)
             .join("\n"),
