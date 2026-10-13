@@ -63,8 +63,8 @@ async function annoncesATraiter(): Promise<Annonce[]> {
       ? q.eq("id", annonceCiblee)
       : q.eq("source_id", annonceCiblee);
   } else {
+    // Uniquement les annonces dont l'analyse a été demandée depuis la page Veille.
     q = q
-      .eq("statut", "nouveau")
       .eq("analyse_statut", "a_faire")
       .order("date_parution", { ascending: false })
       .limit(limite);

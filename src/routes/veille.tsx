@@ -191,7 +191,7 @@ function VeillePage() {
                   <span>{a.source}</span>
                 </div>
 
-                <VeilleAnalysePanel annonce={a} />
+                <VeilleAnalysePanel annonce={a} canEdit={canEdit} />
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {canEdit ? (

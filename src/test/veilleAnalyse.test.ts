@@ -39,7 +39,7 @@ describe("pointsRecap", () => {
     ).toEqual([
       "Visite obligatoire (selon l'avis)",
       "Certifications citées dans l'avis : MASE",
-      "Analyse du DCE à venir",
+      "Analyse du DCE en cours",
     ]);
   });
 

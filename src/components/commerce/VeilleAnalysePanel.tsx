@@ -7,11 +7,13 @@ import {
   FolderOpen,
   Footprints,
   Loader2,
+  ScanSearch,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
+import { useDemanderAnalyseDce } from "@/hooks/useVeille";
 import { cn } from "@/lib/utils";
 import type { VeilleAnnonceRow } from "@/lib/veille";
 import {
@@ -52,8 +54,47 @@ async function ouvrirPiece(fichier: VeilleDceFichier) {
   window.open(data.signedUrl, "_blank", "noopener");
 }
 
+/** Bouton « Analyser le DCE » : l'analyse n'est lancée que sur demande. */
+function BoutonAnalyse({ annonce, relancer }: { annonce: VeilleAnnonceRow; relancer?: boolean }) {
+  const demander = useDemanderAnalyseDce();
+  if (annonce.analyse_statut === "a_faire") return null;
+  return (
+    <Button
+      size="sm"
+      variant={relancer ? "ghost" : "secondary"}
+      className="h-7 text-xs"
+      disabled={demander.isPending}
+      onClick={() =>
+        demander.mutate(annonce.id, {
+          onSuccess: (res) =>
+            toast.success(
+              res.lance
+                ? "Analyse lancée : résultat dans quelques minutes"
+                : "Analyse demandée : elle sera faite au prochain passage du robot (8 h)",
+            ),
+          onError: (e: unknown) =>
+            toast.error(e instanceof Error ? e.message : "Impossible de lancer l'analyse"),
+        })
+      }
+    >
+      {demander.isPending ? (
+        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <ScanSearch className="mr-1 h-3.5 w-3.5" />
+      )}
+      {relancer ? "Relancer l'analyse" : "Analyser le DCE"}
+    </Button>
+  );
+}
+
 /** Résultat de l'analyse DCE (visite, certifications) sur une annonce de veille. */
-export function VeilleAnalysePanel({ annonce }: { annonce: VeilleAnnonceRow }) {
+export function VeilleAnalysePanel({
+  annonce,
+  canEdit,
+}: {
+  annonce: VeilleAnnonceRow;
+  canEdit: boolean;
+}) {
   const [ouvert, setOuvert] = useState(false);
   const analyse = annonce.analyse_dce;
   const indices = annonce.avis_indices;
@@ -66,8 +107,9 @@ export function VeilleAnalysePanel({ annonce }: { annonce: VeilleAnnonceRow }) {
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {annonce.analyse_statut === "a_faire" ? (
           <Puce className="bg-muted text-muted-foreground">
-            <Loader2 className="h-3 w-3" />
+            <Loader2 className="h-3 w-3 animate-spin" />
             {VEILLE_ANALYSE_STATUT_LABELS.a_faire}
+            {annonce.analyse_erreur ? ` (nouvel essai : ${annonce.analyse_erreur})` : ""}
           </Puce>
         ) : null}
         {visite?.mentionnee ? (
@@ -91,6 +133,7 @@ export function VeilleAnalysePanel({ annonce }: { annonce: VeilleAnnonceRow }) {
           </Puce>
         ))}
         {annonce.url_dce ? <LienDce annonce={annonce} /> : null}
+        {canEdit ? <BoutonAnalyse annonce={annonce} /> : null}
       </div>
     );
   }
@@ -99,6 +142,12 @@ export function VeilleAnalysePanel({ annonce }: { annonce: VeilleAnnonceRow }) {
   return (
     <Collapsible open={ouvert} onOpenChange={setOuvert} className="mt-2">
       <div className="flex flex-wrap items-center gap-1.5">
+        {annonce.analyse_statut === "a_faire" ? (
+          <Puce className="bg-muted text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {VEILLE_ANALYSE_STATUT_LABELS.a_faire}
+          </Puce>
+        ) : null}
         <Puce className={VISITE_STYLES[analyse.visite.exigee]}>
           <Footprints className="h-3 w-3" />
           {VISITE_LABELS[analyse.visite.exigee]}
@@ -205,8 +254,8 @@ export function VeilleAnalysePanel({ annonce }: { annonce: VeilleAnnonceRow }) {
             </p>
           ) : null}
 
-          {fichiers.length || annonce.url_dce ? (
-            <div className="flex flex-wrap gap-1.5 pt-1">
+          {fichiers.length || annonce.url_dce || canEdit ? (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
               {fichiers.map((f) => (
                 <Button
                   key={f.path}
@@ -220,6 +269,7 @@ export function VeilleAnalysePanel({ annonce }: { annonce: VeilleAnnonceRow }) {
                 </Button>
               ))}
               {annonce.url_dce ? <LienDce annonce={annonce} /> : null}
+              {canEdit ? <BoutonAnalyse annonce={annonce} relancer /> : null}
             </div>
           ) : null}
         </div>

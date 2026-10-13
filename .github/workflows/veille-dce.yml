@@ -1,6 +1,9 @@
 # Robot DCE de la veille AO : collecte BOAMP, téléchargement des DCE sur les
 # plateformes acheteurs, lecture du RC/CCTP et analyse IA (visite, certifications).
-# Les résultats apparaissent dans la page Veille et dans le mail de 10h.
+# Seules les annonces pour lesquelles l'analyse a été demandée (bouton
+# « Analyser le DCE » de la page Veille) sont traitées. L'application lance ce
+# workflow à la demande ; le passage du matin collecte les avis et reprend les
+# demandes en attente (nouvel essai après un échec de téléchargement).
 name: Veille AO — analyse des DCE
 
 on:
@@ -17,6 +20,10 @@ on:
         description: "Nombre maximum d'annonces"
         required: false
         default: "15"
+      collecte:
+        description: "Collecter d'abord les nouveaux avis BOAMP"
+        type: boolean
+        default: true
       diagnostic:
         description: "Garder captures d'écran et pages (artefact dce-diagnostic)"
         type: boolean
@@ -69,6 +76,7 @@ jobs:
           MARCHES_SECURISES_PASSWORD: ${{ secrets.MARCHES_SECURISES_PASSWORD }}
           VEILLE_DCE_ANNONCE: ${{ github.event.inputs.annonce }}
           VEILLE_DCE_LIMIT: ${{ github.event.inputs.limite || '15' }}
+          VEILLE_DCE_SANS_COLLECTE: ${{ github.event.inputs.collecte == 'false' && '1' || '0' }}
           VEILLE_DCE_DIAGNOSTIC: ${{ github.event.inputs.diagnostic == 'true' && '1' || '0' }}
         run: npx tsx --tsconfig scripts/dce/tsconfig.json scripts/dce/run.ts
 

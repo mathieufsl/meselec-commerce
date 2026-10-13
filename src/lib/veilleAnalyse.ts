@@ -6,7 +6,7 @@
 export type VeilleAnalyseStatut = "a_faire" | "termine" | "sans_dce" | "echec" | "non_demande";
 
 export const VEILLE_ANALYSE_STATUT_LABELS: Record<VeilleAnalyseStatut, string> = {
-  a_faire: "Analyse DCE en attente",
+  a_faire: "Analyse du DCE en cours",
   termine: "DCE analysé",
   sans_dce: "Analyse sur l'avis seul",
   echec: "DCE non récupéré",
@@ -154,6 +154,6 @@ export function pointsRecap(row: {
   }
   const certifs = row.avis_indices?.certifications ?? [];
   if (certifs.length) points.push(`Certifications citées dans l'avis : ${certifs.join(", ")}`);
-  if (row.analyse_statut === "a_faire") points.push("Analyse du DCE à venir");
+  if (row.analyse_statut === "a_faire") points.push("Analyse du DCE en cours");
   return points;
 }

@@ -1,19 +1,32 @@
 # Robot DCE de la veille AO
 
-Chaque jour ouvré vers 8 h (heure de Paris), le workflow GitHub Actions
-`.github/workflows/veille-dce.yml` :
+L'analyse se lance **à la demande**, annonce par annonce, avec le bouton
+« Analyser le DCE » de la page Veille. L'application déclenche alors le workflow
+GitHub Actions `.github/workflows/veille-dce.yml`, qui, pour chaque annonce
+demandée :
 
-1. collecte les avis BOAMP (même filtre que la page Veille) ;
-2. pour chaque annonce nouvelle, ouvre l'adresse des documents du marché trouvée
+1. ouvre l'adresse des documents du marché trouvée
    dans l'avis, se connecte à la plateforme et télécharge le DCE ;
-3. dézippe (zips imbriqués compris), repère le RC et le CCTP (et le CCAP si le RC
+2. dézippe (zips imbriqués compris), repère le RC et le CCTP (et le CCAP si le RC
    manque) ;
-4. les fait lire par Claude : visite (obligatoire, dates, modalités),
+3. les fait lire par Claude : visite (obligatoire, dates, modalités),
    certifications et qualifications, autres exigences, points d'attention ;
-5. enregistre le résultat dans `veille_annonces.analyse_dce` et dépose le RC/CCTP
+4. enregistre le résultat dans `veille_annonces.analyse_dce` et dépose le RC/CCTP
    dans le bucket privé `veille-dce`.
 
-Le mail de 10 h et la page Veille affichent ensuite ces informations.
+Le résultat apparaît dans la page Veille après quelques minutes (la page se
+rafraîchit seule) et dans le mail de 10 h.
+
+Le passage planifié des jours ouvrés (vers 8 h) collecte les nouveaux avis BOAMP
+et reprend les demandes restées en attente (nouvel essai après un échec de
+téléchargement). Il n'analyse rien qui n'a pas été demandé.
+
+## Lancement depuis l'application (Lovable)
+
+Ajouter dans les secrets du projet Lovable `GITHUB_DISPATCH_TOKEN` : un jeton
+GitHub « fine-grained » limité au dépôt `mathieufsl/meselec-commerce`, avec la
+permission **Actions : Read and write**. Sans ce jeton, le bouton enregistre la
+demande et l'analyse se fait au passage de 8 h.
 
 ## Secrets à créer (GitHub → Settings → Secrets and variables → Actions)
 
@@ -45,10 +58,10 @@ GitHub → Actions → « Veille AO — analyse des DCE » → *Run workflow* :
 
 ## Statuts (`analyse_statut`)
 
-- `a_faire` : en attente du robot ;
+- `non_demande` : pas d'analyse demandée (valeur par défaut) ;
+- `a_faire` : analyse demandée, en cours ou en attente du robot ;
 - `termine` : DCE récupéré et analysé ;
 - `sans_dce` : pas d'adresse de DCE dans l'avis, plateforme non gérée ou RC/CCTP
   absents : analyse faite sur l'avis seul ;
 - `echec` : DCE non récupéré après 2 essais (analyse sur l'avis seul, erreur dans
   `analyse_erreur`) ;
-- `non_demande` : annonces antérieures, closes ou déjà traitées.

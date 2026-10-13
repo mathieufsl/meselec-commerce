@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { refreshVeille } from "@/lib/veille.functions";
+import { demanderAnalyseDce, refreshVeille } from "@/lib/veille.functions";
 import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow, type VeilleStatut } from "@/lib/veille";
 import { resumeAnalyseLignes } from "@/lib/veilleAnalyse";
 import type { AoNatureMarche, AoSecteurCode } from "@/lib/commerceTypes";
@@ -17,6 +17,20 @@ export function useVeilleAnnonces() {
         .limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as VeilleAnnonceRow[];
+    },
+    // Tant qu'une analyse est en cours, on rafraîchit pour afficher le résultat.
+    refetchInterval: (query) =>
+      query.state.data?.some((a) => a.analyse_statut === "a_faire") ? 30_000 : false,
+  });
+}
+
+export function useDemanderAnalyseDce() {
+  const qc = useQueryClient();
+  const run = useServerFn(demanderAnalyseDce);
+  return useMutation({
+    mutationFn: async (id: string) => run({ data: { id } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
   });
 }
@@ -69,7 +83,12 @@ export function useImportVeilleToAo() {
             annonce.domaines.length ? `Domaines : ${annonce.domaines.join(", ")}` : null,
             annonce.url_dce ? `DCE : ${annonce.url_dce}` : null,
             ...(annonce.analyse_dce
-              ? ["", "Analyse DCE :", ...resumeAnalyseLignes(annonce.analyse_dce), annonce.analyse_dce.resume]
+              ? [
+                  "",
+                  "Analyse DCE :",
+                  ...resumeAnalyseLignes(annonce.analyse_dce),
+                  annonce.analyse_dce.resume,
+                ]
               : []),
           ]
             .filter(Boolean)
