@@ -41,9 +41,54 @@ import { cleanDisplaySeparators } from "@/lib/displayText";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { AppelOffre } from "@/lib/commerceTypes";
-import { Briefcase, Columns3, LayoutList, Paperclip, Radar, Search, SlidersHorizontal } from "lucide-react";
+import { aoAnnonceUrl } from "@/lib/aoAnnonceUrl";
+import { useResizableColumns } from "@/hooks/useResizableColumns";
+import {
+  Briefcase,
+  Columns3,
+  ExternalLink,
+  LayoutList,
+  Paperclip,
+  Radar,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 
 type AoViewMode = "liste" | "kanban";
+
+type AoColumnKey =
+  | "client"
+  | "secteurs"
+  | "reference"
+  | "objet"
+  | "statut"
+  | "docs"
+  | "date"
+  | "montant";
+
+const AO_TABLE_COLUMNS: Array<{
+  key: AoColumnKey;
+  label: string;
+  width: number;
+  align?: "center" | "right";
+}> = [
+  { key: "client", label: "Client", width: 260 },
+  { key: "secteurs", label: "Secteur(s)", width: 130 },
+  { key: "reference", label: "Réf.", width: 170 },
+  { key: "objet", label: "Lieu / Objet", width: 320 },
+  { key: "statut", label: "Statut", width: 120 },
+  { key: "docs", label: "Docs", width: 70, align: "center" },
+  { key: "date", label: "Date limite", width: 130 },
+  { key: "montant", label: "Montant", width: 130, align: "right" },
+];
+
+const AO_COLUMN_DEFAULT_WIDTHS = Object.fromEntries(
+  AO_TABLE_COLUMNS.map((c) => [c.key, c.width]),
+) as Record<AoColumnKey, number>;
+
+/** Première colonne figée lors du défilement horizontal. */
+const STICKY_FIRST_COL =
+  "sticky left-0 z-[5] bg-card after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border";
 
 /** État de vue conservé pendant la session (retour depuis le détail d'un AO). */
 function useSessionState<T>(key: string, initial: T) {
@@ -91,6 +136,12 @@ function AppelsOffresPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [detailAoId, setDetailAoId] = useState<string | null>(null);
+  const {
+    widths: colWidths,
+    totalWidth: totalColWidth,
+    startResize: startColResize,
+    resetColumn: resetColWidth,
+  } = useResizableColumns("ao-list:col-widths", AO_COLUMN_DEFAULT_WIDTHS);
   // Les KPI se replient dès qu'on fait défiler la liste, pour laisser la place aux lignes.
   const [kpisCollapsed, setKpisCollapsed] = useState(false);
 
@@ -437,17 +488,44 @@ function AppelsOffresPage() {
                     Aucun appel d&apos;offres pour ce filtre.
                   </p>
                 ) : (
-                  <table className="w-full min-w-max text-sm">
+                  <table
+                    className="table-fixed text-sm"
+                    style={{ width: totalColWidth, minWidth: "100%" }}
+                  >
+                    <colgroup>
+                      {AO_TABLE_COLUMNS.map((col) => (
+                        <col key={col.key} style={{ width: colWidths[col.key] }} />
+                      ))}
+                      <col />
+                    </colgroup>
                     <thead className="sticky top-0 z-10 border-b bg-card">
                       <tr className="text-xs text-muted-foreground">
-                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Client</th>
-                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Secteur(s)</th>
-                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Réf.</th>
-                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Lieu / Objet</th>
-                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Statut</th>
-                        <th className="px-3 py-2 text-center font-semibold whitespace-nowrap">Docs</th>
-                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Date limite</th>
-                        <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Montant</th>
+                        {AO_TABLE_COLUMNS.map((col, i) => (
+                          <th
+                            key={col.key}
+                            className={cn(
+                              "relative truncate px-3 py-2 font-semibold",
+                              col.align === "center"
+                                ? "text-center"
+                                : col.align === "right"
+                                  ? "text-right"
+                                  : "text-left",
+                              i === 0 && STICKY_FIRST_COL,
+                            )}
+                          >
+                            {col.label}
+                            <span
+                              role="separator"
+                              aria-orientation="vertical"
+                              title="Glisser pour redimensionner · double-clic pour réinitialiser"
+                              className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize touch-none select-none hover:bg-primary/30"
+                              onPointerDown={(e) => startColResize(col.key, e)}
+                              onDoubleClick={() => resetColWidth(col.key)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </th>
+                        ))}
+                        <th />
                       </tr>
                     </thead>
                     <tbody>
@@ -455,38 +533,62 @@ function AppelsOffresPage() {
                         const days = daysUntil(ao.date_limite_depot);
                         const donneur = ao.donneur_ordre_libre ?? ao.clients?.nom_entreprise;
                         const secteurCodes = (ao.ao_secteurs ?? []).map((s) => s.secteur);
+                        const annonceUrl = aoAnnonceUrl(ao);
                         return (
                           <tr
                             key={ao.id}
-                            className="cursor-pointer border-b transition-colors hover:bg-muted/50"
+                            className="group cursor-pointer border-b transition-colors hover:bg-muted/50"
                             onClick={() =>
                               navigate({ to: "/appels-offres/$aoId", params: { aoId: ao.id } })
                             }
                           >
-                            <td className="px-3 py-2 font-medium whitespace-nowrap">{donneur ?? ""}</td>
-                            <td className="px-3 py-2">
+                            <td
+                              className={cn(
+                                "truncate px-3 py-2 font-medium",
+                                STICKY_FIRST_COL,
+                                "transition-colors group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]",
+                              )}
+                              title={donneur ?? undefined}
+                            >
+                              {donneur ?? ""}
+                            </td>
+                            <td className="overflow-hidden px-3 py-2">
                               <AoSecteurBadges secteurs={secteurCodes} />
                             </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              <Link
-                                to="/appels-offres/$aoId"
-                                params={{ aoId: ao.id }}
-                                className="font-medium text-primary hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {ao.reference}
-                              </Link>
+                            <td className="truncate px-3 py-2">
+                              {annonceUrl ? (
+                                <a
+                                  href={annonceUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="Ouvrir l'annonce du marché"
+                                  className="inline-flex max-w-full items-center gap-1 font-medium text-primary hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span className="truncate">{ao.reference}</span>
+                                  <ExternalLink className="h-3 w-3 shrink-0" />
+                                </a>
+                              ) : (
+                                <Link
+                                  to="/appels-offres/$aoId"
+                                  params={{ aoId: ao.id }}
+                                  className="font-medium text-primary hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {ao.reference}
+                                </Link>
+                              )}
                             </td>
-                            <td className="max-w-[280px] px-3 py-2">
+                            <td className="px-3 py-2" title={cleanDisplaySeparators(ao.titre)}>
                               <p className="truncate font-medium">{cleanDisplaySeparators(ao.titre)}</p>
                               {ao.lieu ? (
                                 <p className="truncate text-xs text-muted-foreground">{ao.lieu}</p>
                               ) : null}
                             </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
+                            <td className="truncate px-3 py-2">
                               <StatusBadge statut={ao.statut} labels={AO_STATUT_LABELS} />
                             </td>
-                            <td className="px-3 py-2 text-center whitespace-nowrap">
+                            <td className="truncate px-3 py-2 text-center">
                               {docCounts[ao.id] ? (
                                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                   <Paperclip className="h-3.5 w-3.5" />
@@ -498,7 +600,7 @@ function AppelsOffresPage() {
                             </td>
                             <td
                               className={cn(
-                                "px-3 py-2 whitespace-nowrap tabular-nums",
+                                "truncate px-3 py-2 tabular-nums",
                                 days != null &&
                                   days <= 7 &&
                                   ao.statut !== "gagne" &&
@@ -513,9 +615,10 @@ function AppelsOffresPage() {
                                   })
                                 : ""}
                             </td>
-                            <td className="px-3 py-2 text-right font-medium whitespace-nowrap tabular-nums">
+                            <td className="truncate px-3 py-2 text-right font-medium tabular-nums">
                               {formatEuro(ao.montant_estime)}
                             </td>
+                            <td />
                           </tr>
                         );
                       })}
