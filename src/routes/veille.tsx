@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ExternalLink, EyeOff, Loader2, RefreshCw, Send, Radar } from "lucide-react";
+import { ExternalLink, EyeOff, Loader2, RefreshCw, Send, Radar, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/commerce/AppShell";
 import { VeilleRecipientsDialog } from "@/components/commerce/VeilleRecipientsDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { AO_SECTEUR_LABELS, type AoSecteurCode } from "@/lib/commerceTypes";
 import { VEILLE_STATUT_LABELS, type VeilleStatut } from "@/lib/veille";
@@ -51,26 +52,50 @@ function formatDate(value: string | null) {
   return new Date(value).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 }
 
+function normalizeSearch(value: string) {
+  return value.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+}
+
 function VeillePage() {
   const navigate = useNavigate();
   const { hasEditorAccess } = useCommerceAuth();
   const canEdit = hasEditorAccess("appels_offres");
   const [filtre, setFiltre] = useState<VeilleStatut | "tous">("nouveau");
   const [idfSeulement, setIdfSeulement] = useState(true);
+  const [search, setSearch] = useState("");
   const { data: annonces = [], isLoading } = useVeilleAnnonces();
   const refresh = useRefreshVeille();
   const setStatut = useSetVeilleStatut();
   const importAo = useImportVeilleToAo();
 
+  const matching = useMemo(() => {
+    const terms = normalizeSearch(search).split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return annonces;
+    return annonces.filter((a) => {
+      const haystack = normalizeSearch(
+        [
+          a.intitule,
+          a.acheteur,
+          a.departement,
+          a.source,
+          ...(a.secteurs as AoSecteurCode[]).map((s) => AO_SECTEUR_LABELS[s] ?? s),
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+      return terms.every((t) => haystack.includes(t));
+    });
+  }, [annonces, search]);
+
   const counts = useMemo(() => {
-    const c: Record<string, number> = { tous: annonces.length };
-    for (const a of annonces) c[a.statut] = (c[a.statut] ?? 0) + 1;
+    const c: Record<string, number> = { tous: matching.length };
+    for (const a of matching) c[a.statut] = (c[a.statut] ?? 0) + 1;
     return c;
-  }, [annonces]);
+  }, [matching]);
 
   const items = useMemo(
-    () => (filtre === "tous" ? annonces : annonces.filter((a) => a.statut === filtre)),
-    [annonces, filtre],
+    () => (filtre === "tous" ? matching : matching.filter((a) => a.statut === filtre)),
+    [matching, filtre],
   );
 
   function lancerVeille() {
@@ -122,23 +147,44 @@ function VeillePage() {
       }
     >
       <div className="space-y-4">
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-          {FILTRES.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setFiltre(f.value)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                filtre === f.value
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {f.label}
-              <span className="ml-1.5 tabular-nums opacity-70">{counts[f.value] ?? 0}</span>
-            </button>
-          ))}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:pb-0">
+            {FILTRES.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setFiltre(f.value)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                  filtre === f.value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {f.label}
+                <span className="ml-1.5 tabular-nums opacity-70">{counts[f.value] ?? 0}</span>
+              </button>
+            ))}
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher titre, acheteur, dép.…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 bg-background pl-9 pr-8"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Effacer la recherche"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {isLoading ? (
@@ -150,17 +196,15 @@ function VeillePage() {
             <Radar className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
             <h2 className="text-base font-semibold">Aucune annonce</h2>
             <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
-              Lancez la veille pour récupérer les avis BOAMP des 7 derniers jours correspondant à
-              l&apos;éclairage public, aux réseaux électriques, au CFO et à la VRD.
+              {search.trim()
+                ? "Aucune annonce ne correspond à votre recherche."
+                : "Lancez la veille pour récupérer les avis BOAMP des 7 derniers jours correspondant à l'éclairage public, aux réseaux électriques, au CFO et à la VRD."}
             </p>
           </div>
         ) : (
           <ul className="space-y-2.5">
             {items.map((a) => (
-              <li
-                key={a.id}
-                className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm"
-              >
+              <li key={a.id} className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold leading-snug text-foreground">
@@ -197,8 +241,7 @@ function VeillePage() {
                       disabled={a.statut === "importe" || importAo.isPending}
                       onClick={() =>
                         importAo.mutate(a, {
-                          onSuccess: () =>
-                            toast.success("Appel d'offres créé dans les AO"),
+                          onSuccess: () => toast.success("Appel d'offres créé dans les AO"),
                           onError: (e: unknown) =>
                             toast.error(e instanceof Error ? e.message : "Échec de l'import"),
                         })
