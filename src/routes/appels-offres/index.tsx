@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type UIEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type UIEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell, StatusBadge } from "@/components/commerce/AppShell";
 import { AoCreateWizard } from "@/components/commerce/AoCreateWizard";
@@ -144,16 +144,26 @@ function AppelsOffresPage() {
   } = useResizableColumns("ao-list:col-widths", AO_COLUMN_DEFAULT_WIDTHS);
   // Les KPI se replient dès qu'on fait défiler la liste, pour laisser la place aux lignes.
   const [kpisCollapsed, setKpisCollapsed] = useState(false);
+  // Marge ajoutée en bas de liste une fois les KPI repliés : sans elle, une liste courte
+  // ne défilerait plus, reviendrait en haut et rouvrirait aussitôt les KPI.
+  const [collapseSpacer, setCollapseSpacer] = useState(0);
+  const kpiRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setKpisCollapsed(false);
+    setCollapseSpacer(0);
   }, [viewMode]);
 
   function handleListScroll(e: UIEvent<HTMLElement>) {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    // Ne replier que si la liste reste défilable une fois les KPI masqués (évite le clignotement).
-    if (scrollTop > 40 && scrollHeight - clientHeight > 320) setKpisCollapsed(true);
-    else if (scrollTop < 4) setKpisCollapsed(false);
+    if (!kpisCollapsed && scrollTop > 24) {
+      const kpiHeight = kpiRef.current?.offsetHeight ?? 0;
+      setCollapseSpacer(Math.max(0, clientHeight + kpiHeight + scrollTop - scrollHeight));
+      setKpisCollapsed(true);
+    } else if (kpisCollapsed && scrollTop < 4) {
+      setKpisCollapsed(false);
+      setCollapseSpacer(0);
+    }
   }
 
   function openAoDetail(ao: AppelOffre) {
@@ -298,7 +308,7 @@ function AppelsOffresPage() {
             aria-hidden={kpisCollapsed}
           >
           <div className="min-h-0 overflow-hidden">
-          <div className="px-3 pb-1 pt-1 sm:px-6">
+          <div ref={kpiRef} className="px-3 pb-1 pt-1 sm:px-6">
             <CommerceKpiBar
               pipelineCount={actifs.length}
               montantPipeline={montantPipeline}
@@ -474,6 +484,7 @@ function AppelsOffresPage() {
                     </section>
                   ))
                 )}
+                {collapseSpacer > 0 ? <div aria-hidden style={{ height: collapseSpacer }} /> : null}
               </div>
 
               <Card className="mx-4 mt-2 hidden min-h-0 flex-1 flex-col shadow-sm sm:mx-6 md:flex">
@@ -625,6 +636,7 @@ function AppelsOffresPage() {
                     </tbody>
                   </table>
                 )}
+                {collapseSpacer > 0 ? <div aria-hidden style={{ height: collapseSpacer }} /> : null}
                 </CardContent>
               </Card>
             </div>
