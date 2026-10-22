@@ -20,6 +20,7 @@ export type AoCreateFormState = {
   titre: string;
   donneur_ordre_libre: string;
   lieu: string;
+  annonce_url: string;
   date_publication: string;
   date_limite_depot: string;
   marche_pluriannuel: boolean;
@@ -78,6 +79,7 @@ export function emptyCreateForm(defaultSocieteId = ""): AoCreateFormState {
     titre: "",
     donneur_ordre_libre: "",
     lieu: "",
+    annonce_url: "",
     date_publication: "",
     date_limite_depot: "",
     marche_pluriannuel: false,
@@ -148,6 +150,7 @@ export function toCreatePayload(form: AoCreateFormState, statut: AoStatut = "non
       titre: form.titre.trim(),
       donneur_ordre_libre: form.donneur_ordre_libre.trim() || null,
       lieu: form.lieu.trim() || null,
+      annonce_url: form.annonce_url.trim() || null,
       date_publication: form.date_publication || null,
       date_limite_depot: form.date_limite_depot || null,
       marche_pluriannuel: form.marche_pluriannuel,

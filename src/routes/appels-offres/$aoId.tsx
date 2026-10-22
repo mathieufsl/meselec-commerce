@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell, Panel } from "@/components/commerce/AppShell";
 import { AoCommentsSheet } from "@/components/commerce/AoCommentsSheet";
+import { AoSharepointButton } from "@/components/commerce/AoSharepointButton";
+import { AoStatusPicker } from "@/components/commerce/AoStatusPicker";
 import { AoIdentityCard } from "@/components/commerce/AoIdentityCard";
 import {
   AoDetailSommaireFloating,
@@ -40,7 +42,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { isFormDirty, toForm, toPayload, type AoDetailFormState } from "@/lib/aoDetailForm";
 import { executeHandoff } from "@/lib/syncErpCache";
-import { type AoReponse } from "@/lib/commerceTypes";
+import { type AoReponse, type AoStatut } from "@/lib/commerceTypes";
 import {
   calcLigneMontant,
   formatEuro,
@@ -186,6 +188,35 @@ function AoDetailPage() {
       setMsg(`Échec : ${(err as Error).message}`);
     } finally {
       setSaving(false);
+    }
+  }
+
+  const [statutSaving, setStatutSaving] = useState(false);
+  const [sharepointSaving, setSharepointSaving] = useState(false);
+
+  async function changeStatut(statut: AoStatut) {
+    if (!ao) return;
+    setStatutSaving(true);
+    setMsg(null);
+    try {
+      await upsertAo.mutateAsync({ id: ao.id, statut });
+      // Garde la fiche alignée sans écraser les autres modifications en cours.
+      setForm((f) => (f ? { ...f, statut } : f));
+      setBaseline((b) => (b ? { ...b, statut } : b));
+    } catch (err) {
+      setMsg(`Échec du changement de statut : ${(err as Error).message}`);
+    } finally {
+      setStatutSaving(false);
+    }
+  }
+
+  async function saveSharepointUrl(url: string | null) {
+    if (!ao) return;
+    setSharepointSaving(true);
+    try {
+      await upsertAo.mutateAsync({ id: ao.id, sharepoint_url: url });
+    } finally {
+      setSharepointSaving(false);
     }
   }
 
@@ -390,6 +421,13 @@ function AoDetailPage() {
       title={ao.reference}
       subtitle={cleanDisplaySeparators(ao.titre)}
       back={{ to: "/appels-offres", label: "Retour liste", onNavigate: navigateBackToList }}
+      titleExtra={
+        <AoStatusPicker
+          statut={ao.statut}
+          pending={statutSaving}
+          {...(canEdit ? { onChange: (s: AoStatut) => void changeStatut(s) } : {})}
+        />
+      }
       flush
       belowHeader={<AoImportBanner aoId={aoId} />}
       contentClassName="flex min-h-0 flex-col px-3 py-3 sm:px-6 sm:py-4"
@@ -412,6 +450,13 @@ function AoDetailPage() {
           ) : (
             <span className="flex-1 text-center text-xs text-muted-foreground">Lecture seule</span>
           )}
+          <AoSharepointButton
+            url={ao.sharepoint_url}
+            canEdit={canEdit}
+            onSave={saveSharepointUrl}
+            saving={sharepointSaving}
+            compact
+          />
           <AoCommentsSheet aoId={aoId} className="h-9 w-9 shrink-0 p-0 [&_span]:sr-only" />
           {canEdit ? (
             <Button
@@ -441,6 +486,12 @@ function AoDetailPage() {
           ) : (
             <span className="text-xs text-muted-foreground">Lecture seule</span>
           )}
+          <AoSharepointButton
+            url={ao.sharepoint_url}
+            canEdit={canEdit}
+            onSave={saveSharepointUrl}
+            saving={sharepointSaving}
+          />
           <AoCommentsSheet aoId={aoId} />
           {canEdit && ao.statut !== "gagne" && reponse ? (
             <Button size="sm" variant="outline" onClick={runHandoff} disabled={busy || lignes.length === 0}>

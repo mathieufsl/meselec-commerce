@@ -423,6 +423,8 @@ export type Database = {
           notes: string | null
           reference: string
           societe_attribuee_id: string | null
+          annonce_url: string | null
+          sharepoint_url: string | null
           statut: string
           titre: string
           type_marche: string | null
@@ -444,6 +446,8 @@ export type Database = {
           notes?: string | null
           reference: string
           societe_attribuee_id?: string | null
+          annonce_url?: string | null
+          sharepoint_url?: string | null
           statut?: string
           titre: string
           type_marche?: string | null
@@ -465,6 +469,8 @@ export type Database = {
           notes?: string | null
           reference?: string
           societe_attribuee_id?: string | null
+          annonce_url?: string | null
+          sharepoint_url?: string | null
           statut?: string
           titre?: string
           type_marche?: string | null

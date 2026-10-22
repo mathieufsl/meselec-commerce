@@ -1,21 +1,17 @@
 import type { AppelOffre } from "@/lib/commerceTypes";
-
-const URL_RE = /https?:\/\/[^\s<>"')]+/;
-
-function trimPunctuation(url: string) {
-  return url.replace(/[.,;:!?]+$/, "");
-}
+import { extractAoAnnonceUrl } from "@/lib/aoNotes";
 
 /**
- * URL de l'annonce du marché : ligne « Annonce : … » des notes (import veille),
- * sinon première URL des notes, sinon avis BOAMP déduit de la référence.
+ * URL de l'annonce du marché : champ « Lien de l'annonce », sinon URL trouvée dans les notes
+ * (import veille), sinon avis BOAMP déduit de la référence.
  */
-export function aoAnnonceUrl(ao: Pick<AppelOffre, "reference" | "notes">): string | null {
-  const notes = ao.notes ?? "";
-  const annonce = notes.match(/Annonce\s*:\s*(https?:\/\/[^\s<>"')]+)/i);
-  if (annonce) return trimPunctuation(annonce[1]!);
-  const any = notes.match(URL_RE);
-  if (any) return trimPunctuation(any[0]);
+export function aoAnnonceUrl(
+  ao: Pick<AppelOffre, "reference" | "notes"> & { annonce_url?: string | null },
+): string | null {
+  const direct = ao.annonce_url?.trim();
+  if (direct) return direct;
+  const fromNotes = extractAoAnnonceUrl(ao.notes);
+  if (fromNotes) return fromNotes;
   const boamp = ao.reference.trim().match(/^BOAMP-(\d{2}-\d+)$/i);
   if (boamp) return `https://www.boamp.fr/avis/detail/${boamp[1]}`;
   return null;

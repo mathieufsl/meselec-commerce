@@ -171,6 +171,15 @@ export function AoCreateWizard({
                 placeholder="Ville, site…"
               />
             </label>
+            <label className="space-y-1 text-sm sm:col-span-2">
+              <span className="text-xs font-medium text-muted-foreground">Lien de l&apos;annonce</span>
+              <Input
+                type="url"
+                value={form.annonce_url}
+                onChange={(e) => patch({ annonce_url: e.target.value })}
+                placeholder="https://… (BOAMP, profil acheteur…)"
+              />
+            </label>
           </div>
         );
       case "calendrier":

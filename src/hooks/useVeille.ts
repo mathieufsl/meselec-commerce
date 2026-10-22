@@ -59,6 +59,7 @@ export function useImportVeilleToAo() {
           titre: annonce.intitule.slice(0, 500),
           donneur_ordre_libre: annonce.acheteur,
           lieu: annonce.departement,
+          annonce_url: annonce.lien,
           date_publication: annonce.date_parution,
           date_limite_depot: annonce.date_limite,
           statut: "non_traite",

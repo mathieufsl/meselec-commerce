@@ -7,6 +7,7 @@ export type AoDetailFormState = {
   titre: string;
   donneur_ordre_libre: string;
   lieu: string;
+  annonce_url: string;
   date_publication: string;
   date_limite_depot: string;
   marche_pluriannuel: boolean;
@@ -41,6 +42,7 @@ export function toForm(ao: AppelOffre, secteurs: AoSecteur[] = ao.ao_secteurs ??
     titre: ao.titre ?? "",
     donneur_ordre_libre: ao.donneur_ordre_libre ?? ao.clients?.nom_entreprise ?? "",
     lieu: ao.lieu ?? "",
+    annonce_url: ao.annonce_url ?? "",
     date_publication: ao.date_publication?.slice(0, 10) ?? "",
     date_limite_depot: ao.date_limite_depot?.slice(0, 10) ?? "",
     marche_pluriannuel: ao.marche_pluriannuel ?? false,
@@ -75,6 +77,7 @@ export function toPayload(form: AoDetailFormState) {
       titre: form.titre.trim(),
       donneur_ordre_libre: form.donneur_ordre_libre.trim() || null,
       lieu: form.lieu.trim() || null,
+      annonce_url: form.annonce_url.trim() || null,
       date_publication: form.date_publication || null,
       date_limite_depot: form.date_limite_depot || null,
       marche_pluriannuel: form.marche_pluriannuel,
@@ -101,6 +104,7 @@ export function isFormDirty(baseline: AoDetailFormState, form: AoDetailFormState
     "titre",
     "donneur_ordre_libre",
     "lieu",
+    "annonce_url",
     "date_publication",
     "date_limite_depot",
     "montant_estime",

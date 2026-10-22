@@ -133,12 +133,14 @@ export interface AppelOffre {
   donneur_ordre_libre: string | null;
   type_marche: string | null;
   lieu: string | null;
+  annonce_url?: string | null;
   date_publication: string | null;
   date_limite_depot: string | null;
   montant_estime: number | null;
   marche_pluriannuel: boolean;
   statut: AoStatut;
   societe_attribuee_id: string | null;
+  sharepoint_url?: string | null;
   chantier_erp_id: string | null;
   handoff_at: string | null;
   notes: string | null;
