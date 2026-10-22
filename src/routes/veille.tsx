@@ -122,6 +122,7 @@ function VeillePage() {
       title="Veille AO"
       subtitle="Collecte BOAMP filtrée sur votre périmètre"
       titleIcon={Radar}
+      back={{ to: "/appels-offres", label: "Appels d'offres" }}
       actions={
         <div className="flex items-center gap-2">
           {canEdit ? <VeilleRecipientsDialog /> : null}
