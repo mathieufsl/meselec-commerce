@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type UIEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell, StatusBadge } from "@/components/commerce/AppShell";
 import { AoCreateWizard } from "@/components/commerce/AoCreateWizard";
@@ -91,6 +91,19 @@ function AppelsOffresPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [detailAoId, setDetailAoId] = useState<string | null>(null);
+  // Les KPI se replient dès qu'on fait défiler la liste, pour laisser la place aux lignes.
+  const [kpisCollapsed, setKpisCollapsed] = useState(false);
+
+  useEffect(() => {
+    setKpisCollapsed(false);
+  }, [viewMode]);
+
+  function handleListScroll(e: UIEvent<HTMLElement>) {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    // Ne replier que si la liste reste défilable une fois les KPI masqués (évite le clignotement).
+    if (scrollTop > 40 && scrollHeight - clientHeight > 320) setKpisCollapsed(true);
+    else if (scrollTop < 4) setKpisCollapsed(false);
+  }
 
   function openAoDetail(ao: AppelOffre) {
     if (isMobile) {
@@ -226,7 +239,15 @@ function AppelsOffresPage() {
         contentClassName="flex min-h-0 flex-col overflow-hidden"
       >
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="shrink-0 px-3 pb-1 pt-1 sm:px-6">
+          <div
+            className={cn(
+              "grid shrink-0 transition-[grid-template-rows,opacity] duration-200 ease-out",
+              kpisCollapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100",
+            )}
+            aria-hidden={kpisCollapsed}
+          >
+          <div className="min-h-0 overflow-hidden">
+          <div className="px-3 pb-1 pt-1 sm:px-6">
             <CommerceKpiBar
               pipelineCount={actifs.length}
               montantPipeline={montantPipeline}
@@ -244,6 +265,8 @@ function AppelsOffresPage() {
                 )
               }
             />
+          </div>
+          </div>
           </div>
 
           <div className="sticky top-0 z-10 shrink-0 border-b border-border/70 bg-background px-3 pb-0 pt-1 shadow-[0_1px_0_0_hsl(var(--border))] sm:px-6">
@@ -362,7 +385,10 @@ function AppelsOffresPage() {
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 pt-2 md:hidden">
+              <div
+                className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 pt-2 md:hidden"
+                onScroll={handleListScroll}
+              >
                 {isLoading ? (
                   <p className="text-sm text-muted-foreground">Chargement…</p>
                 ) : filtered.length === 0 ? (
@@ -403,7 +429,7 @@ function AppelsOffresPage() {
                 <div className="shrink-0 border-b px-3 py-2 text-sm text-muted-foreground">
                   {filtered.length} appel(s) d&apos;offres
                 </div>
-                <CardContent className="min-h-0 flex-1 overflow-y-auto p-0">
+                <CardContent className="min-h-0 flex-1 overflow-y-auto p-0" onScroll={handleListScroll}>
                 {isLoading ? (
                   <p className="p-4 text-sm text-muted-foreground">Chargement…</p>
                 ) : filtered.length === 0 ? (
