@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   saveProspectionStateMap,
+  upsertProspectionCommune,
   type ProspectionCommuneState,
   type ProspectionStateMap,
 } from "@/lib/prospection/api";
@@ -179,6 +180,30 @@ export function ProspectionWorkspace() {
       });
     },
     [syncDirtyForKey],
+  );
+
+  /** Fiche commune : chaque modification est enregistrée tout de suite en base (partagée entre comptes et appareils). */
+  const patchAndSave = useCallback(
+    async (communeKey: string, patch: Partial<ProspectionCommuneState>) => {
+      updateRow(communeKey, patch);
+      try {
+        await upsertProspectionCommune(communeKey, patch);
+        const saved = { ...DEFAULT_ROW, ...savedStateRef.current[communeKey], ...patch };
+        if (patch.contacts) saved.contact = summarizeContacts(patch.contacts);
+        savedStateRef.current = { ...savedStateRef.current, [communeKey]: saved };
+        setSavedState(savedStateRef.current);
+        syncDirtyForKey(communeKey, stateRef.current[communeKey] ?? saved);
+      } catch (err) {
+        console.error("Prospection autosave failed:", err);
+        toast({
+          variant: "destructive",
+          title: "Échec de la sauvegarde",
+          description:
+            err instanceof Error ? err.message : "Impossible d'enregistrer les données sur le serveur.",
+        });
+      }
+    },
+    [updateRow, syncDirtyForKey, toast],
   );
 
   const dirty = dirtyKeys.size > 0;
@@ -557,7 +582,7 @@ export function ProspectionWorkspace() {
         commune={detailCommune}
         row={detailCommune ? (state[detailCommune.key] ?? DEFAULT_ROW) : DEFAULT_ROW}
         isDirty={detailCommune ? dirtyKeys.has(detailCommune.key) : false}
-        onPatch={updateRow}
+        onPatch={(communeKey, patch) => void patchAndSave(communeKey, patch)}
         onOpenScript={handleOpenScript}
       />
 

@@ -139,7 +139,14 @@ export function ProspectionCommuneDetailSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        // Fermer sans quitter le champ (croix, clic extérieur, glisser) ne déclenche pas onBlur.
+        if (!next) commitTextFields();
+        onOpenChange(next);
+      }}
+    >
       <SheetContent
         side={isMobile ? "bottom" : "right"}
         className={cn(
