@@ -12,6 +12,7 @@ const baseState: ProspectionCommuneState = {
   contact: "",
   contacts: [],
   notes: "",
+  responsables: [],
 };
 
 describe("aggregatePrestataires", () => {

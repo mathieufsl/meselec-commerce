@@ -184,6 +184,7 @@ export function ProspectionCartesMap({
         contact: "",
         contacts: [],
         notes: "",
+        responsables: [],
       };
       const dimmed =
         hasHighlight &&

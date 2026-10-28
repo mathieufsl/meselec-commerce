@@ -35,6 +35,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { ProspectionResponsablesToggles } from "@/components/prospection/ProspectionResponsablesPicker";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { FileText, Mail, Phone, Plus, Trash2, UserPlus } from "lucide-react";
@@ -322,6 +323,14 @@ export function ProspectionCommuneDetailSheet({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Qui s&apos;en occupe ?</Label>
+              <ProspectionResponsablesToggles
+                value={row.responsables}
+                onChange={(responsables) => onPatch(communeKey, { responsables })}
+              />
             </div>
 
             <div className="space-y-2">

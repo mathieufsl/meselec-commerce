@@ -12,6 +12,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   contact: "",
   contacts: [],
   notes: "",
+  responsables: [],
 };
 
 /** Fusionne l'état serveur avec le seed CSV (le serveur prime si renseigné). */
@@ -44,6 +45,7 @@ export function mergeProspectionState(
     contact: server.contact || seed.contact || "",
     contacts: server.contacts.length > 0 ? server.contacts : [],
     notes: server.notes || seed.notes || "",
+    responsables: server.responsables,
   };
 }
 

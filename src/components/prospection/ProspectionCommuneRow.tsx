@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { ProspectionResponsablesSelect } from "@/components/prospection/ProspectionResponsablesPicker";
 import { cn } from "@/lib/utils";
 import { FileText } from "lucide-react";
 
@@ -219,6 +220,12 @@ export const ProspectionCommuneRow = memo(
               ))}
             </SelectContent>
           </Select>
+        </TableCell>
+        <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
+          <ProspectionResponsablesSelect
+            value={row.responsables}
+            onChange={(responsables) => onPatch(communeKey, { responsables })}
+          />
         </TableCell>
         <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
           <ProspectionTextInput

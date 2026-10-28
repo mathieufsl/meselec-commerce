@@ -4,6 +4,7 @@ import type { ProspectionCommuneState } from "@/lib/prospection/api";
 import { aggloBadgeClass, statusLabel, statusSelectClass } from "@/lib/prospection/ui";
 import { departementShortLabel } from "@/lib/prospection/crmUi";
 import { cn } from "@/lib/utils";
+import { ResponsableBadges } from "@/components/prospection/ProspectionResponsablesPicker";
 import { ChevronRight } from "lucide-react";
 
 type Props = {
@@ -60,6 +61,7 @@ export const ProspectionCommuneMobileCard = memo(function ProspectionCommuneMobi
           >
             {commune.agglo || "N/A"}
           </span>
+          <ResponsableBadges value={row.responsables} />
           {row.prestataire ? (
             <span className="truncate text-xs font-medium text-success">{row.prestataire}</span>
           ) : null}

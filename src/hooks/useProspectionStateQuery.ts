@@ -32,6 +32,7 @@ export function useProspectionStateMutations() {
         contact: "",
         contacts: [],
         notes: "",
+        responsables: [],
         ...current,
         ...patch,
       };

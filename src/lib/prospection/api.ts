@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeResponsables } from "@/lib/prospection/responsables";
 import {
   hydrateContacts,
   summarizeContacts,
@@ -18,6 +19,8 @@ export type ProspectionCommuneState = {
   contact: string;
   contacts: ProspectionContact[];
   notes: string;
+  /** Qui suit la commune (plusieurs personnes possibles). */
+  responsables: string[];
 };
 
 export type ProspectionStateMap = Record<string, ProspectionCommuneState>;
@@ -32,6 +35,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   contact: "",
   contacts: [],
   notes: "",
+  responsables: [],
 };
 
 const YVELINES_LEGACY_PREFIX = "Yvelines (78)::";
@@ -49,6 +53,7 @@ type ProspectionSuiviRow = {
   contact: string | null;
   contacts_json?: unknown;
   notes: string | null;
+  responsables?: unknown;
 };
 
 function resolveCommuneKey(row: ProspectionSuiviRow): string | null {
@@ -69,6 +74,7 @@ function stateFromRow(row: ProspectionSuiviRow): ProspectionCommuneState {
     contacts,
     contact: summarizeContacts(contacts) || (row.contact ?? ""),
     notes: row.notes ?? "",
+    responsables: normalizeResponsables(row.responsables),
   };
 }
 
@@ -135,6 +141,7 @@ export async function upsertProspectionCommune(
     contact: current.contact,
     contacts_json: current.contacts,
     notes: current.notes,
+    responsables: current.responsables,
   };
 
   const { error: newSchemaError } = await (supabase as any)
@@ -168,7 +175,7 @@ async function readCurrentRow(
   communeKey: string,
   patch: Partial<ProspectionCommuneState>,
 ): Promise<ProspectionCommuneState> {
-  const selectCols = "status, gestion, gestion_voirie, porte_entree, prestataire, prestataire_voirie, contact, contacts_json, notes";
+  const selectCols = "status, gestion, gestion_voirie, porte_entree, prestataire, prestataire_voirie, contact, contacts_json, notes, responsables";
   const { data: byKey, error: byKeyError } = await (supabase as any)
     .from("prospection_commune_suivi")
     .select(selectCols)

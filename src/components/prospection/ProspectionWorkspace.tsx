@@ -63,6 +63,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   contact: "",
   contacts: [],
   notes: "",
+  responsables: [],
 };
 /** Complète l'état serveur avec le référentiel CSV (comme la vue Cartes), pour que Liste et Cartes affichent la même chose. */
 function withReferenceSeed(server: ProspectionStateMap): ProspectionStateMap {
@@ -74,7 +75,7 @@ function withReferenceSeed(server: ProspectionStateMap): ProspectionStateMap {
 }
 
 function rowKey(row: ProspectionCommuneState): string {
-  return `${row.status}|${row.gestion}|${row.gestionVoirie}|${row.porteEntree}|${row.prestataire}|${row.prestataireVoirie}|${summarizeContacts(row.contacts)}|${row.notes}`;
+  return `${row.status}|${row.gestion}|${row.gestionVoirie}|${row.porteEntree}|${row.prestataire}|${row.prestataireVoirie}|${summarizeContacts(row.contacts)}|${row.notes}|${row.responsables.join(",")}`;
 }
 
 function getChangedRowsFromDirtyKeys(
@@ -304,11 +305,11 @@ export function ProspectionWorkspace() {
 
   const exportCsv = () => {
     const rows = stateRef.current;
-    let csv = "Departement;Commune;Habitants;Agglo;Maire;Nuance;Qui gere EP;Qui gere voirie;Porte entree;Statut;Prestataire EP;Prestataire voirie;Contact;Notes\n";
+    let csv = "Departement;Commune;Habitants;Agglo;Maire;Nuance;Qui gere EP;Qui gere voirie;Porte entree;Statut;Qui;Prestataire EP;Prestataire voirie;Contact;Notes\n";
     for (const c of filterProspectionCommunes(communes, rows, { ...baseListFilters, statusTab: "all" })) {
       const s = rows[c.key] ?? DEFAULT_ROW;
       const contactSummary = summarizeContacts(s.contacts) || s.contact || "";
-      csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${c.nuance || ""}";"${s.gestion || ""}";"${s.gestionVoirie || ""}";"${s.porteEntree || ""}";"${s.status}";"${s.prestataire || ""}";"${s.prestataireVoirie || ""}";"${contactSummary}";"${s.notes || ""}"\n`;
+      csv += `"${c.departement}";"${c.ville}";${c.habitants};"${c.agglo}";"${c.maire}";"${c.nuance || ""}";"${s.gestion || ""}";"${s.gestionVoirie || ""}";"${s.porteEntree || ""}";"${s.status}";"${s.responsables.join(", ")}";"${s.prestataire || ""}";"${s.prestataireVoirie || ""}";"${contactSummary}";"${s.notes || ""}"\n`;
     }
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);

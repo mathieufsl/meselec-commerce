@@ -23,6 +23,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   contact: "",
   contacts: [],
   notes: "",
+  responsables: [],
 };
 
 export function filterProspectionCommunes(
@@ -43,7 +44,8 @@ export function filterProspectionCommunes(
       !c.agglo.toLowerCase().includes(q) &&
       !c.departement.toLowerCase().includes(q) &&
       !(s.prestataire || "").toLowerCase().includes(q) &&
-      !(s.prestataireVoirie || "").toLowerCase().includes(q)
+      !(s.prestataireVoirie || "").toLowerCase().includes(q) &&
+      !s.responsables.some((r) => r.toLowerCase().includes(q))
     ) {
       continue;
     }

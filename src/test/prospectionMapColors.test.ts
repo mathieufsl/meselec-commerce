@@ -17,6 +17,7 @@ const baseState: ProspectionCommuneState = {
   contact: "",
   contacts: [],
   notes: "",
+  responsables: [],
 };
 
 describe("prestataireColor", () => {

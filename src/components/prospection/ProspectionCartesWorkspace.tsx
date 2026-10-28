@@ -41,6 +41,7 @@ const DEFAULT_ROW: ProspectionCommuneState = {
   contact: "",
   contacts: [],
   notes: "",
+  responsables: [],
 };
 
 const COLOR_MODES = new Set<ProspectionMapColorMode>(["prestataire", "prestataireVoirie", "gestion", "gestionVoirie", "porte", "statut", "nuance"]);
