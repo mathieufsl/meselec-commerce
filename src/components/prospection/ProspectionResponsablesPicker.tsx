@@ -16,7 +16,7 @@ export function ResponsableBadges({ value, className }: { value: string[]; class
       {value.map((name) => (
         <span
           key={name}
-          className={cn("rounded px-1.5 py-0.5 text-[11px] font-medium leading-tight", responsableBadgeClass(name))}
+          className={cn("rounded px-1.5 py-0.5 text-xs font-medium leading-tight", responsableBadgeClass(name))}
         >
           {name}
         </span>

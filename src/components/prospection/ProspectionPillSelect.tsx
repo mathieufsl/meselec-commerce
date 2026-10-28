@@ -10,7 +10,7 @@ export function Pill({ label, className }: { label: string; className?: string }
   return (
     <span
       className={cn(
-        "inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[11px] font-medium leading-tight",
+        "inline-block max-w-full truncate rounded px-1.5 py-0.5 text-xs font-medium leading-tight",
         className,
       )}
       title={label}
