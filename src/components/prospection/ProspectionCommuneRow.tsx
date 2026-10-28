@@ -7,21 +7,17 @@ import {
   PORTE_ENTREE_OPTIONS,
   STATUS_OPTIONS,
   aggloBadgeClass,
+  gestionPillClass,
+  porteEntreePillClass,
   statusRowClass,
   statusSelectClass,
 } from "@/lib/prospection/ui";
 import { nuanceColor, nuanceLabel } from "@/lib/prospection/nuances";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { ProspectionResponsablesSelect } from "@/components/prospection/ProspectionResponsablesPicker";
+import { PillSelect } from "@/components/prospection/ProspectionPillSelect";
 import { cn } from "@/lib/utils";
 import { FileText } from "lucide-react";
 
@@ -59,7 +55,10 @@ const ProspectionTextInput = memo(function ProspectionTextInput({
         if (e.key === "Enter") e.currentTarget.blur();
       }}
       onClick={stopRowClick}
-      className={className}
+      className={cn(
+        "border-transparent bg-transparent shadow-none placeholder:text-muted-foreground/40 hover:bg-muted/70 focus-visible:bg-background",
+        className,
+      )}
     />
   );
 });
@@ -139,87 +138,37 @@ export const ProspectionCommuneRow = memo(
             <span className="text-xs text-muted-foreground">—</span>
           )}
         </TableCell>
-        <TableCell className="px-2 py-1.5" onClick={stopRowClick}>
-          <Select
-            value={row.gestion || "__none__"}
-            onValueChange={(v) =>
-              onPatch(communeKey, {
-                gestion: (v === "__none__" ? "" : v) as ProspectionCommuneState["gestion"],
-              })
-            }
-          >
-            <SelectTrigger className="h-8 w-full min-w-0 text-[10px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {GESTION_OPTIONS.map((o) => (
-                <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <TableCell className="max-w-0 px-1 py-1.5" onClick={stopRowClick}>
+          <PillSelect
+            value={row.gestion}
+            options={GESTION_OPTIONS}
+            pillClass={gestionPillClass}
+            onChange={(v) => onPatch(communeKey, { gestion: v as ProspectionCommuneState["gestion"] })}
+          />
         </TableCell>
-        <TableCell className="px-2 py-1.5" onClick={stopRowClick}>
-          <Select
-            value={row.gestionVoirie || "__none__"}
-            onValueChange={(v) =>
-              onPatch(communeKey, {
-                gestionVoirie: (v === "__none__" ? "" : v) as ProspectionCommuneState["gestionVoirie"],
-              })
-            }
-          >
-            <SelectTrigger className="h-8 w-full min-w-0 text-[10px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {GESTION_OPTIONS.map((o) => (
-                <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <TableCell className="max-w-0 px-1 py-1.5" onClick={stopRowClick}>
+          <PillSelect
+            value={row.gestionVoirie}
+            options={GESTION_OPTIONS}
+            pillClass={gestionPillClass}
+            onChange={(v) => onPatch(communeKey, { gestionVoirie: v as ProspectionCommuneState["gestionVoirie"] })}
+          />
         </TableCell>
-        <TableCell className="px-2 py-1.5" onClick={stopRowClick}>
-          <Select
-            value={row.porteEntree || "__none__"}
-            onValueChange={(v) =>
-              onPatch(communeKey, {
-                porteEntree: (v === "__none__" ? "" : v) as ProspectionCommuneState["porteEntree"],
-              })
-            }
-          >
-            <SelectTrigger className="h-8 w-full min-w-0 text-[10px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PORTE_ENTREE_OPTIONS.map((o) => (
-                <SelectItem key={o.value || "__none__"} value={o.value || "__none__"}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <TableCell className="max-w-0 px-1 py-1.5" onClick={stopRowClick}>
+          <PillSelect
+            value={row.porteEntree}
+            options={PORTE_ENTREE_OPTIONS}
+            pillClass={porteEntreePillClass}
+            onChange={(v) => onPatch(communeKey, { porteEntree: v as ProspectionCommuneState["porteEntree"] })}
+          />
         </TableCell>
-        <TableCell className="px-2 py-1.5" onClick={stopRowClick}>
-          <Select
+        <TableCell className="max-w-0 px-1 py-1.5" onClick={stopRowClick}>
+          <PillSelect
             value={row.status}
-            onValueChange={(v) => onPatch(communeKey, { status: v as ProspectionCommuneState["status"] })}
-          >
-            <SelectTrigger
-              className={cn("h-8 w-full min-w-0 text-[10px]", statusSelectClass(row.status))}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={STATUS_OPTIONS}
+            pillClass={statusSelectClass}
+            onChange={(v) => onPatch(communeKey, { status: v as ProspectionCommuneState["status"] })}
+          />
         </TableCell>
         <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
           <ProspectionResponsablesSelect
@@ -230,22 +179,22 @@ export const ProspectionCommuneRow = memo(
         <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
           <ProspectionTextInput
             value={row.prestataire}
-            placeholder="ex: Spie Citéos"
+            placeholder="—"
             onCommit={(prestataire) => onPatch(communeKey, { prestataire })}
             className={cn(
               "h-8 w-full min-w-0 text-xs",
-              row.prestataire && "border-success/30 bg-success-subtle font-semibold text-success",
+              row.prestataire && "font-semibold text-success",
             )}
           />
         </TableCell>
         <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
           <ProspectionTextInput
             value={row.prestataireVoirie}
-            placeholder="ex: Colas"
+            placeholder="—"
             onCommit={(prestataireVoirie) => onPatch(communeKey, { prestataireVoirie })}
             className={cn(
               "h-8 w-full min-w-0 text-xs",
-              row.prestataireVoirie && "border-success/30 bg-success-subtle font-semibold text-success",
+              row.prestataireVoirie && "font-semibold text-success",
             )}
           />
         </TableCell>
@@ -258,7 +207,7 @@ export const ProspectionCommuneRow = memo(
         <TableCell className="max-w-0 px-2 py-1.5" onClick={stopRowClick}>
           <ProspectionTextInput
             value={row.notes}
-            placeholder="Notes…"
+            placeholder="—"
             onCommit={(notes) => onPatch(communeKey, { notes })}
             className="h-8 w-full min-w-0 text-xs"
           />

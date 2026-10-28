@@ -70,3 +70,23 @@ export function prospectionStatusBadgeClass(status: ProspectionCommuneState["sta
       return "";
   }
 }
+
+/** Couleurs des pastilles du tableau (style Notion). */
+export function gestionPillClass(gestion: ProspectionCommuneState["gestion"]) {
+  switch (gestion) {
+    case "commune":
+      return "bg-info-subtle text-info";
+    case "agglo":
+      return "bg-warning-subtle text-warning";
+    case "syndicat":
+      return "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
+export function porteEntreePillClass(porte: ProspectionCommuneState["porteEntree"]) {
+  if (porte === "oui") return "bg-success-subtle text-success";
+  if (porte === "non") return "bg-error-subtle text-error";
+  return "bg-muted text-muted-foreground";
+}

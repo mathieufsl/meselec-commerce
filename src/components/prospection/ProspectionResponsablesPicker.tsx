@@ -7,7 +7,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 
 export function ResponsableBadges({ value, className }: { value: string[]; className?: string }) {
   if (value.length === 0) return null;
@@ -16,7 +16,7 @@ export function ResponsableBadges({ value, className }: { value: string[]; class
       {value.map((name) => (
         <span
           key={name}
-          className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none", responsableBadgeClass(name))}
+          className={cn("rounded px-1.5 py-0.5 text-[11px] font-medium leading-tight", responsableBadgeClass(name))}
         >
           {name}
         </span>
@@ -38,16 +38,15 @@ export const ProspectionResponsablesSelect = memo(function ProspectionResponsabl
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex min-h-8 w-full min-w-0 items-center justify-between gap-1 rounded-md border border-input bg-background px-1.5 py-1 text-left text-[10px] hover:bg-muted/50"
+          className="flex min-h-8 w-full min-w-0 items-center rounded-md px-1 py-1 text-left text-[10px] transition-colors hover:bg-muted/70"
           title={value.length ? value.join(", ") : "Choisir qui s'en occupe"}
         >
           {value.length ? (
             // Les noms passent à la ligne plutôt que d'être coupés quand plusieurs personnes sont cochées.
             <ResponsableBadges value={value} />
           ) : (
-            <span className="text-muted-foreground">?</span>
+            <span className="px-1 text-xs text-muted-foreground/50">—</span>
           )}
-          <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-44 p-1">
