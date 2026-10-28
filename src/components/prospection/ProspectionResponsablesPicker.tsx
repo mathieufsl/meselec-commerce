@@ -38,11 +38,12 @@ export const ProspectionResponsablesSelect = memo(function ProspectionResponsabl
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-8 w-full min-w-0 items-center justify-between gap-1 rounded-md border border-input bg-background px-2 text-left text-[10px] hover:bg-muted/50"
+          className="flex min-h-8 w-full min-w-0 items-center justify-between gap-1 rounded-md border border-input bg-background px-1.5 py-1 text-left text-[10px] hover:bg-muted/50"
           title={value.length ? value.join(", ") : "Choisir qui s'en occupe"}
         >
           {value.length ? (
-            <ResponsableBadges value={value} className="flex-nowrap overflow-hidden" />
+            // Les noms passent à la ligne plutôt que d'être coupés quand plusieurs personnes sont cochées.
+            <ResponsableBadges value={value} />
           ) : (
             <span className="text-muted-foreground">?</span>
           )}
