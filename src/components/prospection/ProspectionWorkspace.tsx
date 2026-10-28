@@ -117,6 +117,7 @@ export function ProspectionWorkspace() {
   const {
     data: serverState = {},
     isLoading: stateLoading,
+    isPlaceholderData: statePlaceholder,
     isFetching: stateFetching,
     error: stateError,
     refetch,
@@ -140,13 +141,22 @@ export function ProspectionWorkspace() {
   const [detailCommune, setDetailCommune] = useState<ProspectionCommune | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
+  // Le placeholder `{}` n'est pas la base : hydrater dessus affichait le seul seed CSV (données obsolètes),
+  // et un « Enregistrer » réécrivait ces valeurs en base. On attend les vraies données, puis on se resynchronise
+  // à chaque rechargement serveur en gardant les lignes modifiées localement et non enregistrées.
   useEffect(() => {
-    if (stateLoading || hydrated) return;
-    setState(withReferenceSeed(serverState));
+    if (stateLoading || statePlaceholder) return;
+    setState((prev) => {
+      const next = withReferenceSeed(serverState);
+      for (const key of dirtyKeysRef.current) {
+        if (prev[key]) next[key] = prev[key];
+      }
+      return next;
+    });
+    savedStateRef.current = serverState;
     setSavedState(serverState);
-    setDirtyKeys(new Set());
     setHydrated(true);
-  }, [serverState, stateLoading, hydrated]);
+  }, [serverState, stateLoading, statePlaceholder]);
 
   const loadFromServer = useCallback(async () => {
     const result = await refetch();
@@ -281,7 +291,7 @@ export function ProspectionWorkspace() {
   );
 
   const loadError = stateError instanceof Error ? stateError.message : stateError ? String(stateError) : null;
-  const isInitialLoad = communesLoading || (stateLoading && !hydrated);
+  const isInitialLoad = communesLoading || !hydrated;
 
   const handleOpenScript = useCallback((target: ScriptTarget) => {
     setScriptTarget(target);
