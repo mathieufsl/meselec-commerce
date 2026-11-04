@@ -29,7 +29,13 @@ export type ProspectionStatut =
   | "perdu"
   | "inactif";
 
-export type AoSecteurCode = "EP" | "CFO_CFA" | "Illumination" | "VRD" | "Enedis";
+export type AoSecteurCode =
+  | "EP"
+  | "CFO_CFA"
+  | "Illumination"
+  | "VRD"
+  | "Enedis"
+  | "Hydraulique";
 
 export type AoNatureMarche = "bail" | "travaux_neuf" | "autre";
 
@@ -41,6 +47,7 @@ export const AO_SECTEURS: AoSecteurCode[] = [
   "Illumination",
   "VRD",
   "Enedis",
+  "Hydraulique",
 ];
 
 export const AO_SECTEUR_LABELS: Record<AoSecteurCode, string> = {
@@ -49,6 +56,7 @@ export const AO_SECTEUR_LABELS: Record<AoSecteurCode, string> = {
   Illumination: "Illumination",
   VRD: "VRD",
   Enedis: "Enedis",
+  Hydraulique: "Hydraulique",
 };
 
 export const AO_NATURE_MARCHE_LABELS: Record<AoNatureMarche, string> = {

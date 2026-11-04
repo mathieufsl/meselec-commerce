@@ -48,7 +48,7 @@ export function CommerceSecteurKpiBar({
         />
       </button>
       <div className={cn(!mobileOpen && "hidden md:block")}>
-      <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
         {AO_SECTEURS.map((code) => {
           const matching = aos.filter((ao) => secteurCodes(ao).includes(code));
           const actifs = matching.filter((a) => ACTIVE_STATUTS.has(a.statut));

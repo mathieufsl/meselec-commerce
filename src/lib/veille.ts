@@ -85,7 +85,7 @@ export const DOMAINE_TO_SECTEUR: Record<VeilleDomaine, AoSecteurCode> = {
   "Réseaux électriques": "Enedis",
   "CFO / installations électriques": "CFO_CFA",
   "VRD / voirie": "VRD",
-  Hydraulique: "VRD",
+  Hydraulique: "Hydraulique",
 };
 
 const DOMAINES = Object.keys(CPV_PREFIXES) as VeilleDomaine[];

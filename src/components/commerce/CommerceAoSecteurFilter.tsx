@@ -12,6 +12,7 @@ export const AO_SECTEUR_BADGE_CLASS: Record<AoSecteurCode, string> = {
   Illumination: "bg-amber-500/15 text-amber-800 border-amber-500/25 dark:text-amber-400",
   VRD: "bg-emerald-500/15 text-emerald-800 border-emerald-500/25 dark:text-emerald-400",
   Enedis: "bg-orange-500/15 text-orange-800 border-orange-500/25 dark:text-orange-400",
+  Hydraulique: "bg-cyan-500/15 text-cyan-800 border-cyan-500/25 dark:text-cyan-400",
 };
 
 export function CommerceAoSecteurFilter({
