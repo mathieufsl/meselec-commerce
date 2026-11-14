@@ -25,7 +25,7 @@ export const Route = createFileRoute("/veille")({
       {
         name: "description",
         content:
-          "Annonces d'appels d'offres publics collectées automatiquement (BOAMP), filtrées sur l'éclairage public, les réseaux électriques, le CFO et la VRD en Île-de-France.",
+          "Annonces d'appels d'offres publics collectées automatiquement (BOAMP), filtrées sur l'éclairage public, les réseaux électriques, le CFO et la VRD en Île-de-France, dans l'Oise (60) et l'Eure (27).",
       },
       { property: "og:title", content: "Veille appels d'offres — Meselec Commerce" },
       {
@@ -132,7 +132,7 @@ function VeillePage() {
             onClick={() => setIdfSeulement((v) => !v)}
             className="whitespace-nowrap"
           >
-            {idfSeulement ? "Île-de-France" : "France entière"}
+            {idfSeulement ? "IDF + 60 + 27" : "France entière"}
           </Button>
           {canEdit ? (
             <Button size="sm" onClick={lancerVeille} disabled={refresh.isPending}>

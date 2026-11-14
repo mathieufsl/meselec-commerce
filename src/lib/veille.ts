@@ -18,6 +18,9 @@ export const VEILLE_STATUT_LABELS: Record<VeilleStatut, string> = {
 
 export const DEPARTEMENTS_IDF = ["75", "77", "78", "91", "92", "93", "94", "95"];
 
+/** Zone de veille : Île-de-France élargie à l'Oise (60) et l'Eure (27). */
+export const DEPARTEMENTS_VEILLE = [...DEPARTEMENTS_IDF, "60", "27"];
+
 export const CPV_PREFIXES: Record<VeilleDomaine, string[]> = {
   "Éclairage public": ["45316110", "34928500", "50232100"],
   Illuminations: ["45316100", "51110000"],
@@ -130,7 +133,7 @@ export function domainesDetectes(cpv: string, texte: string): VeilleDomaine[] {
 }
 
 export function estIdf(departement: string): boolean {
-  return DEPARTEMENTS_IDF.some((code) => departement.includes(code));
+  return DEPARTEMENTS_VEILLE.some((code) => departement.includes(code));
 }
 
 export function secteursFromDomaines(domaines: VeilleDomaine[]): AoSecteurCode[] {

@@ -60,7 +60,7 @@ const Email = ({ date, annonces = [], collectees = 0, retenues = 0, appUrl }: Pr
         {annonces.length === 0 ? (
           <Text style={emptyText}>
             Aucune nouvelle annonce correspondant à votre périmètre (éclairage public, réseaux
-            électriques, CFO, VRD — Île-de-France) n'a été publiée sur la période.
+            électriques, CFO, VRD — Île-de-France, Oise, Eure) n'a été publiée sur la période.
           </Text>
         ) : (
           annonces.slice(0, 20).map((a, i) => (
