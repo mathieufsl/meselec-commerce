@@ -30,6 +30,9 @@ export interface VeilleRecapAnnonce {
   plateforme?: string | null
   dce_url?: string | null
   qualif_statut?: string | null
+  url_dce?: string | null
+  /** Lignes courtes : visite, certifications… (analyse DCE ou indices de l'avis). */
+  points?: string[]
 }
 
 interface Props {
@@ -91,6 +94,11 @@ const Carte = ({ a }: { a: VeilleRecapAnnonce }) => (
         .join(' · ')}
     </Text>
     {a.resume ? <Text style={cardResume}>{a.resume}</Text> : null}
+    {(a.points ?? []).map((p, j) => (
+      <Text key={j} style={cardPoint}>
+        {p}
+      </Text>
+    ))}
     {badges(a).length > 0 ? (
       <Text style={cardMeta}>
         {badges(a).map((b) => (
@@ -102,10 +110,10 @@ const Carte = ({ a }: { a: VeilleRecapAnnonce }) => (
     ) : null}
     <Text style={cardMeta}>
       {a.plateforme && a.plateforme !== 'inconnue' ? `Plateforme : ${a.plateforme}` : ''}
-      {a.dce_url ? (
+      {a.dce_url ?? a.url_dce ? (
         <>
           {a.plateforme && a.plateforme !== 'inconnue' ? ' · ' : ''}
-          <Link href={a.dce_url} style={dceLink}>
+          <Link href={(a.dce_url ?? a.url_dce) as string} style={dceLink}>
             DCE →
           </Link>
         </>
@@ -245,6 +253,11 @@ export const template = {
         exigences: { avis_insuffisant: false, visite_obligatoire: true },
         plateforme: 'Maximilien',
         dce_url: 'https://marches.maximilien.fr/entreprise/consultation/950530',
+        url_dce: 'https://marches.maximilien.fr/entreprise/consultation/123456',
+        points: [
+          'Visite obligatoire (14/09/2026, 10h)',
+          'Certifications : Qualifelec EP2 ou équivalent, AIPR exigée',
+        ],
       },
       {
         intitule: 'Travaux VRD et réseaux — opération logements',
@@ -308,6 +321,7 @@ const warnBox = {
 }
 const warnText = { fontSize: '13px', color: '#991b1b', margin: '0' }
 const cardMeta = { fontSize: '12px', color: '#6b7280', margin: '2px 0' }
+const cardPoint = { fontSize: '12px', color: '#92400e', margin: '2px 0' }
 const ctaSection = { textAlign: 'center' as const, margin: '20px 0' }
 const ctaButton = {
   backgroundColor: '#1d4ed8',

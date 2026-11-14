@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/commerce/AppShell";
+import { VeilleAnalysePanel } from "@/components/commerce/VeilleAnalysePanel";
 import { VeilleRecipientsDialog } from "@/components/commerce/VeilleRecipientsDialog";
 import { VeilleProfilDialog } from "@/components/commerce/VeilleProfilDialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -195,9 +196,9 @@ function DetailAnnonce({ a }: { a: VeilleAnnonceRow }) {
         </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
-        {a.dce_url ? (
+        {a.dce_url ?? a.url_dce ? (
           <Button size="sm" asChild>
-            <a href={a.dce_url} target="_blank" rel="noreferrer">
+            <a href={(a.dce_url ?? a.url_dce) as string} target="_blank" rel="noreferrer">
               <FileDown className="mr-1.5 h-4 w-4" /> DCE
             </a>
           </Button>
@@ -559,6 +560,8 @@ function VeillePage() {
                   {a.plateforme && a.plateforme !== "inconnue" ? <span>{a.plateforme}</span> : null}
                 </div>
 
+                <VeilleAnalysePanel annonce={a} canEdit={canEdit} />
+
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {canEdit ? (
                     <Button
@@ -590,9 +593,9 @@ function VeillePage() {
                       Ouvrir l&apos;AO
                     </Button>
                   ) : null}
-                  {a.dce_url ? (
+                  {a.dce_url ?? a.url_dce ? (
                     <Button size="sm" variant="outline" asChild>
-                      <a href={a.dce_url} target="_blank" rel="noreferrer">
+                      <a href={(a.dce_url ?? a.url_dce) as string} target="_blank" rel="noreferrer">
                         <FileDown className="mr-1.5 h-4 w-4" />
                         DCE
                       </a>

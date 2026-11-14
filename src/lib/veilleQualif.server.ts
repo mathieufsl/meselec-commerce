@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { aplatirDonnees, detecterPlateforme, extraireCpv, extraireUrls } from "@/lib/veilleAvis";
+import {
+  aplatirDonnees,
+  detecterPlateforme,
+  extraireCpv,
+  extraireUrls,
+  lireAvis,
+} from "@/lib/veilleAvis";
 import {
   buildSystemPrompt,
   buildUserMessage,
@@ -24,6 +30,7 @@ type AnnonceRow = {
   departement: string | null;
   date_limite: string | null;
   raw: Record<string, unknown> | null;
+  analyse_statut: string | null;
 };
 
 export type QualifResultat = {
@@ -32,6 +39,8 @@ export type QualifResultat = {
   traitees: number;
   qualifiees: number;
   erreurs: number;
+  /** Annonces prioritaires dont l'analyse du DCE vient d'être demandée au robot. */
+  dceDemandes: number;
 };
 
 function modele(): string {
@@ -76,7 +85,7 @@ async function qualifierUne(
   system: string,
   model: string,
   apiKey: string,
-): Promise<boolean> {
+): Promise<"ok" | "ok_dce" | "erreur"> {
   const donnees = a.raw?.["donnees"];
   const { plateforme, dce_url } = detecterPlateforme(extraireUrls(donnees ?? ""));
   const user = buildUserMessage({
@@ -92,6 +101,9 @@ async function qualifierUne(
   for (let tentative = 0; tentative < 2; tentative += 1) {
     try {
       const { qualification: q, usage } = await appelerClaude(system, user, model, apiKey);
+      // Une annonce prioritaire part directement au robot DCE (si rien n'a encore été demandé).
+      const demanderDce =
+        q.decision === "prioritaire" && (a.analyse_statut ?? "non_demande") === "non_demande";
       const { error } = await client
         .from("veille_annonces")
         .update({
@@ -112,10 +124,11 @@ async function qualifierUne(
           qualif_error: null,
           qualif_usage: usage,
           qualified_at: new Date().toISOString(),
+          ...(demanderDce ? { analyse_statut: "a_faire", analyse_tentatives: 0 } : {}),
         } as never)
         .eq("id", a.id);
       if (error) throw error;
-      return true;
+      return demanderDce ? "ok_dce" : "ok";
     } catch (e) {
       lastError = e;
     }
@@ -132,7 +145,7 @@ async function qualifierUne(
       qualif_model: model,
     } as never)
     .eq("id", a.id);
-  return false;
+  return "erreur";
 }
 
 /** Exécute `fn` sur chaque élément avec au plus `n` appels simultanés. */
@@ -164,6 +177,7 @@ export async function qualifierAnnonces(
       traitees: 0,
       qualifiees: 0,
       erreurs: 0,
+      dceDemandes: 0,
     };
   }
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
@@ -175,12 +189,21 @@ export async function qualifierAnnonces(
     .order("entite");
   if (pErr) throw pErr;
   if (!profils?.length) {
-    return { ok: false, error: "Aucun profil de qualification actif.", traitees: 0, qualifiees: 0, erreurs: 0 };
+    return {
+      ok: false,
+      error: "Aucun profil de qualification actif.",
+      traitees: 0,
+      qualifiees: 0,
+      erreurs: 0,
+      dceDemandes: 0,
+    };
   }
 
   let query = client
     .from("veille_annonces")
-    .select("id, source_id, intitule, acheteur, cpv, departement, date_limite, raw");
+    .select(
+      "id, source_id, intitule, acheteur, cpv, departement, date_limite, raw, analyse_statut",
+    );
   if (options.ids?.length) query = query.in("id", options.ids);
   else query = query.eq("qualif_statut", "a_qualifier").order("date_parution", { ascending: false });
   const { data: annonces, error: aErr } = await query.limit(limit);
@@ -190,12 +213,15 @@ export async function qualifierAnnonces(
   const model = modele();
   let qualifiees = 0;
   let erreurs = 0;
+  let dceDemandes = 0;
   await parLots((annonces ?? []) as unknown as AnnonceRow[], CONCURRENCE, async (a) => {
-    if (await qualifierUne(client, a, system, model, apiKey)) qualifiees += 1;
-    else erreurs += 1;
+    const r = await qualifierUne(client, a, system, model, apiKey);
+    if (r === "erreur") erreurs += 1;
+    else qualifiees += 1;
+    if (r === "ok_dce") dceDemandes += 1;
   });
 
-  return { ok: true, traitees: (annonces ?? []).length, qualifiees, erreurs };
+  return { ok: true, traitees: (annonces ?? []).length, qualifiees, erreurs, dceDemandes };
 }
 
 /**
@@ -227,9 +253,16 @@ export async function rattraperVeille(
       const record = await fetchBoampRecord(r.source_id);
       if (!record) return;
       const cpv = extraireCpv(record["donnees"]).join(" ") || null;
+      const avis = lireAvis(record);
       const { error: upErr } = await client
         .from("veille_annonces")
-        .update({ raw: record, ...(cpv ? { cpv } : {}) } as never)
+        .update({
+          raw: record,
+          url_dce: avis.url_dce,
+          plateforme: avis.plateforme,
+          avis_indices: avis.indices,
+          ...(cpv ? { cpv } : {}),
+        } as never)
         .eq("id", r.id);
       if (!upErr) rattrapees += 1;
     } catch {
@@ -249,7 +282,7 @@ export async function rattraperVeille(
   }
 
   if (idsAQualifier.length === 0) {
-    return { ok: true, traitees: 0, qualifiees: 0, erreurs: 0, rattrapees };
+    return { ok: true, traitees: 0, qualifiees: 0, erreurs: 0, dceDemandes: 0, rattrapees };
   }
   const res = await qualifierAnnonces(client, { ids: idsAQualifier, limit: 200 });
   return { ...res, rattrapees };

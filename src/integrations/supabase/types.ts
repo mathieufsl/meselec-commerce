@@ -1050,6 +1050,15 @@ export type Database = {
       }
       veille_annonces: {
         Row: {
+          analyse_at: string | null
+          analyse_dce: Json | null
+          analyse_erreur: string | null
+          analyse_statut: string
+          analyse_tentatives: number
+          avis_indices: Json
+          dce_fichiers: Json
+          plateforme: string | null
+          url_dce: string | null
           acheteur: string | null
           ao_id: string | null
           cpv: string | null
@@ -1069,6 +1078,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          analyse_at?: string | null
+          analyse_dce?: Json | null
+          analyse_erreur?: string | null
+          analyse_statut?: string
+          analyse_tentatives?: number
+          avis_indices?: Json
+          dce_fichiers?: Json
+          plateforme?: string | null
+          url_dce?: string | null
           acheteur?: string | null
           ao_id?: string | null
           cpv?: string | null
@@ -1088,6 +1106,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          analyse_at?: string | null
+          analyse_dce?: Json | null
+          analyse_erreur?: string | null
+          analyse_statut?: string
+          analyse_tentatives?: number
+          avis_indices?: Json
+          dce_fichiers?: Json
+          plateforme?: string | null
+          url_dce?: string | null
           acheteur?: string | null
           ao_id?: string | null
           cpv?: string | null

@@ -3,6 +3,7 @@ import { render } from "@react-email/render";
 import { createFileRoute } from "@tanstack/react-router";
 import { TEMPLATES } from "@/lib/email-templates/registry";
 import type { VeilleRecapAnnonce } from "@/lib/email-templates/veille-recap";
+import type { VeilleAnalyse } from "@/lib/veilleAnalyse";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 const FROM = "RMS Commerce <veille@meselec.fr>";
@@ -99,12 +100,13 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
         let qualifIndisponible = false;
         try {
           const { qualifierAnnonces } = await import("@/lib/veilleQualif.server");
-          if (collecte.idsNouvelles.length > 0) {
-            const q = await qualifierAnnonces(supabaseAdmin, {
-              ids: collecte.idsNouvelles,
-              limit: 200,
-            });
-            if (!q.ok || (q.traitees > 0 && q.qualifiees === 0)) qualifIndisponible = true;
+          // Tout ce qui attend : nouvelles annonces de cette collecte et celles
+          // ramenées plus tôt par le robot DCE du matin.
+          const q = await qualifierAnnonces(supabaseAdmin, { limit: 200 });
+          if (!q.ok || (q.traitees > 0 && q.qualifiees === 0)) qualifIndisponible = true;
+          if (q.dceDemandes > 0) {
+            const { lancerRobotDce } = await import("@/lib/veilleDce.server");
+            await lancerRobotDce();
           }
         } catch (e) {
           console.error("[veille-daily] qualification:", e);
@@ -118,27 +120,38 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           timeZone: "Europe/Paris",
         });
 
-        const colonnes =
-          "intitule, acheteur, departement, date_limite, lien, domaines, entite, decision, score, resume, certif_manquante, interet_relationnel, exigences, plateforme, dce_url, qualif_statut";
-        let rows: unknown[] = [];
-        if (opts.inclureExistantes) {
-          const depuis = new Date(Date.now() - fenetreJours * 86400000)
-            .toISOString()
-            .slice(0, 10);
-          const { data } = await supabaseAdmin
-            .from("veille_annonces")
-            .select(colonnes)
-            .gte("date_parution", depuis)
-            .order("date_parution", { ascending: false });
-          rows = data ?? [];
-        } else if (collecte.idsNouvelles.length > 0) {
-          const { data } = await supabaseAdmin
-            .from("veille_annonces")
-            .select(colonnes)
-            .in("id", collecte.idsNouvelles);
-          rows = data ?? [];
+        // Annonces arrivées depuis le dernier mail (24 h), qu'elles viennent de
+        // cette collecte, du robot DCE du matin ou d'une collecte manuelle.
+        const { pointsRecap } = await import("@/lib/veilleAnalyse");
+        const depuis = opts.inclureExistantes
+          ? new Date(Date.now() - fenetreJours * 86400000).toISOString().slice(0, 10)
+          : null;
+        let requete = supabaseAdmin
+          .from("veille_annonces")
+          .select(
+            "intitule, acheteur, departement, date_limite, lien, domaines, url_dce, analyse_dce, analyse_statut, avis_indices, entite, decision, score, resume, certif_manquante, interet_relationnel, exigences, plateforme, dce_url, qualif_statut",
+          )
+          .order("date_parution", { ascending: false });
+        requete = depuis
+          ? requete.gte("date_parution", depuis)
+          : requete.gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+        const { data: rows, error: rowsErr } = await requete;
+        if (rowsErr) {
+          return Response.json({ ok: false, error: rowsErr.message }, { status: 500 });
         }
-        const annonces = rows as VeilleRecapAnnonce[];
+        type LigneRecap = VeilleRecapAnnonce & {
+          domaines: string[] | null;
+          analyse_dce: VeilleAnalyse | null;
+          analyse_statut: string | null;
+          avis_indices: NonNullable<Parameters<typeof pointsRecap>[0]["avis_indices"]> | null;
+        };
+        const annonces: VeilleRecapAnnonce[] = ((rows ?? []) as unknown as LigneRecap[]).map(
+          ({ analyse_dce, analyse_statut, avis_indices, ...r }) => ({
+            ...r,
+            domaines: (r.domaines ?? []) as string[],
+            points: pointsRecap({ analyse_dce, analyse_statut, avis_indices }),
+          }),
+        );
 
         const templateData = {
           date: dateLabel,

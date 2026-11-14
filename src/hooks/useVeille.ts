@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { qualifierVeille, rattraperVeilleFn, refreshVeille } from "@/lib/veille.functions";
+import {
+  demanderAnalyseDce,
+  qualifierVeille,
+  rattraperVeilleFn,
+  refreshVeille,
+} from "@/lib/veille.functions";
 import type { QualificationProfil } from "@/lib/veilleQualif";
-import type { VeilleAnnonceRow, VeilleStatut } from "@/lib/veille";
+import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow, type VeilleStatut } from "@/lib/veille";
+import { resumeAnalyseLignes } from "@/lib/veilleAnalyse";
 import type { AoNatureMarche, AoSecteurCode } from "@/lib/commerceTypes";
 
 export function useVeilleAnnonces() {
@@ -13,13 +19,25 @@ export function useVeilleAnnonces() {
       const { data, error } = await supabase
         .from("veille_annonces")
         // Pas de `raw` (avis complet, volumineux) dans la liste.
-        .select(
-          "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, ao_id, created_at, updated_at, qualif_statut, entite, decision, score, resume, raisons, points_rouges, exigences, certif_manquante, interet_relationnel, type_marche, plateforme, dce_url, qualif_model, qualif_error, qualified_at",
-        )
+        .select(VEILLE_ANNONCE_COLONNES)
         .order("date_parution", { ascending: false, nullsFirst: false })
         .limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as VeilleAnnonceRow[];
+    },
+    // Tant qu'une analyse est en cours, on rafraîchit pour afficher le résultat.
+    refetchInterval: (query) =>
+      query.state.data?.some((a) => a.analyse_statut === "a_faire") ? 30_000 : false,
+  });
+}
+
+export function useDemanderAnalyseDce() {
+  const qc = useQueryClient();
+  const run = useServerFn(demanderAnalyseDce);
+  return useMutation({
+    mutationFn: async (id: string) => run({ data: { id } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
   });
 }
@@ -71,6 +89,15 @@ export function useImportVeilleToAo() {
             annonce.lien ? `Annonce : ${annonce.lien}` : null,
             annonce.cpv ? `CPV : ${annonce.cpv}` : null,
             annonce.domaines.length ? `Domaines : ${annonce.domaines.join(", ")}` : null,
+            annonce.url_dce ? `DCE : ${annonce.url_dce}` : null,
+            ...(annonce.analyse_dce
+              ? [
+                  "",
+                  "Analyse DCE :",
+                  ...resumeAnalyseLignes(annonce.analyse_dce),
+                  annonce.analyse_dce.resume,
+                ]
+              : []),
           ]
             .filter(Boolean)
             .join("\n"),
