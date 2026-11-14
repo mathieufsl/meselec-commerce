@@ -2,6 +2,7 @@ import * as React from "react";
 import { render } from "@react-email/render";
 import { createFileRoute } from "@tanstack/react-router";
 import { TEMPLATES } from "@/lib/email-templates/registry";
+import type { VeilleRecapAnnonce } from "@/lib/email-templates/veille-recap";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 const FROM = "RMS Commerce <veille@meselec.fr>";
@@ -94,36 +95,55 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           return Response.json({ ok: false, error: error.message }, { status: 500 });
         }
 
+        // Qualification IA des nouvelles annonces (le mail part même si elle échoue).
+        let qualifIndisponible = false;
+        try {
+          const { qualifierAnnonces } = await import("@/lib/veilleQualif.server");
+          if (collecte.idsNouvelles.length > 0) {
+            const q = await qualifierAnnonces(supabaseAdmin, {
+              ids: collecte.idsNouvelles,
+              limit: 200,
+            });
+            if (!q.ok || (q.traitees > 0 && q.qualifiees === 0)) qualifIndisponible = true;
+          }
+        } catch (e) {
+          console.error("[veille-daily] qualification:", e);
+          qualifIndisponible = true;
+        }
+
         const dateLabel = new Date().toLocaleDateString("fr-FR", {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
           timeZone: "Europe/Paris",
         });
-        let annonces = collecte.annoncesNouvelles.map((a) => ({
-          intitule: a.intitule,
-          acheteur: a.acheteur,
-          departement: a.departement,
-          date_limite: a.date_limite,
-          lien: a.lien,
-          domaines: a.domaines as string[],
-        }));
 
+        const colonnes =
+          "intitule, acheteur, departement, date_limite, lien, domaines, entite, decision, score, resume, certif_manquante, interet_relationnel, exigences, plateforme, dce_url, qualif_statut";
+        let rows: unknown[] = [];
         if (opts.inclureExistantes) {
           const depuis = new Date(Date.now() - fenetreJours * 86400000)
             .toISOString()
             .slice(0, 10);
-          const { data: rows } = await supabaseAdmin
+          const { data } = await supabaseAdmin
             .from("veille_annonces")
-            .select("intitule, acheteur, departement, date_limite, lien, domaines")
+            .select(colonnes)
             .gte("date_parution", depuis)
             .order("date_parution", { ascending: false });
-          annonces = (rows ?? []) as typeof annonces;
+          rows = data ?? [];
+        } else if (collecte.idsNouvelles.length > 0) {
+          const { data } = await supabaseAdmin
+            .from("veille_annonces")
+            .select(colonnes)
+            .in("id", collecte.idsNouvelles);
+          rows = data ?? [];
         }
+        const annonces = rows as VeilleRecapAnnonce[];
 
         const templateData = {
           date: dateLabel,
           annonces,
+          qualifIndisponible,
           collectees: collecte.collectees,
           retenues: collecte.retenues,
           appUrl: "https://commerce.rmsenergies.com/veille",

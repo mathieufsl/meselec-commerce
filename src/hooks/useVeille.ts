@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { refreshVeille } from "@/lib/veille.functions";
+import { qualifierVeille, rattraperVeilleFn, refreshVeille } from "@/lib/veille.functions";
+import type { QualificationProfil } from "@/lib/veilleQualif";
 import type { VeilleAnnonceRow, VeilleStatut } from "@/lib/veille";
 import type { AoNatureMarche, AoSecteurCode } from "@/lib/commerceTypes";
 
@@ -11,7 +12,10 @@ export function useVeilleAnnonces() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("veille_annonces")
-        .select("*")
+        // Pas de `raw` (avis complet, volumineux) dans la liste.
+        .select(
+          "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, ao_id, created_at, updated_at, qualif_statut, entite, decision, score, resume, raisons, points_rouges, exigences, certif_manquante, interet_relationnel, type_marche, plateforme, dce_url, qualif_model, qualif_error, qualified_at",
+        )
         .order("date_parution", { ascending: false, nullsFirst: false })
         .limit(500);
       if (error) throw error;
@@ -164,6 +168,61 @@ export function useDeleteVeilleRecipient() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["veille-recipients"] });
+    },
+  });
+}
+
+export function useQualifierVeille() {
+  const qc = useQueryClient();
+  const run = useServerFn(qualifierVeille);
+  return useMutation({
+    mutationFn: async (input?: { ids?: string[]; limit?: number }) => run({ data: input ?? {} }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
+    },
+  });
+}
+
+export function useRattraperVeille() {
+  const qc = useQueryClient();
+  const run = useServerFn(rattraperVeilleFn);
+  return useMutation({
+    mutationFn: async (input?: { jours?: number; idwebs?: string[] }) =>
+      run({ data: input ?? {} }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
+    },
+  });
+}
+
+export function useQualificationProfils() {
+  return useQuery({
+    queryKey: ["qualification-profils"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("qualification_profil" as never)
+        .select("*")
+        .order("entite");
+      if (error) throw error;
+      return (data ?? []) as unknown as QualificationProfil[];
+    },
+  });
+}
+
+export function useUpdateQualificationProfil() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (profil: QualificationProfil) => {
+      if (!profil.id) throw new Error("Profil sans identifiant");
+      const { id, updated_at: _u, ...rest } = profil;
+      const { error } = await supabase
+        .from("qualification_profil" as never)
+        .update({ ...rest, updated_at: new Date().toISOString() } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["qualification-profils"] });
     },
   });
 }

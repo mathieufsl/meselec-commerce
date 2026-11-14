@@ -26,3 +26,27 @@ export const refreshVeille = createServerFn({ method: "POST" })
       nouvelles: res.nouvelles,
     };
   });
+
+export const qualifierVeille = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { ids?: string[]; limit?: number }) => ({
+    ids: Array.isArray(input.ids) ? input.ids.filter((i) => typeof i === "string").slice(0, 200) : undefined,
+    limit: Math.min(Math.max(input.limit ?? 50, 1), 200),
+  }))
+  .handler(async ({ data, context }) => {
+    const { qualifierAnnonces } = await import("@/lib/veilleQualif.server");
+    return qualifierAnnonces(context.supabase, data);
+  });
+
+export const rattraperVeilleFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { jours?: number; idwebs?: string[] }) => ({
+    jours: Math.min(Math.max(input.jours ?? 14, 1), 60),
+    idwebs: Array.isArray(input.idwebs)
+      ? input.idwebs.filter((i) => typeof i === "string" && /^[\w-]+$/.test(i)).slice(0, 100)
+      : undefined,
+  }))
+  .handler(async ({ data, context }) => {
+    const { rattraperVeille } = await import("@/lib/veilleQualif.server");
+    return rattraperVeille(context.supabase, data);
+  });

@@ -5,6 +5,7 @@ import {
   secteursFromDomaines,
   type VeilleAnnonce,
 } from "@/lib/veille";
+import { extraireCpv } from "@/lib/veilleAvis";
 
 const BASE_URL =
   "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
@@ -29,16 +30,25 @@ function dateOnly(value: string): string | null {
   return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
 }
 
-function normaliser(record: OdsRecord): VeilleAnnonce | null {
+export type VeilleAnnonceCollectee = VeilleAnnonce & { raw: OdsRecord };
+
+export function normaliser(record: OdsRecord): VeilleAnnonceCollectee | null {
   const idweb = texte(record, "idweb", "id");
   const intitule = texte(record, "objet", "intitule", "titre");
   if (!intitule) return null;
   const acheteur = texte(record, "nomacheteur", "acheteur", "organisme");
-  const cpv = texte(record, "code_cpv", "cpv", "codecpv");
+  // L'API ne renvoie pas de champ CPV : on le lit dans le texte complet de l'avis.
+  const cpv = [texte(record, "code_cpv", "cpv", "codecpv"), ...extraireCpv(record["donnees"])]
+    .filter(Boolean)
+    .join(" ")
+    .split(/\s+/)
+    .filter((c, i, arr) => c && arr.indexOf(c) === i)
+    .join(" ");
   const departement = texte(record, "code_departement", "departement", "dc");
   const descripteur = texte(record, "descripteur", "descripteur_libelle");
 
-  const domaines = domainesDetectes(cpv, [intitule, acheteur, descripteur].join(" "));
+  // Mots-clés sur l'intitulé et le descripteur seulement (pas le nom de l'acheteur).
+  const domaines = domainesDetectes(cpv, [intitule, descripteur].join(" "));
 
   return {
     source: "BOAMP",
@@ -52,7 +62,22 @@ function normaliser(record: OdsRecord): VeilleAnnonce | null {
     lien: idweb ? `https://www.boamp.fr/avis/detail/${idweb}` : null,
     domaines,
     secteurs: secteursFromDomaines(domaines),
+    raw: record,
   };
+}
+
+/** Récupère un record BOAMP complet par son idweb (rattrapage de `raw`). */
+export async function fetchBoampRecord(idweb: string): Promise<OdsRecord | null> {
+  const url = `${BASE_URL}?${new URLSearchParams({
+    where: `idweb="${idweb.replace(/"/g, "")}"`,
+    limit: "1",
+  }).toString()}`;
+  const res = await fetch(url, {
+    headers: { Accept: "application/json", "User-Agent": "rms-commerce-veille/1.0" },
+  });
+  if (!res.ok) throw new Error(`L'API BOAMP a répondu ${res.status}.`);
+  const json = (await res.json()) as { results?: OdsRecord[] };
+  return json.results?.[0] ?? null;
 }
 
 export type CollecteVeilleResultat =
@@ -63,6 +88,7 @@ export type CollecteVeilleResultat =
       retenues: number;
       nouvelles: number;
       annoncesNouvelles: VeilleAnnonce[];
+      idsNouvelles: string[];
     }
   | {
       ok: true;
@@ -70,6 +96,7 @@ export type CollecteVeilleResultat =
       retenues: number;
       nouvelles: number;
       annoncesNouvelles: VeilleAnnonce[];
+      idsNouvelles: string[];
     };
 
 /**
@@ -109,6 +136,7 @@ export async function collecterVeille(
         retenues: 0,
         nouvelles: 0,
         annoncesNouvelles: [],
+        idsNouvelles: [],
       };
     }
     const json = (await res.json()) as { results?: OdsRecord[] };
@@ -119,11 +147,11 @@ export async function collecterVeille(
 
   const normalisees = collected
     .map(normaliser)
-    .filter((a): a is VeilleAnnonce => a !== null)
+    .filter((a): a is VeilleAnnonceCollectee => a !== null)
     .filter((a) => a.domaines.length > 0)
     .filter((a) => !idfSeulement || estIdf(a.departement ?? ""));
 
-  const uniques = new Map<string, VeilleAnnonce>();
+  const uniques = new Map<string, VeilleAnnonceCollectee>();
   for (const a of normalisees) uniques.set(`${a.source}::${a.source_id}`, a);
   const annonces = [...uniques.values()];
 
@@ -134,6 +162,7 @@ export async function collecterVeille(
       retenues: 0,
       nouvelles: 0,
       annoncesNouvelles: [],
+      idsNouvelles: [],
     };
   }
 
@@ -160,14 +189,21 @@ export async function collecterVeille(
     lien: a.lien,
     domaines: a.domaines,
     secteurs: a.secteurs,
+    raw: a.raw,
   }));
 
-  const { error } = await client
+  const { data: upserted, error } = await client
     .from("veille_annonces")
-    .upsert(rows, { onConflict: "source,source_id", ignoreDuplicates: false });
+    .upsert(rows, { onConflict: "source,source_id", ignoreDuplicates: false })
+    .select("id, source_id");
   if (error) throw error;
 
-  const annoncesNouvelles = annonces.filter((a) => !known.has(a.source_id));
+  const annoncesNouvelles = annonces
+    .filter((a) => !known.has(a.source_id))
+    .map(({ raw: _raw, ...a }) => a);
+  const idsNouvelles = ((upserted ?? []) as Array<{ id: string; source_id: string }>)
+    .filter((r) => !known.has(r.source_id))
+    .map((r) => r.id);
 
   return {
     ok: true,
@@ -175,5 +211,6 @@ export async function collecterVeille(
     retenues: annonces.length,
     nouvelles: annoncesNouvelles.length,
     annoncesNouvelles,
+    idsNouvelles,
   };
 }
