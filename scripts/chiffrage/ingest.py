@@ -566,7 +566,7 @@ def build(ep: Path, brouillon: Path) -> tuple[list[dict], dict[str, list[dict]],
 # ------------------------------------------------------------------------ sorties
 COLS = ["numero", "section", "designation", "unite", "quantite", "pu_ht", "montant_ht", "famille", "dimensions",
         "fourniture_ht", "heures_mo", "mo_ht", "sous_traitance_ht", "fournisseur", "sous_traitant", "aleas_ht",
-        "frais_generaux_ht", "marge_nette_ht", "pu_brouillon_ht", "decomposition_origine", "detail", "fichier", "feuille",
+        "frais_generaux_ht", "marge_nette_ht", "materiel_ht", "pu_brouillon_ht", "decomposition_origine", "detail", "fichier", "feuille",
         "ligne", "ordre"]
 
 
@@ -580,18 +580,19 @@ def q(v: object) -> str:
     return "'" + str(v).replace("'", "''") + "'"
 
 
-def to_sql(sources: list[dict], P: dict[str, list[dict]]) -> str:
-    L = ["-- Généré par scripts/chiffrage/ingest.py — historique de chiffrage (offres déposées + décomposition).",
+def to_sql(sources: list[dict], P: dict[str, list[dict]], header: str = "scripts/chiffrage/ingest.py") -> str:
+    L = [f"-- Généré par {header} — historique de chiffrage (offres déposées + décomposition).",
          "-- Idempotent : les postes des sources listées sont remplacés à chaque exécution.", ""]
     for s in sources:
         sid = uuid.uuid5(NS, f"source:{s['code']}")
         fichiers = sorted({r["fichier"] for r in P[s["code"]] if r.get("fichier")})
         L.append(
-            "insert into public.chiffrage_sources (id, code, nom, client, activite, annee, ao_id, fichier_reponse) values "
+            "insert into public.chiffrage_sources (id, code, nom, client, activite, annee, ao_id, fichier_reponse, note) values "
             f"({q(str(sid))}, {q(s['code'])}, {q(s['nom'])}, {q(s['client'])}, {q(s['activite'])}, 2026, "
             + (f"(select id from public.appels_offres where reference = {q(s['ao_ref'])} limit 1)" if s.get("ao_ref") else "null")
-            + f", {q(' ; '.join(fichiers))}) on conflict (code) do update set nom = excluded.nom, client = excluded.client, "
-            "activite = excluded.activite, fichier_reponse = excluded.fichier_reponse;"
+            + f", {q(' ; '.join(fichiers))}, {q(s.get('note'))}) on conflict (code) do update set nom = excluded.nom, "
+            "client = excluded.client, activite = excluded.activite, fichier_reponse = excluded.fichier_reponse, note = excluded.note, "
+            "ao_id = coalesce(excluded.ao_id, public.chiffrage_sources.ao_id);"
         )
     L.append("")
     ids = ", ".join(q(str(uuid.uuid5(NS, f"source:{s['code']}"))) for s in sources)
