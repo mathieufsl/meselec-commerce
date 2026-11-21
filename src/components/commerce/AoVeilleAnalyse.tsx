@@ -1,0 +1,183 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { ExternalLink, Radar, ScanSearch, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { VeilleAnalysePanel } from "@/components/commerce/VeilleAnalysePanel";
+import { cn } from "@/lib/utils";
+import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow } from "@/lib/veille";
+import { VEILLE_DECISION_LABELS } from "@/lib/veilleQualif";
+import type { AvisResume } from "@/lib/veilleResume";
+
+type AnnonceVeille = VeilleAnnonceRow & { avis_resume: AvisResume | null };
+
+const DECISION_STYLES = {
+  prioritaire: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  a_creuser: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  hors_sujet: "bg-muted text-muted-foreground",
+} as const;
+
+function Liste({ titre, items }: { titre: string; items: string[] | undefined }) {
+  if (!items?.length) return null;
+  return (
+    <div>
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {titre}
+      </p>
+      <ul className="list-disc space-y-0.5 pl-5 text-sm">
+        {items.map((r, i) => (
+          <li key={i}>{r}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Tout ce que la veille sait de l'AO (qualification IA, analyse du DCE et ses
+ * pièces, résumé de l'avis), lu en direct sur l'annonce liée : une analyse qui
+ * se termine après l'envoi vers les AO apparaît ici aussi.
+ */
+export function AoVeilleAnalyse({ aoId, canEdit }: { aoId: string; canEdit: boolean }) {
+  const { data: annonce, isLoading } = useQuery({
+    queryKey: ["ao-veille", aoId],
+    queryFn: async (): Promise<AnnonceVeille | null> => {
+      const { data, error } = await supabase
+        .from("veille_annonces")
+        .select(`${VEILLE_ANNONCE_COLONNES}, avis_resume`)
+        .eq("ao_id", aoId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as AnnonceVeille | null) ?? null;
+    },
+    // Suit le robot DCE tant qu'il travaille sur l'annonce.
+    refetchInterval: (q) => (q.state.data?.analyse_statut === "a_faire" ? 10_000 : false),
+  });
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (!annonce) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Cet appel d&apos;offres n&apos;a pas été créé depuis la veille : pas d&apos;analyse
+        enregistrée.
+      </p>
+    );
+  }
+
+  const a = annonce;
+  const ex = a.exigences ?? {};
+  const infos: Array<[string, string | null | undefined]> = [
+    ["Montant estimé", ex.montant_estime],
+    ["Durée", ex.duree],
+    ["Allotissement", ex.allotissement],
+    ["CA minimum", ex.chiffre_affaires_min],
+    ["Références", ex.references],
+    ["Certifications exigées", ex.certifications?.length ? ex.certifications.join(", ") : null],
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Radar className="h-4 w-4 text-primary" />
+        <span className="text-muted-foreground">Annonce de veille :</span>
+        <span className="font-medium">{a.intitule}</span>
+        <Link
+          to="/veille"
+          className="text-xs text-primary hover:underline"
+          onClick={() => {
+            // La page Veille rouvre l'annonce mémorisée (onglet « Tous » pour la retrouver).
+            try {
+              window.localStorage.setItem("veille:annonce", JSON.stringify(a.id));
+              window.localStorage.setItem("veille:filtre", JSON.stringify("tous"));
+            } catch {
+              // Stockage indisponible : la page Veille s'ouvre simplement.
+            }
+          }}
+        >
+          Ouvrir la veille
+        </Link>
+        {a.lien ? (
+          <a
+            href={a.lien}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-0.5 text-xs text-primary hover:underline"
+          >
+            Avis BOAMP <ExternalLink className="h-3 w-3" />
+          </a>
+        ) : null}
+      </div>
+
+      {/* Qualification IA */}
+      <section className="space-y-2 rounded-xl border p-3.5">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Sparkles className="h-3.5 w-3.5" /> Qualification IA
+        </p>
+        {a.qualif_statut === "qualifie" && a.decision ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  "rounded px-1.5 py-0.5 text-xs font-semibold",
+                  DECISION_STYLES[a.decision],
+                )}
+              >
+                {VEILLE_DECISION_LABELS[a.decision]}
+                {a.score != null ? <span className="ml-1 tabular-nums">{a.score}</span> : null}
+              </span>
+              {a.entite && a.entite !== "aucune" ? (
+                <span className="rounded border px-1.5 py-0.5 text-xs font-medium">{a.entite}</span>
+              ) : null}
+            </div>
+            {a.resume ? <p className="text-sm leading-relaxed">{a.resume}</p> : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Liste titre="Pour" items={a.raisons} />
+              <Liste titre="Points rouges" items={a.points_rouges} />
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+              {infos
+                .filter(([, v]) => v)
+                .map(([k, v]) => (
+                  <div key={k} className="contents">
+                    <dt className="text-muted-foreground">{k}</dt>
+                    <dd className="break-words">{v}</dd>
+                  </div>
+                ))}
+            </dl>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">Annonce non qualifiée.</p>
+        )}
+      </section>
+
+      {/* Analyse du DCE et pièces lues */}
+      <section className="rounded-xl border p-3.5">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <ScanSearch className="h-3.5 w-3.5" /> Analyse du DCE
+        </p>
+        <VeilleAnalysePanel annonce={a} canEdit={canEdit} defaultOpen />
+      </section>
+
+      {/* Résumé IA de l'avis */}
+      {a.avis_resume ? (
+        <section className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-sm">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> Résumé IA de l&apos;avis
+          </p>
+          <p className="font-medium leading-relaxed">{a.avis_resume.en_bref}</p>
+          {a.avis_resume.sections.map((s) => (
+            <div key={s.titre}>
+              <p className="mb-1 text-xs font-semibold text-muted-foreground">{s.titre}</p>
+              <ul className="list-disc space-y-0.5 pl-5 leading-relaxed">
+                {s.points.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      ) : null}
+    </div>
+  );
+}

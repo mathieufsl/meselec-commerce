@@ -1278,6 +1278,15 @@ function VeillePage() {
   };
   const nbEnCours = matching.filter((a) => activitesDe(a).length > 0).length;
   const nbARevoir = matching.filter((a) => suivi.marques[a.id]).length;
+  // Plus rien à revoir (ou plus rien en cours) : on quitte ce filtre au lieu d'afficher une liste vide.
+  useEffect(() => {
+    if (
+      (filtreSuivi === "a_revoir" && nbARevoir === 0) ||
+      (filtreSuivi === "en_cours" && nbEnCours === 0)
+    ) {
+      setFiltreSuivi("aucun");
+    }
+  }, [filtreSuivi, nbARevoir, nbEnCours]);
 
   const items = useMemo(() => {
     const list =
