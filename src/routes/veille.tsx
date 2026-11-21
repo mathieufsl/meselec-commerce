@@ -173,10 +173,15 @@ function ResumeIa({ id }: { id: string }) {
   const { data, isLoading } = useVeilleAvisComplet(id);
   const resumer = useResumerAvis();
   const resume = data?.avis_resume ?? null;
+  // Le panneau garde ce composant d'une annonce à l'autre : on n'affiche l'état
+  // (chargement, erreur) que s'il concerne l'annonce affichée.
+  const pourCetteAnnonce = resumer.variables?.id === id;
+  const enCours = resumer.isPending && pourCetteAnnonce;
   // Pas de génération automatique : le résumé IA n'est lancé qu'au clic sur « Résumer l'avis ».
 
-  const erreur =
-    resumer.data && !resumer.data.ok
+  const erreur = !pourCetteAnnonce
+    ? null
+    : resumer.data && !resumer.data.ok
       ? resumer.data.error
       : resumer.error instanceof Error
         ? resumer.error.message
@@ -193,15 +198,15 @@ function ResumeIa({ id }: { id: string }) {
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs text-muted-foreground"
-            disabled={resumer.isPending}
+            disabled={enCours}
             onClick={() => resumer.mutate({ id, force: true })}
           >
-            <RefreshCw className={cn("mr-1 h-3 w-3", resumer.isPending && "animate-spin")} />
+            <RefreshCw className={cn("mr-1 h-3 w-3", enCours && "animate-spin")} />
             Régénérer
           </Button>
         ) : null}
       </div>
-      {resumer.isPending && !resume ? (
+      {enCours && !resume ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Lecture de l'avis par l'IA…
         </div>
