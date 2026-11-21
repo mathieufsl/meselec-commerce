@@ -5,6 +5,7 @@ import { AoCommentsSheet } from "@/components/commerce/AoCommentsSheet";
 import { AoSharepointButton } from "@/components/commerce/AoSharepointButton";
 import { AoStatusPicker } from "@/components/commerce/AoStatusPicker";
 import { AoIdentityCard } from "@/components/commerce/AoIdentityCard";
+import { AoSyntheseCard } from "@/components/commerce/AoSyntheseCard";
 import {
   AoDetailSommaireFloating,
   useAoSectionObserver,
@@ -65,7 +66,7 @@ export const Route = createFileRoute("/appels-offres/$aoId")({
 
 const AO_SECTIONS: AoSection[] = [
   { id: "projet", label: "Fiche projet", number: 1 },
-  { id: "veille", label: "Analyse veille", number: 2 },
+  { id: "veille", label: "Points clés", number: 2 },
   { id: "documents", label: "Documents", number: 3 },
   { id: "historique", label: "Historique réponses", number: 4 },
   { id: "chiffrage", label: "Chiffrage", number: 5 },
@@ -97,6 +98,7 @@ function AoDetailPage() {
   const [form, setForm] = useState<AoDetailFormState | null>(null);
   const [baseline, setBaseline] = useState<AoDetailFormState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editionOuverte, setEditionOuverte] = useState(false);
 
   const sectionIds = useMemo(() => AO_SECTIONS.map((s) => s.id), []);
   const { activeId, navigate: scrollToSection } = useAoSectionObserver(sectionIds);
@@ -529,27 +531,56 @@ function AoDetailPage() {
       <div className="min-w-0 flex-1 space-y-6 pb-4 lg:space-y-10 lg:pb-12">
         {/* Section 1 — Fiche projet */}
         <section id="projet" className="scroll-mt-24">
-          <Panel title="Fiche projet" bodyClassName="space-y-4">
+          <Panel title="Fiche projet" bodyClassName="space-y-5">
             {form ? (
               <>
-                <AoIdentityCard
+                <AoSyntheseCard
                   form={form}
-                  onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
                   societes={societes}
-                  donneurOrdreSuggestions={donneurOrdreSuggestions}
-                  mode="detail"
+                  documentsCount={allowedDocumentCount}
+                  reponsesCount={reponses.length}
+                  editing={editionOuverte || isDirty}
+                  {...(canEdit ? { onEdit: () => setEditionOuverte((v) => !v) } : {})}
                 />
-                <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Réponses enregistrées
-                    </label>
-                    <p className="mt-1 text-sm font-semibold">{reponses.length}</p>
+
+                {canEdit && (editionOuverte || isDirty) ? (
+                  <div className="space-y-3 rounded-lg border border-dashed p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Modifier les informations
+                    </p>
+                    <AoIdentityCard
+                      form={form}
+                      onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
+                      societes={societes}
+                      donneurOrdreSuggestions={donneurOrdreSuggestions}
+                      mode="detail"
+                      hideStatut
+                      hideNotes
+                    />
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Documents</label>
-                    <p className="mt-1 text-sm font-semibold">{allowedDocumentCount}</p>
-                  </div>
+                ) : null}
+
+                <div className="space-y-1.5 border-t pt-4">
+                  <label
+                    htmlFor="ao-notes"
+                    className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  >
+                    Notes internes
+                  </label>
+                  {canEdit ? (
+                    <Textarea
+                      id="ao-notes"
+                      rows={Math.min(12, Math.max(3, form.notes.split("\n").length + 1))}
+                      value={form.notes}
+                      placeholder="Vos notes sur cet AO…"
+                      onChange={(e) => setForm((f) => (f ? { ...f, notes: e.target.value } : f))}
+                      className="text-sm leading-relaxed"
+                    />
+                  ) : (
+                    <p className="whitespace-pre-line text-sm leading-relaxed">
+                      {form.notes || "Aucune note."}
+                    </p>
+                  )}
                 </div>
               </>
             ) : (
@@ -560,7 +591,7 @@ function AoDetailPage() {
 
         {/* Analyse de la veille (qualification, DCE, résumé de l'avis), en direct */}
         <section id="veille" className="scroll-mt-24">
-          <Panel title="Analyse de la veille">
+          <Panel title="Points clés (analyse de la veille)">
             <AoVeilleAnalyse aoId={aoId} canEdit={canEdit} />
           </Panel>
         </section>

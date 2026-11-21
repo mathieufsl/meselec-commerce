@@ -175,6 +175,8 @@ export function AoIdentityCard({
   mode = "create",
   compact = false,
   showFields = "all",
+  hideStatut = false,
+  hideNotes = false,
 }: {
   form: FormState;
   onChange: (patch: Partial<FormState>) => void;
@@ -183,6 +185,10 @@ export function AoIdentityCard({
   mode?: "create" | "detail";
   compact?: boolean;
   showFields?: "all" | "secteurs";
+  /** Le statut se change déjà dans l'en-tête de la fiche. */
+  hideStatut?: boolean;
+  /** Les notes sont affichées à part sur la fiche. */
+  hideNotes?: boolean;
 }) {
   const usedSecteurs = form.secteurs
     .map((s) => s.secteur)
@@ -292,7 +298,7 @@ export function AoIdentityCard({
             ))}
           </select>
         </label>
-        {mode === "detail" && "statut" in form ? (
+        {mode === "detail" && "statut" in form && !hideStatut ? (
           <label className="space-y-1 text-sm">
             <span className="text-xs font-medium text-muted-foreground">Statut</span>
             <select
@@ -351,7 +357,7 @@ export function AoIdentityCard({
         </div>
       </div>
 
-      {mode === "detail" && "notes" in form && showFields === "all" ? (
+      {mode === "detail" && "notes" in form && showFields === "all" && !hideNotes ? (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground">Notes internes</span>
