@@ -1,4 +1,5 @@
-const GITHUB_DEPOT = "mathieufsl/meselec-commerce";
+// Dépôt Lovable : c'est lui qui porte les secrets du robot.
+const GITHUB_DEPOT = "mathieufsl/rms-commerce";
 const GITHUB_WORKFLOW = "veille-dce.yml";
 
 /**

@@ -38,6 +38,8 @@ permissions:
 
 jobs:
   analyse:
+    # Le code est poussé sur deux dépôts : seul rms-commerce a les secrets.
+    if: github.repository == 'mathieufsl/rms-commerce'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
