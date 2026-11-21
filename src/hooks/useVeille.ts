@@ -286,7 +286,8 @@ export function useVeilleAvisComplet(id: string | null) {
   return useQuery({
     queryKey: ["veille-avis", id],
     enabled: Boolean(id),
-    staleTime: Infinity,
+    // Court : un résumé fait dans un autre onglet (ou dont la réponse s'est perdue) réapparaît.
+    staleTime: 30_000,
     queryFn: async (): Promise<VeilleAvisComplet> => {
       const { data, error } = await supabase
         .from("veille_annonces")
@@ -300,12 +301,26 @@ export function useVeilleAvisComplet(id: string | null) {
   });
 }
 
+/** Résumé déjà enregistré en base pour cette annonce (ou null). */
+async function lireResumeEnregistre(id: string): Promise<AvisResume | null> {
+  const { data } = await supabase
+    .from("veille_annonces")
+    .select("avis_resume")
+    .eq("id", id)
+    .maybeSingle();
+  return ((data as { avis_resume?: AvisResume | null } | null)?.avis_resume ??
+    null) as AvisResume | null;
+}
+
 export function useResumerAvis() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { id: string; force?: boolean }) => {
+    mutationFn: async (input: {
+      id: string;
+      force?: boolean;
+    }): Promise<{ ok: true; resume: AvisResume } | { ok: false; error: string }> => {
       // Edge Function Supabase : elle lit le secret ANTHROPIC_API_KEY du projet.
-      // L'Edge Function coupe l'appel IA à 90 s ; ce délai couvre une fonction qui ne répond plus.
+      // Elle coupe l'appel IA à 90 s ; ce délai couvre une fonction qui ne répond plus.
       let timer: ReturnType<typeof setTimeout> | undefined;
       const delai = new Promise<never>((_, reject) => {
         timer = setTimeout(
@@ -313,21 +328,31 @@ export function useResumerAvis() {
           100_000,
         );
       });
-      const { data, error } = await Promise.race([
-        supabase.functions.invoke<{ ok: true; resume: AvisResume } | { ok: false; error: string }>(
-          "veille-resume-avis",
-          { body: input },
-        ),
-        delai,
-      ]).finally(() => clearTimeout(timer));
-      if (data) return data;
-      let message = error?.message ?? "Échec du résumé IA";
-      const ctx = (error as { context?: Response } | null)?.context;
-      if (ctx && typeof ctx.json === "function") {
-        const corps = (await ctx.json().catch(() => null)) as { error?: string } | null;
-        if (corps?.error) message = corps.error;
+      let message: string;
+      try {
+        const { data, error } = await Promise.race([
+          supabase.functions.invoke<
+            { ok: true; resume: AvisResume } | { ok: false; error: string }
+          >("veille-resume-avis", { body: input }),
+          delai,
+        ]);
+        if (data) return data;
+        message = error?.message ?? "Échec du résumé IA";
+        const ctx = (error as { context?: Response } | null)?.context;
+        if (ctx && typeof ctx.json === "function") {
+          const corps = (await ctx.json().catch(() => null)) as { error?: string } | null;
+          if (corps?.error) message = corps.error;
+        }
+      } catch (e) {
+        message = e instanceof Error ? e.message : "Échec du résumé IA";
+      } finally {
+        clearTimeout(timer);
       }
-      return { ok: false as const, error: message };
+      // La réponse a pu se perdre en route (« Failed to fetch ») alors que le résumé
+      // a bien été fait et enregistré côté serveur : on le relit avant d'afficher l'erreur.
+      const enregistre = await lireResumeEnregistre(input.id).catch(() => null);
+      if (enregistre && !input.force) return { ok: true, resume: enregistre };
+      return { ok: false, error: `${message} — réessayez.` };
     },
     onSuccess: (res, input) => {
       if (!res.ok) return;
@@ -335,6 +360,9 @@ export function useResumerAvis() {
         raw: old?.raw ?? null,
         avis_resume: res.resume,
       }));
+    },
+    onSettled: (_res, _err, input) => {
+      void qc.invalidateQueries({ queryKey: ["veille-avis", input.id] });
     },
   });
 }
