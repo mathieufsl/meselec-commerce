@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -173,15 +173,7 @@ function ResumeIa({ id }: { id: string }) {
   const { data, isLoading } = useVeilleAvisComplet(id);
   const resumer = useResumerAvis();
   const resume = data?.avis_resume ?? null;
-  const demandeAuto = useRef<string | null>(null);
-
-  // Premier affichage d'une annonce sans résumé : on le génère automatiquement (mis en cache).
-  useEffect(() => {
-    if (isLoading || !data || resume || demandeAuto.current === id) return;
-    if (!data.raw) return;
-    demandeAuto.current = id;
-    resumer.mutate({ id });
-  }, [id, isLoading, data, resume, resumer]);
+  // Pas de génération automatique : le résumé IA n'est lancé qu'au clic sur « Résumer l'avis ».
 
   const erreur =
     resumer.data && !resumer.data.ok
