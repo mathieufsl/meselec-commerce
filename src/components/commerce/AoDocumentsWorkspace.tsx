@@ -1,15 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import {
-  Download,
-  ExternalLink,
-  FileText,
-  Loader2,
-  Paperclip,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { Download, ExternalLink, FileText, Loader2, Paperclip, Search, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Panel } from "@/components/commerce/AppShell";
 import { Button } from "@/components/ui/button";
@@ -149,7 +141,6 @@ function DocumentDetailsPane({
   onDownload: (doc: AoDocument) => void;
   onDelete: (doc: AoDocument) => void;
 }) {
-
   const openInNewTab = () => {
     if (!preview.previewSrc) return;
     window.open(preview.previewSrc, "_blank", "noopener,noreferrer");
@@ -237,7 +228,7 @@ function DocumentDetailsPane({
             Ouvrir sur SharePoint
           </Button>
         ) : null}
-        {(preview.previewSrc) ? (
+        {preview.previewSrc ? (
           <Button type="button" size="sm" variant="ghost" className="h-8" onClick={openInNewTab}>
             <ExternalLink className="h-3.5 w-3.5" />
           </Button>
@@ -260,10 +251,7 @@ function DocumentDetailsPane({
 export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
   const qc = useQueryClient();
   const { data: documents = [], isLoading } = useAoDocuments(aoId);
-  const allowedDocuments = useMemo(
-    () => filterAoDocumentsByAllowedTypes(documents),
-    [documents],
-  );
+  const allowedDocuments = useMemo(() => filterAoDocumentsByAllowedTypes(documents), [documents]);
 
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -342,9 +330,9 @@ export function AoDocumentsWorkspace({ aoId }: { aoId: string }) {
           onChange={(e) => setCategoryFilter(e.target.value)}
         >
           <option value="all">Tous les types</option>
-          {AO_UPLOAD_ALLOWED_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {AO_DOCUMENT_TYPE_LABELS[t]}
+          {AO_DOCUMENT_GROUPS.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.label}
             </option>
           ))}
         </select>

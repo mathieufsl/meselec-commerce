@@ -4,7 +4,11 @@ import type { AoDocument, AoDocumentType } from "@/lib/commerceTypes";
 export const AO_DOCUMENTS_BUCKET = "ao-documents";
 
 /** Seuls ces types peuvent être déposés sur un AO (évite d'alourdir le dossier). */
-export const AO_UPLOAD_ALLOWED_TYPES = ["memoire", "cctp", "dpgf"] as const satisfies readonly AoDocumentType[];
+export const AO_UPLOAD_ALLOWED_TYPES = [
+  "memoire",
+  "cctp",
+  "dpgf",
+] as const satisfies readonly AoDocumentType[];
 
 export type AoUploadAllowedType = (typeof AO_UPLOAD_ALLOWED_TYPES)[number];
 
@@ -40,8 +44,18 @@ export function triageIncomingAoFiles(files: File[]): {
   return { accepted, skipped };
 }
 
+/**
+ * Types affichés sur la fiche AO : ceux qu'on peut déposer, plus les pièces de la
+ * consultation (RC, DCE) reprises depuis la Veille.
+ */
+export const AO_VISIBLE_TYPES = [
+  ...AO_UPLOAD_ALLOWED_TYPES,
+  "rc",
+  "dce",
+] as const satisfies readonly AoDocumentType[];
+
 export function filterAoDocumentsByAllowedTypes(docs: AoDocument[]): AoDocument[] {
-  return docs.filter((doc) => isAoUploadAllowedType(doc.type));
+  return docs.filter((doc) => (AO_VISIBLE_TYPES as readonly string[]).includes(doc.type));
 }
 
 export const AO_DOCUMENT_TYPE_LABELS: Record<AoDocumentType, string> = {
@@ -74,6 +88,12 @@ export const AO_DOCUMENT_GROUPS: Array<{
     label: "CCTP",
     description: "Cahier des clauses techniques particulières.",
     types: ["cctp"],
+  },
+  {
+    id: "dce",
+    label: "DCE",
+    description: "Pièces de la consultation (RC, DCE…) reprises depuis la Veille.",
+    types: ["rc", "dce"],
   },
   {
     id: "dpgf",
@@ -260,4 +280,70 @@ export async function deleteAoDocument(doc: AoDocument): Promise<void> {
   }
   const { error } = await supabase.from("ao_documents").delete().eq("id", doc.id);
   if (error) throw error;
+}
+
+/** Type d'une pièce du DCE d'après son nom (RC, CCTP, DPGF…), « dce » par défaut. */
+export function guessDcePieceType(fileName: string): AoDocumentType {
+  const connu = guessAoDocumentTypeFromFileName(fileName);
+  if (connu) return connu;
+  const n = fileName.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  if (/(^|[^a-z])rc([^a-z]|$)|reglement/.test(n)) return "rc";
+  return "dce";
+}
+
+/**
+ * Recopie dans les documents de l'AO les pièces déposées à la main sur une annonce
+ * de veille (`veille-dce/<annonce>/depot/`). Renvoie le nombre de fichiers copiés et
+ * ceux qui ont échoué : un échec ne bloque pas l'envoi de l'annonce vers les AO.
+ */
+export async function copierDepotVeilleVersAo(params: {
+  annonceId: string;
+  aoId: string;
+}): Promise<{ copies: number; echecs: string[] }> {
+  const { annonceId, aoId } = params;
+  const dossier = `${annonceId}/depot`;
+  const { data: fichiers, error } = await supabase.storage.from("veille-dce").list(dossier);
+  if (error) return { copies: 0, echecs: [`liste des fichiers : ${error.message}`] };
+
+  const { data: auth } = await supabase.auth.getUser();
+  let copies = 0;
+  const echecs: string[] = [];
+  for (const f of fichiers ?? []) {
+    // Les dossiers apparaissent sans id dans la liste du stockage.
+    if (!f.id || f.name.startsWith(".")) continue;
+    try {
+      const { data: blob, error: dErr } = await supabase.storage
+        .from("veille-dce")
+        .download(`${dossier}/${f.name}`);
+      if (dErr || !blob) throw dErr ?? new Error("téléchargement vide");
+      const type = guessDcePieceType(f.name);
+      const storagePath = buildAoDocumentStoragePath(aoId, type, f.name);
+      const mime = blob.type || (f.metadata as { mimetype?: string } | null)?.mimetype || null;
+      const { error: uErr } = await supabase.storage
+        .from(AO_DOCUMENTS_BUCKET)
+        .upload(storagePath, blob, { upsert: false, ...(mime ? { contentType: mime } : {}) });
+      if (uErr) throw uErr;
+      const { error: iErr } = await supabase.from("ao_documents").insert({
+        ao_id: aoId,
+        type,
+        nom_fichier: f.name,
+        storage_path: storagePath,
+        fichier_url: storagePath,
+        taille_octets: blob.size,
+        mime_type: mime,
+        version: 1,
+        notes: "Déposé sur la Veille AO",
+        uploaded_by: auth.user?.id ?? null,
+        uploaded_by_email: auth.user?.email ?? null,
+      });
+      if (iErr) {
+        await supabase.storage.from(AO_DOCUMENTS_BUCKET).remove([storagePath]);
+        throw iErr;
+      }
+      copies += 1;
+    } catch (e) {
+      echecs.push(`${f.name} : ${e instanceof Error ? e.message : "échec"}`);
+    }
+  }
+  return { copies, echecs };
 }

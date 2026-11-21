@@ -16,6 +16,8 @@ import {
   type VeilleStatut,
 } from "@/lib/veille";
 import { resumeAnalyseLignes } from "@/lib/veilleAnalyse";
+import { copierDepotVeilleVersAo } from "@/lib/aoDocuments";
+import { toast } from "sonner";
 import type { AoNatureMarche, AoSecteurCode } from "@/lib/commerceTypes";
 
 export function useVeilleAnnonces() {
@@ -166,6 +168,15 @@ export function useImportVeilleToAo() {
         .update({ statut: "importe", ao_id: ao.id } as never)
         .eq("id", annonce.id);
       if (upErr) throw upErr;
+
+      // Pièces du DCE déposées à la main sur la Veille : on les garde dans les documents de l'AO.
+      const depot = await copierDepotVeilleVersAo({ annonceId: annonce.id, aoId: ao.id });
+      if (depot.copies > 0) {
+        toast.success(`${depot.copies} document(s) déposé(s) ajouté(s) à l'AO`);
+      }
+      if (depot.echecs.length > 0) {
+        toast.error(`Documents non copiés vers l'AO : ${depot.echecs.join(" · ")}`);
+      }
 
       return ao.id as string;
     },
