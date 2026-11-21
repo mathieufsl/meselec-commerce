@@ -21,3 +21,6 @@ max_frequency = "5s"
 
 [functions.commerce-manage-accounts]
 verify_jwt = true
+
+[functions.veille-resume-avis]
+verify_jwt = true
