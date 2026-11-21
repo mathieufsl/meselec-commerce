@@ -51,7 +51,9 @@ describe("aoDocuments", () => {
     expect(getAoDocumentPreviewKind(baseDoc({ mime_type: "image/png", nom_fichier: "plan.png" }))).toBe(
       "image",
     );
-    expect(getAoDocumentPreviewKind(baseDoc({ mime_type: null, nom_fichier: "bpu.xlsx" }))).toBe("none");
+    expect(getAoDocumentPreviewKind(baseDoc({ mime_type: null, nom_fichier: "bpu.xlsx" }))).toBe("sheet");
+    expect(getAoDocumentPreviewKind(baseDoc({ mime_type: null, nom_fichier: "RC.docx" }))).toBe("word");
+    expect(getAoDocumentPreviewKind(baseDoc({ mime_type: null, nom_fichier: "vieux.doc" }))).toBe("none");
     expect(getAoDocumentPreviewKind(baseDoc({ storage_path: null }))).toBe("none");
   });
 

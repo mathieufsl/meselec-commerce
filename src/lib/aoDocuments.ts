@@ -184,7 +184,8 @@ export async function uploadAoDocument(params: {
   return data as AoDocument;
 }
 
-export type AoDocumentPreviewKind = "pdf" | "image" | "none";
+/** `word` et `sheet` sont convertis en HTML dans le navigateur (Word via mammoth, tableur via SheetJS). */
+export type AoDocumentPreviewKind = "pdf" | "image" | "word" | "sheet" | "none";
 
 const EXTENSION_MIME: Record<string, string> = {
   ".pdf": "application/pdf",
@@ -195,6 +196,11 @@ const EXTENSION_MIME: Record<string, string> = {
   ".webp": "image/webp",
   ".bmp": "image/bmp",
   ".svg": "image/svg+xml",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xls": "application/vnd.ms-excel",
+  ".ods": "application/vnd.oasis.opendocument.spreadsheet",
+  ".csv": "text/csv",
 };
 
 /** Les imports OneDrive stockent souvent application/octet-stream — on déduit le vrai type. */
@@ -217,6 +223,9 @@ export function getAoDocumentPreviewKind(doc: AoDocument): AoDocumentPreviewKind
     return "image";
   }
   if (mime === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+  // L'ancien format .doc n'est pas lisible par mammoth : pas d'aperçu.
+  if (name.endsWith(".docx") || mime.includes("wordprocessingml")) return "word";
+  if (/\.(xlsx|xlsm|xls|ods|csv)$/i.test(name) || mime.includes("spreadsheetml")) return "sheet";
   return "none";
 }
 

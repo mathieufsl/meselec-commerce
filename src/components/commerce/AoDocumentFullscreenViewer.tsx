@@ -102,6 +102,14 @@ export function AoDocumentFullscreenViewer({
             src={preview.previewSrc}
             className="absolute inset-0 h-full w-full border-0 bg-white"
           />
+        ) : preview.htmlDoc ? (
+          // Word / tableur converti en HTML ; sandbox vide : aucun script n'est exécuté.
+          <iframe
+            title={doc.nom_fichier}
+            srcDoc={preview.htmlDoc}
+            sandbox=""
+            className="absolute inset-0 h-full w-full border-0 bg-white"
+          />
         ) : preview.previewKind === "image" && preview.imageSrc ? (
           <div className="flex h-full items-center justify-center overflow-auto p-4">
             <img

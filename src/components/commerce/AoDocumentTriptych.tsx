@@ -119,6 +119,14 @@ export function AoDocumentTriptych({
               src={preview.viewerSrc}
               className="h-full min-h-[240px] w-full flex-1 border-0 bg-white lg:min-h-0"
             />
+          ) : preview.htmlDoc ? (
+            // Word / tableur converti en HTML ; sandbox vide : aucun script n'est exécuté.
+            <iframe
+              title={selected.nom_fichier}
+              srcDoc={preview.htmlDoc}
+              sandbox=""
+              className="h-full min-h-[240px] w-full flex-1 border-0 bg-white lg:min-h-0"
+            />
           ) : preview.previewKind === "image" && preview.imageSrc ? (
             <div className="flex flex-1 items-center justify-center overflow-auto p-4">
               <img

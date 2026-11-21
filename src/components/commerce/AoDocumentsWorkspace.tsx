@@ -101,6 +101,20 @@ function DocumentPreviewPane({
     );
   }
 
+  if (preview.htmlDoc) {
+    // Word / tableur converti en HTML ; sandbox vide : aucun script n'est exécuté.
+    return (
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-muted/20">
+        <iframe
+          title={doc.nom_fichier}
+          srcDoc={preview.htmlDoc}
+          sandbox=""
+          className="absolute inset-0 h-full w-full border-0 bg-white"
+        />
+      </div>
+    );
+  }
+
   if (preview.previewKind === "image" && preview.imageSrc) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center overflow-auto p-4">
