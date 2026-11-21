@@ -2,6 +2,12 @@ import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
+  CalendarRange,
+  Check,
+  Mail,
+  MapPin,
+  MoreHorizontal,
+  SlidersHorizontal,
   ExternalLink,
   EyeOff,
   FileDown,
@@ -29,6 +35,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -111,7 +126,9 @@ function DecisionBadge({ a }: { a: VeilleAnnonceRow }) {
     );
   }
   return (
-    <span className={cn("rounded px-1.5 py-0.5 text-xs font-semibold", DECISION_STYLES[a.decision])}>
+    <span
+      className={cn("rounded px-1.5 py-0.5 text-xs font-semibold", DECISION_STYLES[a.decision])}
+    >
       {VEILLE_DECISION_LABELS[a.decision]}
       {a.score != null ? <span className="ml-1 tabular-nums opacity-80">{a.score}</span> : null}
     </span>
@@ -159,7 +176,10 @@ function DetailAnnonce({ a }: { a: VeilleAnnonceRow }) {
       <div className="flex flex-wrap items-center gap-2">
         <DecisionBadge a={a} />
         {badgesAnnonce(a).map((b) => (
-          <span key={b} className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <span
+            key={b}
+            className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+          >
             {b}
           </span>
         ))}
@@ -196,7 +216,7 @@ function DetailAnnonce({ a }: { a: VeilleAnnonceRow }) {
         </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
-        {a.dce_url ?? a.url_dce ? (
+        {(a.dce_url ?? a.url_dce) ? (
           <Button size="sm" asChild>
             <a href={(a.dce_url ?? a.url_dce) as string} target="_blank" rel="noreferrer">
               <FileDown className="mr-1.5 h-4 w-4" /> DCE
@@ -215,6 +235,49 @@ function DetailAnnonce({ a }: { a: VeilleAnnonceRow }) {
   );
 }
 
+type Periode = "toutes" | "aujourdhui" | "7j" | "14j" | "30j" | "90j" | "perso";
+
+const PERIODES: Array<{ value: Periode; label: string; jours?: number }> = [
+  { value: "toutes", label: "Toutes dates" },
+  { value: "aujourdhui", label: "Aujourd'hui", jours: 0 },
+  { value: "7j", label: "7 derniers jours", jours: 7 },
+  { value: "14j", label: "14 derniers jours", jours: 14 },
+  { value: "30j", label: "30 derniers jours", jours: 30 },
+  { value: "90j", label: "3 derniers mois", jours: 90 },
+  { value: "perso", label: "Personnalisée…" },
+];
+
+function toIsoDay(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const j = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${j}`;
+}
+
+/** Bornes [du, au] (jours ISO inclus) de la période, ou null si pas de filtre. */
+function bornesPeriode(
+  periode: Periode,
+  du: string,
+  au: string,
+): { du: string | null; au: string | null } | null {
+  if (periode === "toutes") return null;
+  if (periode === "perso") return du || au ? { du: du || null, au: au || null } : null;
+  const jours = PERIODES.find((p) => p.value === periode)?.jours ?? 0;
+  const debut = new Date();
+  debut.setDate(debut.getDate() - jours);
+  return { du: toIsoDay(debut), au: null };
+}
+
+function labelPeriode(periode: Periode, du: string, au: string) {
+  if (periode !== "perso") return PERIODES.find((p) => p.value === periode)?.label ?? "";
+  const fmt = (v: string) =>
+    new Date(`${v}T00:00:00`).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+  if (du && au) return `${fmt(du)} → ${fmt(au)}`;
+  if (du) return `Depuis le ${fmt(du)}`;
+  if (au) return `Jusqu'au ${fmt(au)}`;
+  return "Toutes dates";
+}
+
 function normalizeSearch(value: string) {
   return value.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
 }
@@ -230,6 +293,12 @@ function VeillePage() {
   const [filtreEntite, setFiltreEntite] = useState<string>("toutes");
   const [filtreDecision, setFiltreDecision] = useState<string>("toutes");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [periode, setPeriode] = useState<Periode>("toutes");
+  const [periodeDu, setPeriodeDu] = useState("");
+  const [periodeAu, setPeriodeAu] = useState("");
+  const [periodeOuverte, setPeriodeOuverte] = useState(false);
+  const [profilOuvert, setProfilOuvert] = useState(false);
+  const [destinatairesOuvert, setDestinatairesOuvert] = useState(false);
   const qualifier = useQualifierVeille();
   const rattraper = useRattraperVeille();
   const { data: annonces = [], isLoading } = useVeilleAnnonces();
@@ -244,8 +313,19 @@ function VeillePage() {
 
   const matching = useMemo(() => {
     const terms = normalizeSearch(search).split(/\s+/).filter(Boolean);
+    const bornes = bornesPeriode(periode, periodeDu, periodeAu);
     const base = annonces
-      .filter((a) => voirHorsSujet || filtreDecision === "hors_sujet" || a.decision !== "hors_sujet")
+      .filter((a) => {
+        if (!bornes) return true;
+        const jour = (a.date_parution ?? a.created_at)?.slice(0, 10);
+        if (!jour) return false;
+        if (bornes.du && jour < bornes.du) return false;
+        if (bornes.au && jour > bornes.au) return false;
+        return true;
+      })
+      .filter(
+        (a) => voirHorsSujet || filtreDecision === "hors_sujet" || a.decision !== "hors_sujet",
+      )
       .filter((a) => filtreEntite === "toutes" || a.entite === filtreEntite)
       .filter((a) =>
         filtreDecision === "toutes"
@@ -269,7 +349,16 @@ function VeillePage() {
       );
       return terms.every((t) => haystack.includes(t));
     });
-  }, [annonces, search, voirHorsSujet, filtreEntite, filtreDecision]);
+  }, [
+    annonces,
+    search,
+    voirHorsSujet,
+    filtreEntite,
+    filtreDecision,
+    periode,
+    periodeDu,
+    periodeAu,
+  ]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { tous: matching.length };
@@ -284,7 +373,13 @@ function VeillePage() {
   }, [matching, filtre]);
   const detail = annonces.find((a) => a.id === detailId) ?? null;
 
-  function toastQualif(res: { ok: boolean; error?: string; traitees: number; qualifiees: number; erreurs: number }) {
+  function toastQualif(res: {
+    ok: boolean;
+    error?: string;
+    traitees: number;
+    qualifiees: number;
+    erreurs: number;
+  }) {
     if (!res.ok) {
       toast.error(res.error ?? "Qualification impossible");
       return;
@@ -356,54 +451,11 @@ function VeillePage() {
   return (
     <AppShell
       title="Veille AO"
-      subtitle="Collecte BOAMP filtrée sur votre périmètre"
+      subtitle={`Collecte BOAMP · ${idfSeulement ? "IDF + 60 + 27" : "France entière"}`}
       titleIcon={Radar}
       back={{ to: "/appels-offres", label: "Appels d'offres" }}
       actions={
         <div className="flex items-center gap-2">
-          {canEdit ? <VeilleProfilDialog /> : null}
-          {canEdit ? <VeilleRecipientsDialog /> : null}
-          {canEdit ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={rattraper14}
-              disabled={rattraper.isPending}
-              className="whitespace-nowrap"
-              title="Complète l'avis des annonces des 14 derniers jours puis les qualifie"
-            >
-              {rattraper.isPending ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <History className="mr-1.5 h-4 w-4" />
-              )}
-              Rattraper 14 j
-            </Button>
-          ) : null}
-          {canEdit ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={qualifierEnAttente}
-              disabled={qualifier.isPending}
-              className="whitespace-nowrap"
-            >
-              {qualifier.isPending ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="mr-1.5 h-4 w-4" />
-              )}
-              Qualifier en attente
-            </Button>
-          ) : null}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIdfSeulement((v) => !v)}
-            className="whitespace-nowrap"
-          >
-            {idfSeulement ? "IDF + 60 + 27" : "France entière"}
-          </Button>
           {canEdit ? (
             <Button size="sm" onClick={lancerVeille} disabled={refresh.isPending}>
               {refresh.isPending ? (
@@ -413,6 +465,70 @@ function VeillePage() {
               )}
               Lancer la veille
             </Button>
+          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="px-2" aria-label="Plus d'actions">
+                {rattraper.isPending || qualifier.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MoreHorizontal className="h-4 w-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              {canEdit ? (
+                <>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    Traitements
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={qualifierEnAttente} disabled={qualifier.isPending}>
+                    <Sparkles className="mr-2 h-4 w-4" /> Qualifier en attente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={rattraper14} disabled={rattraper.isPending}>
+                    <History className="mr-2 h-4 w-4" /> Rattraper 14 jours
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                Périmètre de collecte
+              </DropdownMenuLabel>
+              {[
+                { v: true, label: "IDF + Oise (60) + Eure (27)" },
+                { v: false, label: "France entière" },
+              ].map((p) => (
+                <DropdownMenuItem key={p.label} onSelect={() => setIdfSeulement(p.v)}>
+                  <MapPin className="mr-2 h-4 w-4" />
+                  <span className="flex-1">{p.label}</span>
+                  {idfSeulement === p.v ? <Check className="h-4 w-4" /> : null}
+                </DropdownMenuItem>
+              ))}
+              {canEdit ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    Réglages
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => setProfilOuvert(true)}>
+                    <SlidersHorizontal className="mr-2 h-4 w-4" /> Profil de qualification
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setDestinatairesOuvert(true)}>
+                    <Mail className="mr-2 h-4 w-4" /> Destinataires
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {canEdit ? (
+            <>
+              <VeilleProfilDialog hideTrigger open={profilOuvert} onOpenChange={setProfilOuvert} />
+              <VeilleRecipientsDialog
+                hideTrigger
+                open={destinatairesOuvert}
+                onOpenChange={setDestinatairesOuvert}
+              />
+            </>
           ) : null}
         </div>
       }
@@ -482,6 +598,85 @@ function VeillePage() {
               <SelectItem value="aucune">Aucune</SelectItem>
             </SelectContent>
           </Select>
+          <Popover open={periodeOuverte} onOpenChange={setPeriodeOuverte}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-8 gap-1.5 text-xs font-normal",
+                  periode !== "toutes" && "border-primary text-primary",
+                )}
+              >
+                <CalendarRange className="h-3.5 w-3.5" />
+                {periode === "toutes"
+                  ? "Parution : toutes dates"
+                  : labelPeriode(periode, periodeDu, periodeAu)}
+                {periode !== "toutes" ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Réinitialiser la période"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPeriode("toutes");
+                    }}
+                    className="-mr-1 rounded p-0.5 hover:bg-muted"
+                  >
+                    <X className="h-3 w-3" />
+                  </span>
+                ) : null}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-2">
+              <p className="px-2 pb-1.5 pt-1 text-xs font-medium text-muted-foreground">
+                Date de parution
+              </p>
+              <div className="flex flex-col">
+                {PERIODES.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => {
+                      setPeriode(p.value);
+                      if (p.value !== "perso") setPeriodeOuverte(false);
+                    }}
+                    className={cn(
+                      "flex items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-muted",
+                      periode === p.value && "font-medium text-primary",
+                    )}
+                  >
+                    {p.label}
+                    {periode === p.value ? <Check className="h-4 w-4" /> : null}
+                  </button>
+                ))}
+              </div>
+              {periode === "perso" ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 border-t px-1 pt-2">
+                  <label className="space-y-1 text-xs text-muted-foreground">
+                    Du
+                    <Input
+                      type="date"
+                      value={periodeDu}
+                      max={periodeAu || undefined}
+                      onChange={(e) => setPeriodeDu(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </label>
+                  <label className="space-y-1 text-xs text-muted-foreground">
+                    Au
+                    <Input
+                      type="date"
+                      value={periodeAu}
+                      min={periodeDu || undefined}
+                      onChange={(e) => setPeriodeAu(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </label>
+                </div>
+              ) : null}
+            </PopoverContent>
+          </Popover>
           <label className="flex items-center gap-2 text-xs text-muted-foreground">
             <Switch checked={voirHorsSujet} onCheckedChange={setVoirHorsSujet} />
             Afficher les hors sujet ({horsSujetMasquees})
@@ -497,8 +692,8 @@ function VeillePage() {
             <Radar className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
             <h2 className="text-base font-semibold">Aucune annonce</h2>
             <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
-              {search.trim()
-                ? "Aucune annonce ne correspond à votre recherche."
+              {search.trim() || periode !== "toutes"
+                ? "Aucune annonce ne correspond à votre recherche ou à la période choisie."
                 : "Lancez la veille pour récupérer les avis BOAMP des 7 derniers jours correspondant à l'éclairage public, aux réseaux électriques, au CFO et à la VRD."}
             </p>
           </div>
@@ -593,7 +788,7 @@ function VeillePage() {
                       Ouvrir l&apos;AO
                     </Button>
                   ) : null}
-                  {a.dce_url ?? a.url_dce ? (
+                  {(a.dce_url ?? a.url_dce) ? (
                     <Button size="sm" variant="outline" asChild>
                       <a href={(a.dce_url ?? a.url_dce) as string} target="_blank" rel="noreferrer">
                         <FileDown className="mr-1.5 h-4 w-4" />

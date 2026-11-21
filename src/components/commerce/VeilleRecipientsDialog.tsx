@@ -19,8 +19,17 @@ import {
   useVeilleRecipients,
 } from "@/hooks/useVeille";
 
-export function VeilleRecipientsDialog() {
-  const [open, setOpen] = useState(false);
+export function VeilleRecipientsDialog({
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
+}: { open?: boolean; onOpenChange?: (open: boolean) => void; hideTrigger?: boolean } = {}) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    onOpenChange?.(v);
+  };
   const [email, setEmail] = useState("");
   const [nom, setNom] = useState("");
   const { data: recipients = [], isLoading } = useVeilleRecipients();
@@ -42,20 +51,21 @@ export function VeilleRecipientsDialog() {
           setNom("");
           toast.success("Destinataire ajouté");
         },
-        onError: (e: unknown) =>
-          toast.error(e instanceof Error ? e.message : "Ajout impossible"),
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Ajout impossible"),
       },
     );
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="whitespace-nowrap">
-          <Mail className="mr-1.5 h-4 w-4" />
-          Destinataires
-        </Button>
-      </DialogTrigger>
+      {hideTrigger ? null : (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="whitespace-nowrap">
+            <Mail className="mr-1.5 h-4 w-4" />
+            Destinataires
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Récapitulatif quotidien</DialogTitle>
@@ -106,9 +116,7 @@ export function VeilleRecipientsDialog() {
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{r.email}</p>
-                  {r.nom ? (
-                    <p className="truncate text-xs text-muted-foreground">{r.nom}</p>
-                  ) : null}
+                  {r.nom ? <p className="truncate text-xs text-muted-foreground">{r.nom}</p> : null}
                 </div>
                 <Switch
                   checked={r.actif}

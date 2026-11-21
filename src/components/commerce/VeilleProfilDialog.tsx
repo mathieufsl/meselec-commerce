@@ -109,24 +109,35 @@ function ProfilForm({ profil }: { profil: QualificationProfil }) {
   );
 }
 
-export function VeilleProfilDialog() {
-  const [open, setOpen] = useState(false);
+export function VeilleProfilDialog({
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
+}: { open?: boolean; onOpenChange?: (open: boolean) => void; hideTrigger?: boolean } = {}) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    onOpenChange?.(v);
+  };
   const { data: profils = [], isLoading } = useQualificationProfils();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="whitespace-nowrap">
-          <SlidersHorizontal className="mr-1.5 h-4 w-4" />
-          Profil de qualification
-        </Button>
-      </DialogTrigger>
+      {hideTrigger ? null : (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="whitespace-nowrap">
+            <SlidersHorizontal className="mr-1.5 h-4 w-4" />
+            Profil de qualification
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Profil de qualification</DialogTitle>
           <DialogDescription>
-            Ce que l'IA sait de chaque entité pour trier les annonces. Les changements
-            s'appliquent aux prochaines qualifications.
+            Ce que l'IA sait de chaque entité pour trier les annonces. Les changements s'appliquent
+            aux prochaines qualifications.
           </DialogDescription>
         </DialogHeader>
         {isLoading ? (
