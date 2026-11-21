@@ -16,9 +16,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { useDemanderAnalyseDce } from "@/hooks/useVeille";
+import { useAbandonnerAnalyseDce, useDemanderAnalyseDce } from "@/hooks/useVeille";
 import { cn } from "@/lib/utils";
-import type { VeilleAnnonceRow } from "@/lib/veille";
+import { analyseEnAttenteApresEchec, type VeilleAnnonceRow } from "@/lib/veille";
 import {
   EXIGENCE_LABELS,
   VEILLE_ANALYSE_STATUT_LABELS,
@@ -57,8 +57,77 @@ async function ouvrirPiece(fichier: VeilleDceFichier) {
   window.open(data.signedUrl, "_blank", "noopener");
 }
 
+/**
+ * Échec du robot en attente du prochain passage : rien ne tourne. On le dit
+ * clairement et on propose de relancer tout de suite ou d'arrêter les essais.
+ */
+function EchecRobot({ annonce, canEdit }: { annonce: VeilleAnnonceRow; canEdit: boolean }) {
+  const demander = useDemanderAnalyseDce();
+  const abandonner = useAbandonnerAnalyseDce();
+  return (
+    <div className="w-full space-y-1.5 rounded-md bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+      <p className="flex items-start gap-1.5 font-medium">
+        <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+        <span className="[overflow-wrap:anywhere]">
+          DCE non récupéré : {annonce.analyse_erreur}. Nouvel essai automatique demain à 7h17.
+        </span>
+      </p>
+      <div className="flex flex-wrap items-center gap-2 pl-5">
+        {canEdit ? (
+          <>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs"
+              disabled={demander.isPending}
+              onClick={() =>
+                demander.mutate(annonce.id, {
+                  onSuccess: (res) =>
+                    toast.success(
+                      res.lance ? "Robot relancé" : "Relance demandée pour le prochain passage",
+                    ),
+                  onError: (e: unknown) =>
+                    toast.error(e instanceof Error ? e.message : "Relance impossible"),
+                })
+              }
+            >
+              Relancer maintenant
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              disabled={abandonner.isPending}
+              onClick={() =>
+                abandonner.mutate(annonce.id, {
+                  onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Échec"),
+                })
+              }
+            >
+              Abandonner
+            </Button>
+          </>
+        ) : null}
+        {annonce.analyse_run_url ? (
+          <a
+            href={annonce.analyse_run_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-0.5 text-primary hover:underline"
+          >
+            journal du robot
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /** Suivi en direct du robot DCE : étape en cours, depuis quand, lien vers l'exécution. */
-function SuiviRobot({ annonce }: { annonce: VeilleAnnonceRow }) {
+function SuiviRobot({ annonce, canEdit }: { annonce: VeilleAnnonceRow; canEdit: boolean }) {
+  if (analyseEnAttenteApresEchec(annonce))
+    return <EchecRobot annonce={annonce} canEdit={canEdit} />;
   const etape =
     (annonce.analyse_etape ?? VEILLE_ANALYSE_STATUT_LABELS.a_faire) +
     (annonce.analyse_erreur ? ` (dernière erreur : ${annonce.analyse_erreur})` : "");
@@ -129,11 +198,13 @@ function BoutonAnalyse({ annonce, relancer }: { annonce: VeilleAnnonceRow; relan
 export function VeilleAnalysePanel({
   annonce,
   canEdit,
+  defaultOpen = false,
 }: {
   annonce: VeilleAnnonceRow;
   canEdit: boolean;
+  defaultOpen?: boolean;
 }) {
-  const [ouvert, setOuvert] = useState(false);
+  const [ouvert, setOuvert] = useState(defaultOpen);
   const analyse = annonce.analyse_dce;
   const indices = annonce.avis_indices;
 
@@ -143,7 +214,9 @@ export function VeilleAnalysePanel({
     const certifs = indices?.certifications ?? [];
     return (
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {annonce.analyse_statut === "a_faire" ? <SuiviRobot annonce={annonce} /> : null}
+        {annonce.analyse_statut === "a_faire" ? (
+          <SuiviRobot annonce={annonce} canEdit={canEdit} />
+        ) : null}
         {visite?.mentionnee ? (
           <Puce
             className={
@@ -175,10 +248,7 @@ export function VeilleAnalysePanel({
     <Collapsible open={ouvert} onOpenChange={setOuvert} className="mt-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {annonce.analyse_statut === "a_faire" ? (
-          <Puce className="bg-muted text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            {VEILLE_ANALYSE_STATUT_LABELS.a_faire}
-          </Puce>
+          <SuiviRobot annonce={annonce} canEdit={canEdit} />
         ) : null}
         <Puce className={VISITE_STYLES[analyse.visite.exigee]}>
           <Footprints className="h-3 w-3" />

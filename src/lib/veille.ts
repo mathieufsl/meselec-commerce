@@ -227,6 +227,8 @@ export interface VeilleAnnonceRow {
   analyse_dce: VeilleAnalyse | null;
   analyse_erreur: string | null;
   analyse_at: string | null;
+  /** Essais de téléchargement du DCE déjà faits par le robot. */
+  analyse_tentatives?: number;
   /** Étape en cours du robot DCE (suivi en direct). */
   analyse_etape: string | null;
   analyse_etape_at: string | null;
@@ -237,4 +239,17 @@ export interface VeilleAnnonceRow {
 
 /** Colonnes lues par l'application (sans `raw`, l'avis brut, trop volumineux). */
 export const VEILLE_ANNONCE_COLONNES =
-  "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, ao_id, created_at, updated_at, url_dce, plateforme, avis_indices, analyse_statut, analyse_dce, analyse_erreur, analyse_at, analyse_etape, analyse_etape_at, analyse_run_url, dce_fichiers, qualif_statut, entite, decision, score, resume, raisons, points_rouges, exigences, certif_manquante, interet_relationnel, type_marche, dce_url, qualif_model, qualif_error, qualified_at";
+  "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, ao_id, created_at, updated_at, url_dce, plateforme, avis_indices, analyse_statut, analyse_dce, analyse_erreur, analyse_at, analyse_tentatives, analyse_etape, analyse_etape_at, analyse_run_url, dce_fichiers, qualif_statut, entite, decision, score, resume, raisons, points_rouges, exigences, certif_manquante, interet_relationnel, type_marche, dce_url, qualif_model, qualif_error, qualified_at";
+
+/**
+ * Le robot a échoué et attend son prochain passage planifié (statut encore
+ * « à faire ») : rien ne tourne, il ne faut ni animation ni rafraîchissement.
+ */
+export function analyseEnAttenteApresEchec(a: VeilleAnnonceRow): boolean {
+  return a.analyse_statut === "a_faire" && (a.analyse_tentatives ?? 0) > 0 && !!a.analyse_erreur;
+}
+
+/** Le robot DCE travaille réellement sur l'annonce (demande en cours, pas un échec en attente). */
+export function analyseEnCours(a: VeilleAnnonceRow): boolean {
+  return a.analyse_statut === "a_faire" && !analyseEnAttenteApresEchec(a);
+}

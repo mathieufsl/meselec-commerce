@@ -63,7 +63,15 @@ export const PLATEFORMES: Partial<Record<VeillePlateforme, ConfigPlateforme>> = 
   achatpublic: {
     envLogin: "ACHATPUBLIC_LOGIN",
     envMotDePasse: "ACHATPUBLIC_PASSWORD",
-    liensDce: [/t[ée]l[ée]charger\s+(le\s+)?dce/i, /retirer\s+(le\s+)?dce/i],
+    // Fiche consultation : onglet « Pièces de marché », puis « Télécharger » à côté
+    // du ZIP du DCE (ou, à défaut, « Télécharger le règlement de la consultation »).
+    liensDce: [
+      /t[ée]l[ée]charger\s+(le\s+)?dce/i,
+      /retirer\s+(le\s+)?dce/i,
+      /^\s*t[ée]l[ée]charger\s*$/i,
+      /t[ée]l[ée]charger\s+le\s+r[èe]glement/i,
+      /pi[èe]ces\s+de\s+march[ée]/i,
+    ],
   },
   "marches-securises": {
     envLogin: "MARCHES_SECURISES_LOGIN",
@@ -239,6 +247,17 @@ export async function telechargerDce(params: {
     await page.goto(url, { waitUntil: "domcontentloaded" });
     await fermerCookies(page);
     await journal(`consultation ouverte (${page.url()})`);
+    // Certaines plateformes (achatpublic) renvoient une page d'erreur générique
+    // au navigateur automatisé au lieu de la consultation.
+    const texteConsultation = await page
+      .locator("body")
+      .innerText({ timeout: 5000 })
+      .catch(() => "");
+    if (/une erreur est survenue/i.test(texteConsultation) && texteConsultation.length < 2000) {
+      throw new Error(
+        `${plateforme} refuse l'accès au robot (page d'erreur au lieu de la consultation) : déposez le DCE à la main`,
+      );
+    }
 
     const liens = [...conf.liensDce, ...LIENS_DCE_COMMUNS];
     for (let etape = 0; etape < 8 && telechargements.length === 0; etape += 1) {

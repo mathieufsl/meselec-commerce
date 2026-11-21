@@ -24,6 +24,7 @@ export const refreshVeille = createServerFn({ method: "POST" })
       collectees: res.collectees,
       retenues: res.retenues,
       nouvelles: res.nouvelles,
+      idsNouvelles: res.idsNouvelles,
     };
   });
 

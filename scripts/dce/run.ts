@@ -12,7 +12,7 @@
  * VEILLE_DCE_LIMIT, VEILLE_DCE_ANNONCE (id ou source_id), VEILLE_DCE_DIAGNOSTIC=1,
  * VEILLE_DCE_SANS_COLLECTE=1.
  */
-import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
@@ -32,6 +32,17 @@ import { identifiantsPour, telechargerDce } from "./plateformes";
 
 const BUCKET = "veille-dce";
 const MAX_TENTATIVES = 2;
+
+/**
+ * Erreurs qui se reproduiront à l'identique demain (parcours inconnu, accès
+ * refusé, identifiants rejetés…) : inutile de retenter, on passe en échec.
+ * Seules les erreurs passagères (réseau, délai dépassé) gardent un nouvel essai.
+ */
+function erreurDefinitive(message: string): boolean {
+  return /parcours non reconnu|refuse l'acc[eè]s|connexion refus[ée]e|plateforme non g[ée]r[ée]e|trop volumineux/i.test(
+    message,
+  );
+}
 
 function env(nom: string): string {
   const v = process.env[nom];
@@ -84,16 +95,14 @@ async function annoncesATraiter(): Promise<Annonce[]> {
   const { data, error } = await q;
   if (error) throw error;
   // Adresse du DCE : celle lue à la collecte, sinon celle trouvée par la qualification IA.
-  return ((data ?? []) as Array<Annonce & { dce_url: string | null }>).map(
-    ({ dce_url, ...a }) => {
-      const url = a.url_dce ?? dce_url;
-      return {
-        ...a,
-        url_dce: url,
-        plateforme: (url ? plateformeDepuisUrl(url) : null) ?? a.plateforme,
-      };
-    },
-  );
+  return ((data ?? []) as Array<Annonce & { dce_url: string | null }>).map(({ dce_url, ...a }) => {
+    const url = a.url_dce ?? dce_url;
+    return {
+      ...a,
+      url_dce: url,
+      plateforme: (url ? plateformeDepuisUrl(url) : null) ?? a.plateforme,
+    };
+  });
 }
 
 async function deposerPieces(
@@ -127,6 +136,30 @@ function contentType(nom: string): string {
   return "application/octet-stream";
 }
 
+/**
+ * Pièces déposées à la main depuis la page Veille (`<annonce>/depot/`) :
+ * téléchargées dans `dossier`. Renvoie le nombre de fichiers récupérés.
+ */
+async function recupererDepot(annonceId: string, dossier: string): Promise<number> {
+  const { data, error } = await supabase.storage.from(BUCKET).list(`${annonceId}/depot`);
+  if (error || !data?.length) return 0;
+  mkdirSync(dossier, { recursive: true });
+  let n = 0;
+  for (const f of data) {
+    if (!f.name || f.name.startsWith(".")) continue;
+    const { data: blob, error: e } = await supabase.storage
+      .from(BUCKET)
+      .download(`${annonceId}/depot/${f.name}`);
+    if (e || !blob) {
+      console.warn(`    ! dépôt ${f.name} illisible : ${e?.message ?? "vide"}`);
+      continue;
+    }
+    writeFileSync(join(dossier, basename(f.name)), Buffer.from(await blob.arrayBuffer()));
+    n += 1;
+  }
+  return n;
+}
+
 async function enregistrer(id: string, maj: Record<string, unknown>) {
   const { error } = await supabase.from("veille_annonces").update(maj).eq("id", id);
   if (error) throw error;
@@ -150,6 +183,36 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
   await etape(annonce.id, "Robot démarré");
   const avis = lireAvis(annonce.raw ?? {}).texte;
   const base = { intitule: annonce.intitule, acheteur: annonce.acheteur, texteAvis: avis };
+
+  // DCE déposé à la main : on lit ces pièces, sans passer par la plateforme.
+  const dossierDepot = mkdtempSync(join(tmpdir(), "dce-depot-"));
+  try {
+    if ((await recupererDepot(annonce.id, dossierDepot)) > 0) {
+      const tous = deplierDce(dossierDepot);
+      const pieces = selectionnerPieces(tous);
+      const fichiersDce = tous.map((f) => relative(dossierDepot, f));
+      console.log(`  DCE déposé : ${tous.length} fichier(s), retenus : ${pieces.length}`);
+      await etape(
+        annonce.id,
+        pieces.length
+          ? `Lecture par Claude des pièces déposées : ${pieces.map((p) => basename(p.chemin)).join(", ")}`
+          : "RC/CCTP introuvables dans les pièces déposées : lecture de l'avis par Claude",
+      );
+      const analyse = await analyserAnnonce({ client: anthropic, ...base, pieces, fichiersDce });
+      const dceFichiers = await deposerPieces(annonce.id, pieces);
+      await enregistrer(annonce.id, {
+        analyse_dce: analyse,
+        analyse_statut: pieces.length ? "termine" : "sans_dce",
+        analyse_erreur: pieces.length ? null : "RC/CCTP introuvables dans les pièces déposées",
+        analyse_at: new Date().toISOString(),
+        analyse_tentatives: annonce.analyse_tentatives + 1,
+        dce_fichiers: dceFichiers,
+      });
+      return;
+    }
+  } finally {
+    rmSync(dossierDepot, { recursive: true, force: true });
+  }
 
   const plateforme = annonce.plateforme;
   const gere =
@@ -207,7 +270,7 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
       const message = (e as Error).message;
       const tentatives = annonce.analyse_tentatives + 1;
       console.log(`  ✗ DCE non récupéré : ${message}`);
-      if (tentatives < MAX_TENTATIVES) {
+      if (tentatives < MAX_TENTATIVES && !erreurDefinitive(message)) {
         await enregistrer(annonce.id, { analyse_tentatives: tentatives, analyse_erreur: message });
         await etape(annonce.id, "DCE non récupéré : nouvel essai au prochain passage (7h17)");
         return;

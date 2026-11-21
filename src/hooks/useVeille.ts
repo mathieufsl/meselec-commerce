@@ -9,7 +9,12 @@ import {
 } from "@/lib/veille.functions";
 import type { AvisResume } from "@/lib/veilleResume";
 import type { QualificationProfil } from "@/lib/veilleQualif";
-import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow, type VeilleStatut } from "@/lib/veille";
+import {
+  analyseEnCours,
+  VEILLE_ANNONCE_COLONNES,
+  type VeilleAnnonceRow,
+  type VeilleStatut,
+} from "@/lib/veille";
 import { resumeAnalyseLignes } from "@/lib/veilleAnalyse";
 import type { AoNatureMarche, AoSecteurCode } from "@/lib/commerceTypes";
 
@@ -27,8 +32,7 @@ export function useVeilleAnnonces() {
       return (data ?? []) as unknown as VeilleAnnonceRow[];
     },
     // Tant qu'une analyse est en cours, on rafraîchit pour suivre le robot étape par étape.
-    refetchInterval: (query) =>
-      query.state.data?.some((a) => a.analyse_statut === "a_faire") ? 5_000 : false,
+    refetchInterval: (query) => (query.state.data?.some(analyseEnCours) ? 5_000 : false),
   });
 }
 
@@ -65,7 +69,19 @@ export function useSetVeilleStatut() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    // Mise à jour immédiate de la liste : l'annonce triée disparaît sans attendre le serveur.
+    onMutate: async ({ id, statut }) => {
+      await qc.cancelQueries({ queryKey: ["veille-annonces"] });
+      const avant = qc.getQueryData<VeilleAnnonceRow[]>(["veille-annonces"]);
+      qc.setQueryData<VeilleAnnonceRow[]>(["veille-annonces"], (old) =>
+        old?.map((a) => (a.id === id ? { ...a, statut } : a)),
+      );
+      return { avant };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.avant) qc.setQueryData(["veille-annonces"], ctx.avant);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
   });
@@ -129,7 +145,13 @@ export function useImportVeilleToAo() {
 
       return ao.id as string;
     },
-    onSuccess: () => {
+    onMutate: async (annonce) => {
+      await qc.cancelQueries({ queryKey: ["veille-annonces"] });
+      qc.setQueryData<VeilleAnnonceRow[]>(["veille-annonces"], (old) =>
+        old?.map((a) => (a.id === annonce.id ? { ...a, statut: "importe" } : a)),
+      );
+    },
+    onSettled: () => {
       void qc.invalidateQueries();
     },
   });
@@ -160,10 +182,9 @@ export function useAddVeilleRecipient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ email, nom }: { email: string; nom?: string }) => {
-      const { error } = await supabase.from("veille_email_recipients").insert({
-        email: email.trim().toLowerCase(),
-        nom: nom?.trim() || null,
-      } as never);
+      const { error } = await supabase
+        .from("veille_email_recipients")
+        .insert({ email: email.trim().toLowerCase(), nom: nom?.trim() || null } as never);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -303,9 +324,7 @@ export function useResumerAvis() {
       let message = error?.message ?? "Échec du résumé IA";
       const ctx = (error as { context?: Response } | null)?.context;
       if (ctx && typeof ctx.json === "function") {
-        const corps = (await ctx.json().catch(() => null)) as {
-          error?: string;
-        } | null;
+        const corps = (await ctx.json().catch(() => null)) as { error?: string } | null;
         if (corps?.error) message = corps.error;
       }
       return { ok: false as const, error: message };
@@ -316,6 +335,27 @@ export function useResumerAvis() {
         raw: old?.raw ?? null,
         avis_resume: res.resume,
       }));
+    },
+  });
+}
+
+/** Arrête les essais du robot DCE sur une annonce (après un échec). */
+export function useAbandonnerAnalyseDce() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("veille_annonces")
+        .update({
+          analyse_statut: "non_demande",
+          analyse_etape: null,
+          analyse_etape_at: null,
+        } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
   });
 }
