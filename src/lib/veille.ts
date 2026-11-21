@@ -227,9 +227,14 @@ export interface VeilleAnnonceRow {
   analyse_dce: VeilleAnalyse | null;
   analyse_erreur: string | null;
   analyse_at: string | null;
+  /** Étape en cours du robot DCE (suivi en direct). */
+  analyse_etape: string | null;
+  analyse_etape_at: string | null;
+  /** Exécution GitHub Actions qui traite l'annonce. */
+  analyse_run_url: string | null;
   dce_fichiers: VeilleDceFichier[];
 }
 
 /** Colonnes lues par l'application (sans `raw`, l'avis brut, trop volumineux). */
 export const VEILLE_ANNONCE_COLONNES =
-  "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, ao_id, created_at, updated_at, url_dce, plateforme, avis_indices, analyse_statut, analyse_dce, analyse_erreur, analyse_at, dce_fichiers, qualif_statut, entite, decision, score, resume, raisons, points_rouges, exigences, certif_manquante, interet_relationnel, type_marche, dce_url, qualif_model, qualif_error, qualified_at";
+  "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, ao_id, created_at, updated_at, url_dce, plateforme, avis_indices, analyse_statut, analyse_dce, analyse_erreur, analyse_at, analyse_etape, analyse_etape_at, analyse_run_url, dce_fichiers, qualif_statut, entite, decision, score, resume, raisons, points_rouges, exigences, certif_manquante, interet_relationnel, type_marche, dce_url, qualif_model, qualif_error, qualified_at";

@@ -1053,6 +1053,9 @@ export type Database = {
           analyse_at: string | null
           analyse_dce: Json | null
           analyse_erreur: string | null
+          analyse_etape: string | null
+          analyse_etape_at: string | null
+          analyse_run_url: string | null
           analyse_statut: string
           analyse_tentatives: number
           avis_indices: Json
@@ -1081,6 +1084,9 @@ export type Database = {
           analyse_at?: string | null
           analyse_dce?: Json | null
           analyse_erreur?: string | null
+          analyse_etape?: string | null
+          analyse_etape_at?: string | null
+          analyse_run_url?: string | null
           analyse_statut?: string
           analyse_tentatives?: number
           avis_indices?: Json
@@ -1109,6 +1115,9 @@ export type Database = {
           analyse_at?: string | null
           analyse_dce?: Json | null
           analyse_erreur?: string | null
+          analyse_etape?: string | null
+          analyse_etape_at?: string | null
+          analyse_run_url?: string | null
           analyse_statut?: string
           analyse_tentatives?: number
           avis_indices?: Json

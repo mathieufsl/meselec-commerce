@@ -77,12 +77,26 @@ export const demanderAnalyseDce = createServerFn({ method: "POST" })
     // Passe par le client de l'utilisateur : les droits d'édition (RLS) s'appliquent.
     const { data: maj, error } = await context.supabase
       .from("veille_annonces")
-      .update({ analyse_statut: "a_faire", analyse_tentatives: 0, analyse_erreur: null })
+      .update({
+        analyse_statut: "a_faire",
+        analyse_tentatives: 0,
+        analyse_erreur: null,
+        analyse_etape: "Demande envoyée au robot",
+        analyse_etape_at: new Date().toISOString(),
+        analyse_run_url: null,
+      })
       .eq("id", data.id)
       .select("id");
     if (error) throw new Error(error.message);
     if (!maj || maj.length === 0) throw new Error("Annonce introuvable ou droits insuffisants");
 
     const { lancerRobotDce } = await import("@/lib/veilleDce.server");
-    return { lance: await lancerRobotDce() };
+    const lance = await lancerRobotDce();
+    if (!lance) {
+      await context.supabase
+        .from("veille_annonces")
+        .update({ analyse_etape: "En attente du passage automatique (7h17)" })
+        .eq("id", data.id);
+    }
+    return { lance };
   });

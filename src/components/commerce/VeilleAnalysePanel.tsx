@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 import {
   AlertTriangle,
   BadgeCheck,
   ChevronDown,
+  ExternalLink,
   FileText,
   FolderOpen,
   Footprints,
@@ -52,6 +55,41 @@ async function ouvrirPiece(fichier: VeilleDceFichier) {
     return;
   }
   window.open(data.signedUrl, "_blank", "noopener");
+}
+
+/** Suivi en direct du robot DCE : étape en cours, depuis quand, lien vers l'exécution. */
+function SuiviRobot({ annonce }: { annonce: VeilleAnnonceRow }) {
+  const etape =
+    (annonce.analyse_etape ?? VEILLE_ANALYSE_STATUT_LABELS.a_faire) +
+    (annonce.analyse_erreur ? ` (dernière erreur : ${annonce.analyse_erreur})` : "");
+  return (
+    <span className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+      <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+      <span className="min-w-0 truncate" title={etape}>
+        {etape}
+      </span>
+      {annonce.analyse_etape_at ? (
+        <span className="opacity-70">
+          ·{" "}
+          {formatDistanceToNow(new Date(annonce.analyse_etape_at), {
+            addSuffix: true,
+            locale: fr,
+          })}
+        </span>
+      ) : null}
+      {annonce.analyse_run_url ? (
+        <a
+          href={annonce.analyse_run_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-0.5 text-primary hover:underline"
+        >
+          journal du robot
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      ) : null}
+    </span>
+  );
 }
 
 /** Bouton « Analyser le DCE » : l'analyse n'est lancée que sur demande. */
@@ -105,13 +143,7 @@ export function VeilleAnalysePanel({
     const certifs = indices?.certifications ?? [];
     return (
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {annonce.analyse_statut === "a_faire" ? (
-          <Puce className="bg-muted text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            {VEILLE_ANALYSE_STATUT_LABELS.a_faire}
-            {annonce.analyse_erreur ? ` (nouvel essai : ${annonce.analyse_erreur})` : ""}
-          </Puce>
-        ) : null}
+        {annonce.analyse_statut === "a_faire" ? <SuiviRobot annonce={annonce} /> : null}
         {visite?.mentionnee ? (
           <Puce
             className={

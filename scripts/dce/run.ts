@@ -47,6 +47,11 @@ const limite = Number(process.env["VEILLE_DCE_LIMIT"] ?? "15");
 const annonceCiblee = process.env["VEILLE_DCE_ANNONCE"]?.trim() || null;
 const diagnostic = process.env["VEILLE_DCE_DIAGNOSTIC"] === "1";
 const dossierArtefacts = join(process.cwd(), "dce-diagnostic");
+// Lien vers cette exécution (variables fournies par GitHub Actions).
+const runUrl =
+  process.env["GITHUB_RUN_ID"] && process.env["GITHUB_REPOSITORY"]
+    ? `${process.env["GITHUB_SERVER_URL"] ?? "https://github.com"}/${process.env["GITHUB_REPOSITORY"]}/actions/runs/${process.env["GITHUB_RUN_ID"]}`
+    : null;
 
 type Annonce = {
   id: string;
@@ -127,8 +132,22 @@ async function enregistrer(id: string, maj: Record<string, unknown>) {
   if (error) throw error;
 }
 
+/** Étape affichée en direct sur la carte de l'annonce (sans bloquer le robot). */
+async function etape(id: string, texte: string) {
+  const { error } = await supabase
+    .from("veille_annonces")
+    .update({
+      analyse_etape: texte.slice(0, 300),
+      analyse_etape_at: new Date().toISOString(),
+      analyse_run_url: runUrl,
+    })
+    .eq("id", id);
+  if (error) console.warn(`    ! étape non enregistrée : ${error.message}`);
+}
+
 async function traiter(annonce: Annonce, navigateur: Browser | null) {
   console.log(`\n▶ ${annonce.source_id} — ${annonce.intitule.slice(0, 90)}`);
+  await etape(annonce.id, "Robot démarré");
   const avis = lireAvis(annonce.raw ?? {}).texte;
   const base = { intitule: annonce.intitule, acheteur: annonce.acheteur, texteAvis: avis };
 
@@ -141,6 +160,7 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
       ? "adresse du DCE absente de l'avis"
       : `plateforme non gérée (${plateforme ?? "inconnue"})`;
     console.log(`  ${raison} → analyse sur l'avis seul`);
+    await etape(annonce.id, `${raison} : lecture de l'avis par Claude`);
     const analyse = await analyserAnnonce({
       client: anthropic,
       ...base,
@@ -159,6 +179,7 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
   if (!identifiantsPour(plateforme)) {
     console.log(`  pas d'identifiants ${plateforme} configurés : tentative sans connexion`);
   }
+  await etape(annonce.id, `Téléchargement du DCE sur ${plateforme}`);
 
   const dossier = mkdtempSync(join(tmpdir(), "dce-"));
   try {
@@ -174,6 +195,7 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
         url: annonce.url_dce as string,
         dossier,
         dossierDiagnostic: diagnostic ? join(dossierArtefacts, annonce.source_id) : null,
+        onEtape: (texte) => etape(annonce.id, `${plateforme} : ${texte}`),
       });
       const tous = deplierDce(dossier);
       fichiersDce = tous.map((f) => relative(dossier, f));
@@ -187,8 +209,10 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
       console.log(`  ✗ DCE non récupéré : ${message}`);
       if (tentatives < MAX_TENTATIVES) {
         await enregistrer(annonce.id, { analyse_tentatives: tentatives, analyse_erreur: message });
+        await etape(annonce.id, "DCE non récupéré : nouvel essai au prochain passage (7h17)");
         return;
       }
+      await etape(annonce.id, "DCE non récupéré : lecture de l'avis par Claude");
       // Dernière tentative : on garde au moins l'analyse de l'avis.
       const analyse = await analyserAnnonce({
         client: anthropic,
@@ -206,6 +230,12 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
       return;
     }
 
+    await etape(
+      annonce.id,
+      pieces.length
+        ? `Lecture par Claude : ${pieces.map((p) => basename(p.chemin)).join(", ")}`
+        : "RC/CCTP introuvables dans le DCE : lecture de l'avis par Claude",
+    );
     const analyse: VeilleAnalyse = await analyserAnnonce({
       client: anthropic,
       ...base,
@@ -240,6 +270,10 @@ async function main() {
   const annonces = await annoncesATraiter();
   console.log(`${annonces.length} annonce(s) à analyser`);
   if (annonces.length === 0) return;
+  // Les annonces traitées l'une après l'autre : chacune sait qu'elle attend son tour.
+  for (const [i, a] of annonces.entries()) {
+    if (i > 0) await etape(a.id, `En file : ${i} annonce(s) avant celle-ci`);
+  }
 
   const navigateur = await chromium.launch({ headless: true }).catch((e: Error) => {
     console.warn(`Navigateur indisponible (${e.message}) : analyses sur l'avis seul`);
@@ -256,6 +290,7 @@ async function main() {
         await enregistrer(annonce.id, { analyse_erreur: (e as Error).message }).catch(
           () => undefined,
         );
+        await etape(annonce.id, `Erreur : ${(e as Error).message}`);
       }
     }
   } finally {

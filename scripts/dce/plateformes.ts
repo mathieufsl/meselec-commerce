@@ -191,8 +191,10 @@ export async function telechargerDce(params: {
   url: string;
   dossier: string;
   dossierDiagnostic: string | null;
+  /** Appelé à chaque étape du parcours (suivi en direct dans l'application). */
+  onEtape?: (etape: string) => Promise<void>;
 }): Promise<string[]> {
-  const { navigateur, plateforme, url, dossier, dossierDiagnostic } = params;
+  const { navigateur, plateforme, url, dossier, dossierDiagnostic, onEtape } = params;
   const conf = PLATEFORMES[plateforme];
   if (!conf) throw new Error(`Plateforme non gérée : ${plateforme}`);
   const id = identifiantsPour(plateforme);
@@ -213,6 +215,7 @@ export async function telechargerDce(params: {
   const journal: Journal = async (etape) => {
     numero += 1;
     console.log(`    [${numero}] ${etape}`);
+    await onEtape?.(etape).catch(() => undefined);
     if (!dossierDiagnostic) return;
     mkdirSync(dossierDiagnostic, { recursive: true });
     for (const [i, p] of contexte.pages().entries()) {
