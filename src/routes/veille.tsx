@@ -58,7 +58,9 @@ import {
   useRefreshVeille,
   useSetVeilleStatut,
   useVeilleAnnonces,
+  useVeilleAvisComplet,
 } from "@/hooks/useVeille";
+import { aplatirDonnees } from "@/lib/veilleAvis";
 import { useCommerceAuth } from "@/hooks/useCommerceAuth";
 
 export const Route = createFileRoute("/veille")({
@@ -151,6 +153,97 @@ function ListeDetail({ titre, items }: { titre: string; items: string[] | undefi
   );
 }
 
+const CHAMPS_AVIS: Array<[string, string]> = [
+  ["objet", "Objet"],
+  ["nature_libelle", "Nature"],
+  ["type_marche", "Type de marché"],
+  ["procedure_libelle", "Procédure"],
+  ["descripteur_libelle", "Descripteurs"],
+  ["datelimitereponse", "Date limite de réponse"],
+  ["criteres", "Critères"],
+];
+
+function valeurTexte(v: unknown): string | null {
+  if (v == null || v === "") return null;
+  if (Array.isArray(v)) return v.map(valeurTexte).filter(Boolean).join(", ") || null;
+  if (typeof v === "object") return aplatirDonnees(v, 2000) || null;
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    return new Date(s).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
+  }
+  return s;
+}
+
+function TexteAvis({ id }: { id: string }) {
+  const { data: raw, isLoading, error } = useVeilleAvisComplet(id);
+  const [complet, setComplet] = useState(false);
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Chargement de l'avis…
+      </div>
+    );
+  }
+  if (error) return <p className="text-xs text-destructive">Avis indisponible.</p>;
+  if (!raw) return <p className="text-xs text-muted-foreground">Texte de l'avis non disponible.</p>;
+
+  const champs = CHAMPS_AVIS.map(([k, label]) => [label, valeurTexte(raw[k])] as const).filter(
+    ([, v]) => v,
+  );
+  const lignes = raw["donnees"] ? aplatirDonnees(raw["donnees"], 60000).split("\n") : [];
+  const LIMITE = 40;
+  const visibles = complet ? lignes : lignes.slice(0, LIMITE);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Texte de l'avis
+      </p>
+      {champs.length ? (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          {champs.map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd className="whitespace-pre-line break-words">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {lignes.length ? (
+        <div className="rounded-lg border bg-muted/30 p-3">
+          <ul className="space-y-1 text-xs leading-relaxed">
+            {visibles.map((l, i) => {
+              const sep = l.indexOf(" : ");
+              return (
+                <li key={i} className="break-words">
+                  {sep > 0 ? (
+                    <>
+                      <span className="font-medium text-muted-foreground">{l.slice(0, sep)}</span>
+                      <span> : {l.slice(sep + 3)}</span>
+                    </>
+                  ) : (
+                    l
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {lignes.length > LIMITE ? (
+            <Button
+              variant="link"
+              size="sm"
+              className="mt-1 h-auto px-0 text-xs"
+              onClick={() => setComplet((v) => !v)}
+            >
+              {complet ? "Réduire" : `Afficher tout l'avis (${lignes.length} lignes)`}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function DetailAnnonce({ a }: { a: VeilleAnnonceRow }) {
   const ex = a.exigences ?? {};
   const lignes: Array<[string, string | null | undefined]> = [
@@ -215,6 +308,7 @@ function DetailAnnonce({ a }: { a: VeilleAnnonceRow }) {
           </ul>
         </div>
       ) : null}
+      <TexteAvis id={a.id} />
       <div className="flex flex-wrap gap-2">
         {(a.dce_url ?? a.url_dce) ? (
           <Button size="sm" asChild>

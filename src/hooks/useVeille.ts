@@ -25,9 +25,9 @@ export function useVeilleAnnonces() {
       if (error) throw error;
       return (data ?? []) as unknown as VeilleAnnonceRow[];
     },
-    // Tant qu'une analyse est en cours, on rafraîchit pour afficher le résultat.
+    // Tant qu'une analyse est en cours, on rafraîchit pour suivre le robot étape par étape.
     refetchInterval: (query) =>
-      query.state.data?.some((a) => a.analyse_statut === "a_faire") ? 30_000 : false,
+      query.state.data?.some((a) => a.analyse_statut === "a_faire") ? 5_000 : false,
   });
 }
 
@@ -214,8 +214,7 @@ export function useRattraperVeille() {
   const qc = useQueryClient();
   const run = useServerFn(rattraperVeilleFn);
   return useMutation({
-    mutationFn: async (input?: { jours?: number; idwebs?: string[] }) =>
-      run({ data: input ?? {} }),
+    mutationFn: async (input?: { jours?: number; idwebs?: string[] }) => run({ data: input ?? {} }),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
@@ -250,6 +249,27 @@ export function useUpdateQualificationProfil() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["qualification-profils"] });
+    },
+  });
+}
+
+/** Avis BOAMP complet (`raw`) d'une annonce, chargé à la demande pour le panneau détail. */
+export function useVeilleAvisComplet(id: string | null) {
+  return useQuery({
+    queryKey: ["veille-avis", id],
+    enabled: Boolean(id),
+    staleTime: Infinity,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("veille_annonces")
+        .select("raw")
+        .eq("id", id as string)
+        .maybeSingle();
+      if (error) throw error;
+      return ((data as { raw?: Record<string, unknown> | null } | null)?.raw ?? null) as Record<
+        string,
+        unknown
+      > | null;
     },
   });
 }
