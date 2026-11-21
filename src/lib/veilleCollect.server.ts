@@ -123,7 +123,8 @@ export async function collecterVeille(
 
   for (let page = 0; page < 10; page += 1) {
     const url = `${BASE_URL}?${new URLSearchParams({
-      where: `dateparution >= date'${dateMin}'`,
+      // Uniquement les avis de marché : pas les résultats (ATTRIBUTION), rectificatifs, annulations…
+      where: `dateparution >= date'${dateMin}' and nature = "APPEL_OFFRE"`,
       order_by: "dateparution desc",
       limit: String(pageSize),
       offset: String(page * pageSize),
