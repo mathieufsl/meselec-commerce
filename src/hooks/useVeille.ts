@@ -9,11 +9,7 @@ import {
 } from "@/lib/veille.functions";
 import type { AvisResume } from "@/lib/veilleResume";
 import type { QualificationProfil } from "@/lib/veilleQualif";
-import {
-  VEILLE_ANNONCE_COLONNES,
-  type VeilleAnnonceRow,
-  type VeilleStatut,
-} from "@/lib/veille";
+import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow, type VeilleStatut } from "@/lib/veille";
 import { resumeAnalyseLignes } from "@/lib/veilleAnalyse";
 import type { AoNatureMarche, AoSecteurCode } from "@/lib/commerceTypes";
 
@@ -32,9 +28,7 @@ export function useVeilleAnnonces() {
     },
     // Tant qu'une analyse est en cours, on rafraîchit pour suivre le robot étape par étape.
     refetchInterval: (query) =>
-      query.state.data?.some((a) => a.analyse_statut === "a_faire")
-        ? 5_000
-        : false,
+      query.state.data?.some((a) => a.analyse_statut === "a_faire") ? 5_000 : false,
   });
 }
 
@@ -53,10 +47,8 @@ export function useRefreshVeille() {
   const qc = useQueryClient();
   const run = useServerFn(refreshVeille);
   return useMutation({
-    mutationFn: async (input?: {
-      fenetreJours?: number;
-      idfSeulement?: boolean;
-    }) => run({ data: input ?? {} }),
+    mutationFn: async (input?: { fenetreJours?: number; idfSeulement?: boolean }) =>
+      run({ data: input ?? {} }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
@@ -66,13 +58,7 @@ export function useRefreshVeille() {
 export function useSetVeilleStatut() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      id,
-      statut,
-    }: {
-      id: string;
-      statut: VeilleStatut;
-    }) => {
+    mutationFn: async ({ id, statut }: { id: string; statut: VeilleStatut }) => {
       const { error } = await supabase
         .from("veille_annonces")
         .update({ statut } as never)
@@ -103,9 +89,7 @@ export function useImportVeilleToAo() {
           notes: [
             annonce.lien ? `Annonce : ${annonce.lien}` : null,
             annonce.cpv ? `CPV : ${annonce.cpv}` : null,
-            annonce.domaines.length
-              ? `Domaines : ${annonce.domaines.join(", ")}`
-              : null,
+            annonce.domaines.length ? `Domaines : ${annonce.domaines.join(", ")}` : null,
             annonce.url_dce ? `DCE : ${annonce.url_dce}` : null,
             ...(annonce.analyse_dce
               ? [
@@ -176,12 +160,10 @@ export function useAddVeilleRecipient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ email, nom }: { email: string; nom?: string }) => {
-      const { error } = await supabase
-        .from("veille_email_recipients")
-        .insert({
-          email: email.trim().toLowerCase(),
-          nom: nom?.trim() || null,
-        } as never);
+      const { error } = await supabase.from("veille_email_recipients").insert({
+        email: email.trim().toLowerCase(),
+        nom: nom?.trim() || null,
+      } as never);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -210,10 +192,7 @@ export function useDeleteVeilleRecipient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("veille_email_recipients")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("veille_email_recipients").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -226,8 +205,7 @@ export function useQualifierVeille() {
   const qc = useQueryClient();
   const run = useServerFn(qualifierVeille);
   return useMutation({
-    mutationFn: async (input?: { ids?: string[]; limit?: number }) =>
-      run({ data: input ?? {} }),
+    mutationFn: async (input?: { ids?: string[]; limit?: number }) => run({ data: input ?? {} }),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
@@ -238,8 +216,7 @@ export function useRattraperVeille() {
   const qc = useQueryClient();
   const run = useServerFn(rattraperVeilleFn);
   return useMutation({
-    mutationFn: async (input?: { jours?: number; idwebs?: string[] }) =>
-      run({ data: input ?? {} }),
+    mutationFn: async (input?: { jours?: number; idwebs?: string[] }) => run({ data: input ?? {} }),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
@@ -311,15 +288,15 @@ export function useResumerAvis() {
       let timer: ReturnType<typeof setTimeout> | undefined;
       const delai = new Promise<never>((_, reject) => {
         timer = setTimeout(
-          () =>
-            reject(new Error("Pas de réponse de l'IA après 100 s. Réessayez.")),
+          () => reject(new Error("Pas de réponse de l'IA après 100 s. Réessayez.")),
           100_000,
         );
       });
       const { data, error } = await Promise.race([
-        supabase.functions.invoke<
-          { ok: true; resume: AvisResume } | { ok: false; error: string }
-        >("veille-resume-avis", { body: input }),
+        supabase.functions.invoke<{ ok: true; resume: AvisResume } | { ok: false; error: string }>(
+          "veille-resume-avis",
+          { body: input },
+        ),
         delai,
       ]).finally(() => clearTimeout(timer));
       if (data) return data;
