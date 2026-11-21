@@ -6,7 +6,9 @@ import {
   qualifierVeille,
   rattraperVeilleFn,
   refreshVeille,
+  resumerAvisFn,
 } from "@/lib/veille.functions";
+import type { AvisResume } from "@/lib/veilleResume";
 import type { QualificationProfil } from "@/lib/veilleQualif";
 import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow, type VeilleStatut } from "@/lib/veille";
 import { resumeAnalyseLignes } from "@/lib/veilleAnalyse";
@@ -253,23 +255,41 @@ export function useUpdateQualificationProfil() {
   });
 }
 
-/** Avis BOAMP complet (`raw`) d'une annonce, chargé à la demande pour le panneau détail. */
+export type VeilleAvisComplet = {
+  raw: Record<string, unknown> | null;
+  avis_resume: AvisResume | null;
+};
+
+/** Avis BOAMP complet (`raw`) et son résumé IA, chargés à la demande pour le panneau détail. */
 export function useVeilleAvisComplet(id: string | null) {
   return useQuery({
     queryKey: ["veille-avis", id],
     enabled: Boolean(id),
     staleTime: Infinity,
-    queryFn: async () => {
+    queryFn: async (): Promise<VeilleAvisComplet> => {
       const { data, error } = await supabase
         .from("veille_annonces")
-        .select("raw")
+        .select("raw, avis_resume")
         .eq("id", id as string)
         .maybeSingle();
       if (error) throw error;
-      return ((data as { raw?: Record<string, unknown> | null } | null)?.raw ?? null) as Record<
-        string,
-        unknown
-      > | null;
+      const row = data as Partial<VeilleAvisComplet> | null;
+      return { raw: row?.raw ?? null, avis_resume: row?.avis_resume ?? null };
+    },
+  });
+}
+
+export function useResumerAvis() {
+  const qc = useQueryClient();
+  const run = useServerFn(resumerAvisFn);
+  return useMutation({
+    mutationFn: async (input: { id: string; force?: boolean }) => run({ data: input }),
+    onSuccess: (res, input) => {
+      if (!res.ok) return;
+      qc.setQueryData<VeilleAvisComplet>(["veille-avis", input.id], (old) => ({
+        raw: old?.raw ?? null,
+        avis_resume: res.resume,
+      }));
     },
   });
 }

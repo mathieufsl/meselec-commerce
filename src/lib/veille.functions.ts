@@ -30,7 +30,9 @@ export const refreshVeille = createServerFn({ method: "POST" })
 export const qualifierVeille = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { ids?: string[]; limit?: number }) => ({
-    ids: Array.isArray(input.ids) ? input.ids.filter((i) => typeof i === "string").slice(0, 200) : undefined,
+    ids: Array.isArray(input.ids)
+      ? input.ids.filter((i) => typeof i === "string").slice(0, 200)
+      : undefined,
     limit: Math.min(Math.max(input.limit ?? 50, 1), 200),
   }))
   .handler(async ({ data, context }) => {
@@ -59,7 +61,6 @@ export const rattraperVeilleFn = createServerFn({ method: "POST" })
       await lancerRobotDce();
     }
     return res;
-
   });
 
 /**
@@ -99,4 +100,18 @@ export const demanderAnalyseDce = createServerFn({ method: "POST" })
         .eq("id", data.id);
     }
     return { lance };
+  });
+
+/** Résumé IA de l'avis BOAMP d'une annonce (mis en cache dans `avis_resume`). */
+export const resumerAvisFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; force?: boolean }) => {
+    if (typeof input?.id !== "string" || !/^[0-9a-f-]{36}$/i.test(input.id)) {
+      throw new Error("Identifiant d'annonce invalide");
+    }
+    return { id: input.id, force: input.force === true };
+  })
+  .handler(async ({ data, context }) => {
+    const { resumerAvis } = await import("@/lib/veilleResume.server");
+    return resumerAvis(context.supabase, data.id, data.force);
   });

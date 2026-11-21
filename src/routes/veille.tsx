@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -58,6 +58,7 @@ import {
   useRefreshVeille,
   useSetVeilleStatut,
   useVeilleAnnonces,
+  useResumerAvis,
   useVeilleAvisComplet,
 } from "@/hooks/useVeille";
 import { aplatirDonnees } from "@/lib/veilleAvis";
@@ -153,94 +154,130 @@ function ListeDetail({ titre, items }: { titre: string; items: string[] | undefi
   );
 }
 
-const CHAMPS_AVIS: Array<[string, string]> = [
-  ["objet", "Objet"],
-  ["nature_libelle", "Nature"],
-  ["type_marche", "Type de marché"],
-  ["procedure_libelle", "Procédure"],
-  ["descripteur_libelle", "Descripteurs"],
-  ["datelimitereponse", "Date limite de réponse"],
-  ["criteres", "Critères"],
-];
+/** Lignes « clé : valeur » de l'avis, sans les codes techniques eForms illisibles. */
+function lignesLisibles(donnees: unknown): string[] {
+  return aplatirDonnees(donnees, 60000)
+    .split("\n")
+    .filter((l) => {
+      const sep = l.indexOf(" : ");
+      if (sep < 0) return l.trim().length > 0;
+      const cle = l.slice(0, sep);
+      const val = l.slice(sep + 3).trim();
+      // « … type code : works », « … code : not-allowed » : bruit technique.
+      if (/\b(code|id|identifier)$/i.test(cle) && !/\s/.test(val)) return false;
+      return val.length > 0;
+    });
+}
 
-function valeurTexte(v: unknown): string | null {
-  if (v == null || v === "") return null;
-  if (Array.isArray(v)) return v.map(valeurTexte).filter(Boolean).join(", ") || null;
-  if (typeof v === "object") return aplatirDonnees(v, 2000) || null;
-  const s = String(v);
-  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
-    return new Date(s).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
-  }
-  return s;
+function ResumeIa({ id }: { id: string }) {
+  const { data, isLoading } = useVeilleAvisComplet(id);
+  const resumer = useResumerAvis();
+  const resume = data?.avis_resume ?? null;
+  const demandeAuto = useRef<string | null>(null);
+
+  // Premier affichage d'une annonce sans résumé : on le génère automatiquement (mis en cache).
+  useEffect(() => {
+    if (isLoading || !data || resume || demandeAuto.current === id) return;
+    if (!data.raw) return;
+    demandeAuto.current = id;
+    resumer.mutate({ id });
+  }, [id, isLoading, data, resume, resumer]);
+
+  const erreur =
+    resumer.data && !resumer.data.ok
+      ? resumer.data.error
+      : resumer.error instanceof Error
+        ? resumer.error.message
+        : null;
+
+  return (
+    <section className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+          <Sparkles className="h-3.5 w-3.5" /> Résumé IA de l'avis
+        </p>
+        {resume ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground"
+            disabled={resumer.isPending}
+            onClick={() => resumer.mutate({ id, force: true })}
+          >
+            <RefreshCw className={cn("mr-1 h-3 w-3", resumer.isPending && "animate-spin")} />
+            Régénérer
+          </Button>
+        ) : null}
+      </div>
+      {resumer.isPending && !resume ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Lecture de l'avis par l'IA…
+        </div>
+      ) : resume ? (
+        <div className="space-y-3 text-sm">
+          <p className="font-medium leading-relaxed">{resume.en_bref}</p>
+          {resume.sections.map((s) => (
+            <div key={s.titre}>
+              <p className="mb-1 text-xs font-semibold text-muted-foreground">{s.titre}</p>
+              <ul className="list-disc space-y-0.5 pl-5 leading-relaxed [overflow-wrap:anywhere]">
+                {s.points.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : erreur ? (
+        <div className="space-y-2">
+          <p className="text-xs text-destructive">{erreur}</p>
+          <Button size="sm" variant="outline" onClick={() => resumer.mutate({ id })}>
+            Réessayer
+          </Button>
+        </div>
+      ) : !isLoading && !data?.raw ? (
+        <p className="text-xs text-muted-foreground">Texte de l'avis non disponible.</p>
+      ) : (
+        <Button size="sm" variant="outline" onClick={() => resumer.mutate({ id })}>
+          <Sparkles className="mr-1.5 h-4 w-4" /> Résumer l'avis
+        </Button>
+      )}
+    </section>
+  );
 }
 
 function TexteAvis({ id }: { id: string }) {
-  const { data: raw, isLoading, error } = useVeilleAvisComplet(id);
-  const [complet, setComplet] = useState(false);
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Chargement de l'avis…
-      </div>
-    );
-  }
-  if (error) return <p className="text-xs text-destructive">Avis indisponible.</p>;
-  if (!raw) return <p className="text-xs text-muted-foreground">Texte de l'avis non disponible.</p>;
-
-  const champs = CHAMPS_AVIS.map(([k, label]) => [label, valeurTexte(raw[k])] as const).filter(
-    ([, v]) => v,
-  );
-  const lignes = raw["donnees"] ? aplatirDonnees(raw["donnees"], 60000).split("\n") : [];
-  const LIMITE = 40;
-  const visibles = complet ? lignes : lignes.slice(0, LIMITE);
+  const { data, isLoading } = useVeilleAvisComplet(id);
+  const raw = data?.raw ?? null;
+  if (isLoading || !raw?.["donnees"]) return null;
+  const lignes = lignesLisibles(raw["donnees"]);
+  if (!lignes.length) return null;
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Texte de l'avis
-      </p>
-      {champs.length ? (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-          {champs.map(([k, v]) => (
-            <div key={k} className="contents">
-              <dt className="text-muted-foreground">{k}</dt>
-              <dd className="whitespace-pre-line break-words">{v}</dd>
+    <details className="group min-w-0 rounded-xl border bg-muted/20">
+      <summary className="cursor-pointer select-none px-3.5 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+        Texte intégral de l'avis
+        <span className="ml-1.5 font-normal normal-case tracking-normal">
+          ({lignes.length} lignes)
+        </span>
+      </summary>
+      <dl className="space-y-2 border-t px-3.5 py-3 text-xs leading-relaxed">
+        {lignes.map((l, i) => {
+          const sep = l.indexOf(" : ");
+          return sep > 0 ? (
+            <div key={i} className="min-w-0">
+              <dt className="text-[11px] text-muted-foreground first-letter:uppercase">
+                {l.slice(0, sep)}
+              </dt>
+              <dd className="[overflow-wrap:anywhere]">{l.slice(sep + 3)}</dd>
             </div>
-          ))}
-        </dl>
-      ) : null}
-      {lignes.length ? (
-        <div className="rounded-lg border bg-muted/30 p-3">
-          <ul className="space-y-1 text-xs leading-relaxed">
-            {visibles.map((l, i) => {
-              const sep = l.indexOf(" : ");
-              return (
-                <li key={i} className="break-words">
-                  {sep > 0 ? (
-                    <>
-                      <span className="font-medium text-muted-foreground">{l.slice(0, sep)}</span>
-                      <span> : {l.slice(sep + 3)}</span>
-                    </>
-                  ) : (
-                    l
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          {lignes.length > LIMITE ? (
-            <Button
-              variant="link"
-              size="sm"
-              className="mt-1 h-auto px-0 text-xs"
-              onClick={() => setComplet((v) => !v)}
-            >
-              {complet ? "Réduire" : `Afficher tout l'avis (${lignes.length} lignes)`}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+          ) : (
+            <p key={i} className="[overflow-wrap:anywhere]">
+              {l}
+            </p>
+          );
+        })}
+      </dl>
+    </details>
   );
 }
 
@@ -265,7 +302,7 @@ function DetailAnnonce({ a }: { a: VeilleAnnonceRow }) {
     ["Modèle", a.qualif_model],
   ];
   return (
-    <div className="space-y-4 px-4 pb-6">
+    <div className="min-w-0 space-y-4 px-4 pb-6">
       <div className="flex flex-wrap items-center gap-2">
         <DecisionBadge a={a} />
         {badgesAnnonce(a).map((b) => (
@@ -280,7 +317,13 @@ function DetailAnnonce({ a }: { a: VeilleAnnonceRow }) {
       {a.qualif_error ? (
         <p className="rounded bg-destructive/10 p-2 text-xs text-destructive">{a.qualif_error}</p>
       ) : null}
-      {a.resume ? <p className="text-sm">{a.resume}</p> : null}
+      <ResumeIa id={a.id} />
+      {a.resume ? (
+        <p className="text-sm">
+          <span className="font-medium">Avis de qualification : </span>
+          {a.resume}
+        </p>
+      ) : null}
       <ListeDetail titre="Raisons" items={a.raisons} />
       <ListeDetail titre="Points rouges" items={a.points_rouges} />
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
@@ -935,7 +978,7 @@ function VeillePage() {
         )}
       </div>
       <Sheet open={detail != null} onOpenChange={(o) => !o && setDetailId(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+        <SheetContent className="w-full overflow-y-auto overflow-x-hidden sm:max-w-xl">
           <SheetHeader>
             <SheetTitle className="pr-6 text-base leading-snug">{detail?.intitule}</SheetTitle>
             {detail?.acheteur ? (
