@@ -19,6 +19,24 @@ export const VEILLE_STATUT_LABELS: Record<VeilleStatut, string> = {
   importe: "Importé",
 };
 
+/** Pourquoi une annonce est ignorée (« Pas pour nous »). */
+export const MOTIFS_IGNORE = [
+  { code: "hors_metier", label: "Hors métier" },
+  { code: "hors_zone", label: "Hors zone" },
+  { code: "taille", label: "Trop gros / trop petit" },
+  { code: "certif", label: "Certification ou qualification manquante" },
+  { code: "delai", label: "Délai trop court" },
+  { code: "charge", label: "Pas de capacité (charge)" },
+  { code: "chances", label: "Peu de chances (concurrence, prix)" },
+  { code: "autre", label: "Autre" },
+] as const;
+
+export type MotifIgnore = (typeof MOTIFS_IGNORE)[number]["code"];
+
+export function libelleMotif(code: string | null | undefined): string | null {
+  return MOTIFS_IGNORE.find((m) => m.code === code)?.label ?? null;
+}
+
 export const DEPARTEMENTS_IDF = ["75", "77", "78", "91", "92", "93", "94", "95"];
 
 /** Zone de veille : Île-de-France élargie à l'Oise (60) et l'Eure (27). */
@@ -202,6 +220,8 @@ export interface VeilleAnnonceRow {
   domaines: string[];
   secteurs: string[];
   statut: VeilleStatut;
+  motif_ignore?: string | null;
+  motif_ignore_note?: string | null;
   ao_id: string | null;
   created_at: string;
   updated_at: string;
@@ -239,7 +259,7 @@ export interface VeilleAnnonceRow {
 
 /** Colonnes lues par l'application (sans `raw`, l'avis brut, trop volumineux). */
 export const VEILLE_ANNONCE_COLONNES =
-  "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, ao_id, created_at, updated_at, url_dce, plateforme, avis_indices, analyse_statut, analyse_dce, analyse_erreur, analyse_at, analyse_tentatives, analyse_etape, analyse_etape_at, analyse_run_url, dce_fichiers, qualif_statut, entite, decision, score, resume, raisons, points_rouges, exigences, certif_manquante, interet_relationnel, type_marche, dce_url, qualif_model, qualif_error, qualified_at";
+  "id, source, source_id, intitule, acheteur, cpv, departement, date_parution, date_limite, lien, domaines, secteurs, statut, motif_ignore, motif_ignore_note, ao_id, created_at, updated_at, url_dce, plateforme, avis_indices, analyse_statut, analyse_dce, analyse_erreur, analyse_at, analyse_tentatives, analyse_etape, analyse_etape_at, analyse_run_url, dce_fichiers, qualif_statut, entite, decision, score, resume, raisons, points_rouges, exigences, certif_manquante, interet_relationnel, type_marche, dce_url, qualif_model, qualif_error, qualified_at";
 
 /**
  * Le robot a échoué et attend son prochain passage planifié (statut encore

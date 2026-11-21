@@ -32,6 +32,14 @@ import { VeilleRecipientsDialog } from "@/components/commerce/VeilleRecipientsDi
 import { VeilleProfilDialog } from "@/components/commerce/VeilleProfilDialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -55,6 +63,9 @@ import { AO_SECTEUR_LABELS, type AoSecteurCode } from "@/lib/commerceTypes";
 import {
   analyseEnAttenteApresEchec,
   analyseEnCours,
+  libelleMotif,
+  MOTIFS_IGNORE,
+  type MotifIgnore,
   type VeilleAnnonceRow,
   type VeilleStatut,
 } from "@/lib/veille";
@@ -517,7 +528,9 @@ function LigneAnnonce({
               <Check className="h-3 w-3" /> Dans les AO
             </span>
           ) : a.statut === "ignore" ? (
-            <span className="text-muted-foreground">Ignorée</span>
+            <span className="text-muted-foreground" title={a.motif_ignore_note ?? undefined}>
+              Ignorée{libelleMotif(a.motif_ignore) ? ` · ${libelleMotif(a.motif_ignore)}` : ""}
+            </span>
           ) : null}
         </div>
       </div>
@@ -722,6 +735,101 @@ function DepotDce({
   );
 }
 
+/** Choix du motif quand on ignore une annonce (touches 1 à 8, Entrée pour valider). */
+function DialogueMotif({
+  annonce,
+  onFermer,
+  onValider,
+}: {
+  annonce: VeilleAnnonceRow | null;
+  onFermer: () => void;
+  onValider: (a: VeilleAnnonceRow, motif: MotifIgnore, note: string) => void;
+}) {
+  const [motif, setMotif] = useState<MotifIgnore | null>(null);
+  const [note, setNote] = useState("");
+  useEffect(() => {
+    setMotif(null);
+    setNote("");
+  }, [annonce?.id]);
+
+  const valide = motif != null && (motif !== "autre" || note.trim().length > 0);
+  function valider(m: MotifIgnore | null = motif) {
+    if (!annonce || !m || (m === "autre" && !note.trim())) return;
+    onValider(annonce, m, note);
+  }
+
+  return (
+    <Dialog open={annonce != null} onOpenChange={(o) => !o && onFermer()}>
+      <DialogContent
+        className="sm:max-w-md"
+        onKeyDown={(e) => {
+          const cible = e.target as HTMLElement;
+          if (cible.tagName === "INPUT" || cible.tagName === "TEXTAREA") {
+            if (e.key === "Enter" && valide) {
+              e.preventDefault();
+              valider();
+            }
+            return;
+          }
+          const n = Number(e.key);
+          const choix = MOTIFS_IGNORE[n - 1];
+          if (choix) {
+            e.preventDefault();
+            setMotif(choix.code);
+            // Un motif sans précision à donner : validé tout de suite.
+            if (choix.code !== "autre" && !note.trim()) valider(choix.code);
+          } else if (e.key === "Enter" && valide) {
+            e.preventDefault();
+            valider();
+          }
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>Pourquoi ce n&apos;est pas pour nous ?</DialogTitle>
+          <DialogDescription className="line-clamp-2">{annonce?.intitule}</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-1.5">
+          {MOTIFS_IGNORE.map((m, i) => (
+            <button
+              key={m.code}
+              type="button"
+              onClick={() => setMotif(m.code)}
+              onDoubleClick={() => m.code !== "autre" && valider(m.code)}
+              className={cn(
+                "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                motif === m.code
+                  ? "border-primary bg-primary/10 font-medium text-primary"
+                  : "border-border hover:bg-muted",
+              )}
+            >
+              <kbd className="flex h-5 w-5 shrink-0 items-center justify-center rounded border font-mono text-[11px] text-muted-foreground">
+                {i + 1}
+              </kbd>
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <Input
+          placeholder={
+            motif === "autre" ? "Précisez le motif (obligatoire)" : "Précision (facultatif)"
+          }
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="h-9"
+        />
+        <DialogFooter>
+          <Button variant="ghost" onClick={onFermer}>
+            Annuler
+          </Button>
+          <Button disabled={!valide} onClick={() => valider()}>
+            <EyeOff className="mr-1.5 h-4 w-4" /> Ignorer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
     <kbd className="ml-1.5 hidden rounded border border-current/30 px-1 font-mono text-[10px] leading-4 opacity-70 lg:inline-block">
@@ -733,6 +841,7 @@ function Kbd({ children }: { children: React.ReactNode }) {
 type ActionsAnnonce = {
   envoyer: (a: VeilleAnnonceRow) => void;
   ignorer: (a: VeilleAnnonceRow) => void;
+  confirmerIgnore: (a: VeilleAnnonceRow, motif: MotifIgnore, note: string) => void;
   analyser: (a: VeilleAnnonceRow) => void;
   requalifier: (a: VeilleAnnonceRow) => void;
   ouvrirAo: (a: VeilleAnnonceRow) => void;
@@ -852,6 +961,23 @@ function PanneauAnnonce({
       </div>
 
       <div className="space-y-4 px-4 py-4 sm:px-5">
+        {a.statut === "ignore" ? (
+          <p className="flex items-start gap-1.5 rounded-lg bg-muted px-3 py-2 text-sm">
+            <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <span>
+              Ignorée
+              {libelleMotif(a.motif_ignore) ? (
+                <>
+                  {" : "}
+                  <span className="font-medium">{libelleMotif(a.motif_ignore)}</span>
+                </>
+              ) : null}
+              {a.motif_ignore_note ? (
+                <span className="text-muted-foreground"> · {a.motif_ignore_note}</span>
+              ) : null}
+            </span>
+          </p>
+        ) : null}
         {/* 1. Verdict de la qualification IA */}
         <section className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -1057,6 +1183,7 @@ function VeillePage() {
     null,
   );
   const [mobileOuvert, setMobileOuvert] = useState(false);
+  const [motifPour, setMotifPour] = useState<VeilleAnnonceRow | null>(null);
   const [periode, setPeriode] = useEtatMemorise<Periode>("periode", "toutes");
   const [periodeDu, setPeriodeDu] = useEtatMemorise("periodeDu", "");
   const [periodeAu, setPeriodeAu] = useEtatMemorise("periodeAu", "");
@@ -1328,14 +1455,24 @@ function VeillePage() {
     },
     ignorer: (a) => {
       if (a.statut === "importe") return;
-      const statut: VeilleStatut = a.statut === "ignore" ? "nouveau" : "ignore";
-      if (statut === "ignore") avancerApres(a);
+      if (a.statut === "ignore") {
+        setStatut.mutate(
+          { id: a.id, statut: "nouveau" },
+          { onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Échec") },
+        );
+        return;
+      }
+      // On demande d'abord pourquoi : le motif est enregistré avec l'annonce.
+      setMotifPour(a);
+    },
+    confirmerIgnore: (a, motif, note) => {
+      setMotifPour(null);
+      avancerApres(a);
       setStatut.mutate(
-        { id: a.id, statut },
+        { id: a.id, statut: "ignore", motif, note },
         {
           onSuccess: () => {
-            if (statut !== "ignore") return;
-            toast("Annonce ignorée", {
+            toast(`Annonce ignorée : ${libelleMotif(motif) ?? motif}`, {
               action: {
                 label: "Annuler",
                 onClick: () => {
@@ -1373,7 +1510,8 @@ function VeillePage() {
   actionsRef.current = actions;
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey || profilOuvert || destinatairesOuvert) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || profilOuvert || destinatairesOuvert || motifPour)
+        return;
       const cible = e.target as HTMLElement | null;
       if (
         cible &&
@@ -1408,6 +1546,7 @@ function VeillePage() {
     profilOuvert,
     destinatairesOuvert,
     setSelectionId,
+    motifPour,
   ]);
 
   const listeVide =
@@ -1791,6 +1930,11 @@ function VeillePage() {
           </div>
         )}
       </div>
+      <DialogueMotif
+        annonce={motifPour}
+        onFermer={() => setMotifPour(null)}
+        onValider={(a, motif, note) => actions.confirmerIgnore(a, motif, note)}
+      />
       {!large ? (
         <Sheet open={mobileOuvert && courante != null} onOpenChange={setMobileOuvert}>
           <SheetContent className="w-full overflow-y-auto overflow-x-hidden p-0 sm:max-w-xl">

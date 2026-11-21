@@ -62,19 +62,43 @@ export function useRefreshVeille() {
 export function useSetVeilleStatut() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, statut }: { id: string; statut: VeilleStatut }) => {
+    mutationFn: async ({
+      id,
+      statut,
+      motif,
+      note,
+    }: {
+      id: string;
+      statut: VeilleStatut;
+      /** Motif quand on ignore ; effacé quand on restaure. */
+      motif?: string | null;
+      note?: string | null;
+    }) => {
       const { error } = await supabase
         .from("veille_annonces")
-        .update({ statut } as never)
+        .update({
+          statut,
+          motif_ignore: statut === "ignore" ? (motif ?? null) : null,
+          motif_ignore_note: statut === "ignore" ? note?.trim() || null : null,
+        } as never)
         .eq("id", id);
       if (error) throw error;
     },
     // Mise à jour immédiate de la liste : l'annonce triée disparaît sans attendre le serveur.
-    onMutate: async ({ id, statut }) => {
+    onMutate: async ({ id, statut, motif, note }) => {
       await qc.cancelQueries({ queryKey: ["veille-annonces"] });
       const avant = qc.getQueryData<VeilleAnnonceRow[]>(["veille-annonces"]);
       qc.setQueryData<VeilleAnnonceRow[]>(["veille-annonces"], (old) =>
-        old?.map((a) => (a.id === id ? { ...a, statut } : a)),
+        old?.map((a) =>
+          a.id === id
+            ? {
+                ...a,
+                statut,
+                motif_ignore: statut === "ignore" ? (motif ?? null) : null,
+                motif_ignore_note: statut === "ignore" ? note?.trim() || null : null,
+              }
+            : a,
+        ),
       );
       return { avant };
     },
