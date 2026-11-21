@@ -116,3 +116,34 @@ export const resumerAvisFn = createServerFn({ method: "POST" })
     const { resumerAvis } = await import("@/lib/veilleResume.server");
     return resumerAvis(context.supabase, data.id, data.force);
   });
+
+/**
+ * Ajoute à la veille un AO trouvé sur un autre site, à partir du lien de son
+ * avis, puis le qualifie (IA) comme une annonce collectée.
+ */
+export const ajouterAnnonceParLienFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { url: string }) => {
+    if (typeof input?.url !== "string" || input.url.length > 2000) {
+      throw new Error("Lien invalide");
+    }
+    return { url: input.url.trim() };
+  })
+  .handler(async ({ data, context }) => {
+    const { ajouterAnnonceParLien } = await import("@/lib/veilleManuel.server");
+    const res = await ajouterAnnonceParLien(context.supabase, data.url);
+    if (!res.ok || res.deja) return { ...res, qualifiee: false };
+    let qualifiee = false;
+    try {
+      const { qualifierAnnonces } = await import("@/lib/veilleQualif.server");
+      const q = await qualifierAnnonces(context.supabase, { ids: [res.id] });
+      qualifiee = q.ok && q.qualifiees > 0;
+      if (q.dceDemandes > 0) {
+        const { lancerRobotDce } = await import("@/lib/veilleDce.server");
+        await lancerRobotDce();
+      }
+    } catch (e) {
+      console.error("[veille] qualification de l'annonce ajoutée :", e);
+    }
+    return { ...res, qualifiee };
+  });

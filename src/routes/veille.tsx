@@ -14,7 +14,9 @@ import {
   FileDown,
   Footprints,
   History,
+  Link2,
   Loader2,
+  Plus,
   RefreshCw,
   Send,
   Upload,
@@ -71,6 +73,7 @@ import {
 } from "@/lib/veille";
 import { VEILLE_DECISION_LABELS, type VeilleDecision } from "@/lib/veilleQualif";
 import {
+  useAjouterAnnonceParLien,
   useDemanderAnalyseDce,
   useImportVeilleToAo,
   useQualifierVeille,
@@ -830,6 +833,100 @@ function DialogueMotif({
   );
 }
 
+/** Ajout d'un AO trouvé sur un autre site : on colle le lien de son avis. */
+function DialogueAjoutLien({
+  ouvert,
+  onFermer,
+  onAjoute,
+}: {
+  ouvert: boolean;
+  onFermer: () => void;
+  onAjoute: (id: string) => void;
+}) {
+  const ajouter = useAjouterAnnonceParLien();
+  const [lien, setLien] = useState("");
+  const secondes = useSecondes(ajouter.isPending);
+  useEffect(() => {
+    if (ouvert) {
+      setLien("");
+      ajouter.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ouvert]);
+
+  const erreur =
+    ajouter.data && !ajouter.data.ok
+      ? ajouter.data.error
+      : ajouter.error instanceof Error
+        ? ajouter.error.message
+        : null;
+
+  function valider() {
+    if (!/^https?:\/\//i.test(lien.trim()) || ajouter.isPending) return;
+    ajouter.mutate(lien, {
+      onSuccess: (res) => {
+        if (!res.ok) return;
+        toast.success(
+          res.deja
+            ? "Cet AO est déjà dans la veille : il est ouvert"
+            : `AO ajouté : ${res.intitule}${res.qualifiee ? " (qualifié par l'IA)" : ""}`,
+        );
+        if (!res.deja && !res.analyseIa) {
+          toast.info("Infos lues sans l'IA : vérifiez l'intitulé et la date limite.");
+        }
+        onAjoute(res.id);
+      },
+    });
+  }
+
+  return (
+    <Dialog open={ouvert} onOpenChange={(o) => !o && !ajouter.isPending && onFermer()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Ajouter un AO par son lien</DialogTitle>
+          <DialogDescription>
+            Collez le lien de l&apos;avis (BOAMP, AWS / marches-publics.info, achatpublic, PLACE,
+            Maximilien, site de l&apos;acheteur…). L&apos;avis est lu, l&apos;AO est ajouté à la
+            veille puis qualifié par l&apos;IA.
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          autoFocus
+          placeholder="https://www.marches-publics.info/Annonces/…"
+          value={lien}
+          onChange={(e) => setLien(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              valider();
+            }
+          }}
+        />
+        {ajouter.isPending ? (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Lecture de l&apos;avis puis qualification IA…{" "}
+            <span className="tabular-nums">{secondes} s</span>
+          </p>
+        ) : erreur ? (
+          <p className="text-sm text-destructive">{erreur}</p>
+        ) : null}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onFermer} disabled={ajouter.isPending}>
+            Annuler
+          </Button>
+          <Button
+            onClick={valider}
+            disabled={ajouter.isPending || !/^https?:\/\//i.test(lien.trim())}
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Ajouter
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
     <kbd className="ml-1.5 hidden rounded border border-current/30 px-1 font-mono text-[10px] leading-4 opacity-70 lg:inline-block">
@@ -1184,6 +1281,7 @@ function VeillePage() {
   );
   const [mobileOuvert, setMobileOuvert] = useState(false);
   const [motifPour, setMotifPour] = useState<VeilleAnnonceRow | null>(null);
+  const [ajoutOuvert, setAjoutOuvert] = useState(false);
   const [periode, setPeriode] = useEtatMemorise<Periode>("periode", "toutes");
   const [periodeDu, setPeriodeDu] = useEtatMemorise("periodeDu", "");
   const [periodeAu, setPeriodeAu] = useEtatMemorise("periodeAu", "");
@@ -1519,7 +1617,15 @@ function VeillePage() {
   actionsRef.current = actions;
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey || profilOuvert || destinatairesOuvert || motifPour)
+      if (
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        profilOuvert ||
+        destinatairesOuvert ||
+        motifPour ||
+        ajoutOuvert
+      )
         return;
       const cible = e.target as HTMLElement | null;
       if (
@@ -1556,6 +1662,7 @@ function VeillePage() {
     destinatairesOuvert,
     setSelectionId,
     motifPour,
+    ajoutOuvert,
   ]);
 
   const listeVide =
@@ -1591,6 +1698,12 @@ function VeillePage() {
       back={{ to: "/appels-offres", label: "Appels d'offres" }}
       actions={
         <div className="flex items-center gap-2">
+          {canEdit ? (
+            <Button size="sm" variant="outline" onClick={() => setAjoutOuvert(true)}>
+              <Link2 className="mr-1.5 h-4 w-4" />
+              Ajouter par lien
+            </Button>
+          ) : null}
           {canEdit ? (
             <Button size="sm" onClick={lancerVeille} disabled={refresh.isPending}>
               {refresh.isPending ? (
@@ -1939,6 +2052,15 @@ function VeillePage() {
           </div>
         )}
       </div>
+      <DialogueAjoutLien
+        ouvert={ajoutOuvert}
+        onFermer={() => setAjoutOuvert(false)}
+        onAjoute={(id) => {
+          setAjoutOuvert(false);
+          setSelectionId(id);
+          if (!large) setMobileOuvert(true);
+        }}
+      />
       <DialogueMotif
         annonce={motifPour}
         onFermer={() => setMotifPour(null)}

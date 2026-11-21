@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  ajouterAnnonceParLienFn,
   demanderAnalyseDce,
   qualifierVeille,
   rattraperVeilleFn,
@@ -417,6 +418,18 @@ export function useAbandonnerAnalyseDce() {
         .eq("id", id);
       if (error) throw error;
     },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
+    },
+  });
+}
+
+/** Ajoute un AO trouvé sur un autre site à partir du lien de son avis. */
+export function useAjouterAnnonceParLien() {
+  const qc = useQueryClient();
+  const run = useServerFn(ajouterAnnonceParLienFn);
+  return useMutation({
+    mutationFn: async (url: string) => run({ data: { url } }),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
