@@ -36,6 +36,13 @@ export type VeilleAnalyse = {
   points_attention: string[];
   /** Ajouté par le robot : fichiers réellement lus (RC, CCTP…). */
   documents_analyses?: string[];
+  /** Ajouté par le robot : modèle, jetons et coût estimé de l'analyse. */
+  usage?: {
+    modele: string;
+    entree: number;
+    sortie: number;
+    cout_usd: number;
+  };
 };
 
 export type VeilleDceFichier = { nom: string; type: string; path: string; taille: number };

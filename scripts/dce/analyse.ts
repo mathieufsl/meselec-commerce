@@ -8,9 +8,42 @@ import Anthropic from "@anthropic-ai/sdk";
 import { VEILLE_ANALYSE_JSON_SCHEMA, type VeilleAnalyse } from "../../src/lib/veilleAnalyse";
 import { texteDePiece, texteSuffisant, type TypePiece } from "./fichiers";
 
-const MODELE = process.env["VEILLE_DCE_MODEL"] || "claude-opus-5-5";
+// Sonnet 5.5 : extraction structurée (visite, certifications, exigences), deux fois
+// moins cher qu'Opus 5.5. Une variable VEILLE_DCE_MODEL sur GitHub prend le dessus.
+const MODELE = process.env["VEILLE_DCE_MODEL"] || "claude-sonnet-5-5";
+
+/** Prix publics par million de jetons (entrée, sortie), pour l'estimation du coût. */
+const PRIX_MTOK: Record<string, [number, number]> = {
+  "claude-sonnet-5-5": [2, 10],
+  "claude-opus-5-5": [4, 20],
+  "claude-haiku-5-5": [0.1, 0.5],
+};
+
+/**
+ * Le CCTP est long et parle surtout d'exécution : on n'en garde que les passages
+ * qui touchent la candidature (visite, qualifications, références, assurances…).
+ * Le RC, lui, est transmis en entier : c'est là que tout est écrit.
+ */
+const MOTS_UTILES_CCTP =
+  /visite|qualif|certif|habilit|agr[ée]ment|iso ?\d|mase|aipr|caces|qualibat|qualifelec|fntp|r[ée]f[ée]rences?|chiffre d.affaires|assurance|d[ée]cennale|[ée]chantillon|astreinte|d[ée]lai d.intervention|p[ée]nalit|sous-trait|amiante|ss[34]\b|rge|irve/i;
+const MAX_CARACTERES_EXTRAITS_CCTP = 40_000;
+
+function extraitsUtiles(texte: string): string {
+  const paragraphes = texte.split(/\n{2,}|\n(?=\s*(?:article|\d+(?:\.\d+)*\s))/i);
+  const garde: string[] = [];
+  let total = 0;
+  for (const [i, p] of paragraphes.entries()) {
+    if (!MOTS_UTILES_CCTP.test(p)) continue;
+    // Le paragraphe et le titre qui le précède, pour garder le contexte.
+    const bloc = `${paragraphes[i - 1]?.slice(-300) ?? ""}\n${p}`.trim();
+    if (total + bloc.length > MAX_CARACTERES_EXTRAITS_CCTP) break;
+    garde.push(bloc);
+    total += bloc.length;
+  }
+  return garde.join("\n[…]\n");
+}
 /** Au-delà, le texte d'une pièce est coupé (et c'est signalé à l'IA et dans l'analyse). */
-const MAX_CARACTERES_PIECE = 250_000;
+const MAX_CARACTERES_PIECE = 150_000;
 const MAX_OCTETS_PDF = 20 * 1024 * 1024;
 
 const SYSTEME = `Tu assistes le service commercial de Meselec, entreprise d'électricité (éclairage public, illuminations, réseaux électriques, CFO, VRD) qui répond aux marchés publics en Île-de-France.
@@ -57,13 +90,27 @@ export async function analyserAnnonce(params: {
     const octets = statSync(piece.chemin).size;
     const texte = texteDePiece(piece.chemin);
 
-    if (texteSuffisant(texte, octets)) {
+    if (texteSuffisant(texte, octets) && piece.type === "cctp") {
+      const extraits = extraitsUtiles(texte);
+      if (!extraits) {
+        documentsAnalyses.push(`${nom} (rien sur la candidature)`);
+        continue;
+      }
+      contenu.push({
+        type: "text",
+        text: `<piece titre="${titre}" extraits="oui">\n${extraits}\n</piece>`,
+      });
+      documentsAnalyses.push(`${nom} (passages utiles)`);
+    } else if (texteSuffisant(texte, octets)) {
       const coupe = texte.length > MAX_CARACTERES_PIECE;
       contenu.push({
         type: "text",
         text: `<piece titre="${titre}"${coupe ? ' tronquee="oui"' : ""}>\n${texte.slice(0, MAX_CARACTERES_PIECE)}\n</piece>`,
       });
       documentsAnalyses.push(coupe ? `${nom} (début seulement)` : nom);
+    } else if (piece.type === "cctp") {
+      // CCTP scanné : le lire en images coûterait cher pour peu d'informations utiles.
+      documentsAnalyses.push(`${nom} (scanné, non lu)`);
     } else if (extname(piece.chemin).toLowerCase() === ".pdf" && octets <= MAX_OCTETS_PDF) {
       // PDF scanné : on le transmet tel quel, Claude lit les pages.
       contenu.push({
@@ -89,7 +136,7 @@ export async function analyserAnnonce(params: {
       fichiersDce.length
         ? `Fichiers présents dans le DCE : ${fichiersDce.slice(0, 80).join(", ")}`
         : "Le DCE n'a pas pu être récupéré : analyse sur l'avis seul.",
-      `<avis>\n${texteAvis.slice(0, 60_000)}\n</avis>`,
+      `<avis>\n${texteAvis.slice(0, pieces.length ? 20_000 : 60_000)}\n</avis>`,
       "Remplis l'analyse demandée.",
     ]
       .filter(Boolean)
@@ -125,8 +172,20 @@ export async function analyserAnnonce(params: {
     .join("");
   const analyse = JSON.parse(texte) as VeilleAnalyse;
   analyse.documents_analyses = documentsAnalyses;
+  const [prixEntree, prixSortie] = PRIX_MTOK[message.model] ?? PRIX_MTOK[MODELE] ?? [0, 0];
+  const entree =
+    message.usage.input_tokens +
+    (message.usage.cache_creation_input_tokens ?? 0) +
+    (message.usage.cache_read_input_tokens ?? 0);
+  const sortie = message.usage.output_tokens;
+  analyse.usage = {
+    modele: message.model,
+    entree,
+    sortie,
+    cout_usd: Math.round(((entree * prixEntree + sortie * prixSortie) / 1e6) * 10_000) / 10_000,
+  };
   console.log(
-    `    analyse : ${message.usage.input_tokens} jetons en entrée, ${message.usage.output_tokens} en sortie`,
+    `    analyse (${message.model}) : ${entree} jetons en entrée, ${sortie} en sortie, ≈ ${analyse.usage.cout_usd} $`,
   );
   return analyse;
 }

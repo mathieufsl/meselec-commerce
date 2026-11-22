@@ -363,6 +363,13 @@ export function VeilleAnalysePanel({
             {analyse.documents_analyses?.length
               ? ` — ${analyse.documents_analyses.join(", ")}`
               : ""}
+            {analyse.usage
+              ? ` · ${analyse.usage.modele.replace("claude-", "").replace(/-(\d)-(\d)$/, " $1.$2")} · ${(
+                  analyse.usage.entree / 1000
+                ).toFixed(0)} k jetons · ≈ ${analyse.usage.cout_usd.toLocaleString("fr-FR", {
+                  maximumFractionDigits: 2,
+                })} $`
+              : ""}
             {annonce.analyse_erreur && annonce.analyse_statut !== "termine"
               ? ` (${annonce.analyse_erreur})`
               : ""}
