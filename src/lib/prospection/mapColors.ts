@@ -68,7 +68,7 @@ export function normalizePrestataireName(name: string): string {
 export function prestataireColor(name: string): string {
   const normalized = normalizePrestataireName(name);
   if (!normalized) return UNSET_COLOR;
-  return PRESTATAIRE_PALETTE[hashString(normalized.toLowerCase()) % PRESTATAIRE_PALETTE.length];
+  return PRESTATAIRE_PALETTE[hashString(normalized.toLowerCase()) % PRESTATAIRE_PALETTE.length] ?? UNSET_COLOR;
 }
 
 export function colorForMapValue(

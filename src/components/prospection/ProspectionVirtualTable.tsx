@@ -43,10 +43,10 @@ export function ProspectionVirtualTable({
   });
 
   const virtualItems = rowVirtualizer.getVirtualItems();
-  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingTop = virtualItems.length > 0 ? (virtualItems[0]?.start ?? 0) : 0;
   const paddingBottom =
     virtualItems.length > 0
-      ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
+      ? rowVirtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0)
       : 0;
 
   if (communes.length === 0) {
@@ -88,6 +88,7 @@ export function ProspectionVirtualTable({
           ) : null}
           {virtualItems.map((virtualRow) => {
             const commune = communes[virtualRow.index];
+          if (!commune) return null;
             const row = state[commune.key] ?? defaultRow;
             return (
               <ProspectionCommuneRow

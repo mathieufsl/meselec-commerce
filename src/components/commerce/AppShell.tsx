@@ -97,7 +97,7 @@ export function AppShell({
   titleExtra?: React.ReactNode;
   flush?: boolean;
   syncLabel?: string | null;
-  primaryAction?: { label: string; onClick: () => void };
+  primaryAction?: { label: string; onClick: () => void } | undefined;
   headerExtra?: React.ReactNode;
   contentClassName?: string;
   mobileFooter?: React.ReactNode;

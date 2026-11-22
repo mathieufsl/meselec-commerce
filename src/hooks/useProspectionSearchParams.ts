@@ -22,7 +22,7 @@ export function useProspectionSearchParams() {
         search[key] = value;
       });
       void navigate({
-        to: route,
+        to: route as never,
         search: search as never,
         replace: opts?.replace ?? false,
       });

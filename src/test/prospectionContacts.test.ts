@@ -18,7 +18,7 @@ describe("prospection contacts", () => {
     expect(parsed).toHaveLength(3);
     expect(parsed[0]).toMatchObject({ type: "maire", nom: "Dupont", telephone: "01" });
     expect(parsed[1]).toMatchObject({ type: "dst", nom: "" });
-    expect(parsed[2].type).toBe("autre");
+    expect(parsed[2]?.type).toBe("autre");
   });
 
   it("hydrates from legacy contact text when JSON is empty", () => {

@@ -19,6 +19,7 @@ export function ProspectionSubNav() {
           <Link
             key={tab.to}
             to={tab.to}
+            search={{} as never}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
               active

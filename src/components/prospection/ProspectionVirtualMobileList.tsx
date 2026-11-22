@@ -46,6 +46,7 @@ export function ProspectionVirtualMobileList({
       <div className="relative w-full" style={{ height: rowVirtualizer.getTotalSize() }}>
         {virtualItems.map((virtualRow) => {
           const commune = communes[virtualRow.index];
+          if (!commune) return null;
           return (
             <div
               key={commune.key}

@@ -27,11 +27,11 @@ describe("aggregatePrestataires", () => {
 
     const stats = aggregatePrestataires(entries);
     expect(stats).toHaveLength(2);
-    expect(stats[0].name).toBe("Citeos");
-    expect(stats[0].count).toBe(3);
-    expect(stats[0].percent).toBe(75);
-    expect(stats[1].name).toBe("EDF");
-    expect(stats[1].count).toBe(1);
+    expect(stats[0]?.name).toBe("Citeos");
+    expect(stats[0]?.count).toBe(3);
+    expect(stats[0]?.percent).toBe(75);
+    expect(stats[1]?.name).toBe("EDF");
+    expect(stats[1]?.count).toBe(1);
   });
 
   it("limite au top N", () => {

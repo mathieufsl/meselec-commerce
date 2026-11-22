@@ -66,13 +66,13 @@ export function parseContactsJson(raw: unknown): ProspectionContact[] {
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
     const row = item as Record<string, unknown>;
-    const type = isContactType(row.type) ? row.type : "autre";
-    const nom = typeof row.nom === "string" ? row.nom : "";
-    const telephone = typeof row.telephone === "string" ? row.telephone : "";
-    const email = typeof row.email === "string" ? row.email : "";
+    const type = isContactType(row["type"]) ? row["type"] : "autre";
+    const nom = typeof row["nom"] === "string" ? row["nom"] : "";
+    const telephone = typeof row["telephone"] === "string" ? row["telephone"] : "";
+    const email = typeof row["email"] === "string" ? row["email"] : "";
     const id =
-      typeof row.id === "string" && row.id.trim()
-        ? row.id
+      typeof row["id"] === "string" && row["id"].trim()
+        ? row["id"]
         : crypto.randomUUID();
     out.push({ id, type, nom, telephone, email });
   }
@@ -109,6 +109,7 @@ export function contactsEqual(a: ProspectionContact[], b: ProspectionContact[]):
   if (a.length !== b.length) return false;
   return a.every((left, i) => {
     const right = b[i];
+    if (!right) return false;
     return (
       left.id === right.id &&
       left.type === right.type &&

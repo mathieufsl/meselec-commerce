@@ -180,8 +180,8 @@ export function AdminPage() {
         await createAccount.mutateAsync({
           email,
           password: createForm.password,
-          prenom: createForm.prenom.trim() || undefined,
-          nom: createForm.nom.trim() || undefined,
+          ...(createForm.prenom.trim() ? { prenom: createForm.prenom.trim() } : {}),
+          ...(createForm.nom.trim() ? { nom: createForm.nom.trim() } : {}),
           module_roles: createRoles,
         });
         toast.success(`Compte créé pour ${email}`);
@@ -251,7 +251,7 @@ export function AdminPage() {
     try {
       await deleteAccount.mutateAsync({
         email: deleteTarget.email,
-        user_id: deleteTarget.user_id ?? undefined,
+        ...(deleteTarget.user_id ? { user_id: deleteTarget.user_id } : {}),
       });
       toast.success("Compte retiré");
       setDeleteTarget(null);
