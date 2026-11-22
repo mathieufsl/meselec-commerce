@@ -71,7 +71,7 @@ const MAX_PAGES_PAR_MOT = 8;
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Petite session HTTP avec cookies (les pages suivantes sont des « postbacks » PRADO). */
-function session() {
+export function sessionHttp() {
   const cookies = new Map<string, string>();
   return async function lire(url: string, corps?: URLSearchParams): Promise<string> {
     const res = await fetch(url, {
@@ -102,7 +102,7 @@ function decoderAttribut(v: string) {
 
 /** Toutes les consultations d'une recherche par mot-clé (pages suivantes comprises). */
 async function chercher(p: PlateformeAtexo, mot: string): Promise<ConsultationAtexo[]> {
-  const lire = session();
+  const lire = sessionHttp();
   let html = await lire(
     `${p.base}/?page=Entreprise.EntrepriseAdvancedSearch&searchAnnCons&keyWord=${encodeURIComponent(mot)}`,
   );
@@ -206,7 +206,7 @@ export async function collecterAtexo(
   res.retenues = candidates.size;
   journal(`${plateforme.libelle} : ${res.lues} lues, ${res.retenues} dans la zone et nos métiers`);
 
-  const lireFiche = session();
+  const lireFiche = sessionHttp();
   for (const [sourceId, c] of candidates) {
     try {
       if (await dejaConnue(client, plateforme, c)) continue;

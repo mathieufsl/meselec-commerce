@@ -666,7 +666,7 @@ function DialogueVeille({
   onFermer: () => void;
   onLancer: (p: ParametresVeille) => void;
 }) {
-  const [sources, setSources] = useState<SourceVeille[]>(["BOAMP", "MAXIMILIEN", "PLACE"]);
+  const [sources, setSources] = useState<SourceVeille[]>(["BOAMP", "MAXIMILIEN", "PLACE", "AWS"]);
   const [critere, setCritere] = useState<"parution" | "limite">("parution");
   const [du, setDu] = useState(jourIso(-7));
   const [au, setAu] = useState("");
@@ -723,7 +723,7 @@ function DialogueVeille({
           <div>
             <p className="mb-1.5 text-xs font-medium text-muted-foreground">Sources</p>
             <div className="flex flex-wrap gap-2">
-              {(["BOAMP", "MAXIMILIEN", "PLACE"] as const).map((src) => {
+              {(["BOAMP", "MAXIMILIEN", "PLACE", "AWS"] as const).map((src) => {
                 const actif = sources.includes(src);
                 return (
                   <button
@@ -843,8 +843,8 @@ function DialogueVeille({
           </div>
           {sources.some((x) => x !== "BOAMP") ? (
             <p className="text-xs text-muted-foreground">
-              Maximilien et PLACE sont lus par le robot : comptez quelques minutes, les annonces
-              apparaissent au fur et à mesure.
+              Maximilien, PLACE et AWS sont lus par le robot : comptez quelques minutes, les
+              annonces apparaissent au fur et à mesure.
             </p>
           ) : null}
         </div>
@@ -1251,6 +1251,7 @@ const LIBELLES_SOURCE: Record<string, string> = {
   BOAMP: "BOAMP",
   MAXIMILIEN: "Maximilien",
   PLACE: "PLACE",
+  AWS: "AWS",
   MANUEL: "Ajout par lien",
 };
 
@@ -1590,7 +1591,7 @@ function VeillePage() {
           );
         }
         if (res.plateformesLancees) {
-          const noms = (parametres.sources ?? ["MAXIMILIEN", "PLACE"])
+          const noms = (parametres.sources ?? ["MAXIMILIEN", "PLACE", "AWS"])
             .filter((x) => x !== "BOAMP")
             .map((x) => LIBELLES_SOURCE[x] ?? x)
             .join(" et ");
@@ -1765,7 +1766,7 @@ function VeillePage() {
   return (
     <AppShell
       title="Veille AO"
-      subtitle="BOAMP · Maximilien · PLACE · IDF + 60 + 27 chaque matin"
+      subtitle="BOAMP · Maximilien · PLACE · AWS · IDF + 60 + 27 chaque matin"
       titleIcon={Radar}
       back={{ to: "/appels-offres", label: "Appels d'offres" }}
       actions={

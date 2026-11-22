@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export type SourceVeille = "BOAMP" | "MAXIMILIEN" | "PLACE";
+export type SourceVeille = "BOAMP" | "MAXIMILIEN" | "PLACE" | "AWS";
+
+const SOURCES: SourceVeille[] = ["BOAMP", "MAXIMILIEN", "PLACE", "AWS"];
 
 export type ParametresVeille = {
   fenetreJours?: number;
@@ -19,16 +21,16 @@ export type ParametresVeille = {
 const JOUR = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Veille (quotidienne ou manuelle) : le BOAMP est lu tout de suite ; Maximilien
- * et PLACE sont lus par le robot (plusieurs minutes), lancé avec les mêmes critères.
+ * Veille (quotidienne ou manuelle) : le BOAMP est lu tout de suite ; Maximilien,
+ * PLACE et AWS sont lus par le robot (plusieurs minutes), lancé avec les mêmes critères.
  */
 export const refreshVeille = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: ParametresVeille) => {
     const jour = (v: unknown) => (typeof v === "string" && JOUR.test(v) ? v : null);
-    const sources = (
-      Array.isArray(input.sources) ? input.sources : ["BOAMP", "MAXIMILIEN", "PLACE"]
-    ).filter((s): s is SourceVeille => ["BOAMP", "MAXIMILIEN", "PLACE"].includes(s));
+    const sources = (Array.isArray(input.sources) ? input.sources : SOURCES).filter(
+      (s): s is SourceVeille => SOURCES.includes(s),
+    );
     return {
       fenetreJours: Math.min(Math.max(input.fenetreJours ?? 7, 1), 60),
       idfSeulement: input.idfSeulement ?? true,

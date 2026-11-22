@@ -31,7 +31,7 @@ function idwebBoamp(url: URL): string | null {
   return url.href.match(/\b(\d{2}-\d{4,})\b/)?.[1] ?? null;
 }
 
-function texteDeLaPage(html: string): { titre: string; texte: string } {
+export function texteDeLaPage(html: string): { titre: string; texte: string } {
   const titre = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "").trim();
   const texte = html
     .replace(/<(script|style|noscript|svg|head)[^>]*>[\s\S]*?<\/\1>/gi, " ")

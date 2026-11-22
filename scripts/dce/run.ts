@@ -27,6 +27,8 @@ import {
 } from "../../src/lib/veilleAvis";
 import { collecterVeille, type OptionsCollecte } from "../../src/lib/veilleCollect.server";
 import { collecterAtexo, PLATEFORMES_ATEXO } from "../../src/lib/veilleAtexo.server";
+import { collecterAws } from "../../src/lib/veilleAws.server";
+import { qualifierAnnonces } from "../../src/lib/veilleQualif.server";
 import { analyserAnnonce } from "./analyse";
 import { deplierDce, selectionnerPieces } from "./fichiers";
 import { identifiantsPour, telechargerDce } from "./plateformes";
@@ -334,6 +336,7 @@ async function main() {
       console.warn("Paramètres de veille illisibles : collecte habituelle");
     }
     const { sources, ...options } = parametres ?? {};
+    const ajoutees: string[] = [];
     if (!parametres) {
       const collecte = await collecterVeille(supabase, { fenetreJours: 3, idfSeulement: true });
       console.log(
@@ -349,10 +352,33 @@ async function main() {
       if (sources && !sources.includes(p.source)) continue;
       try {
         const r = await collecterAtexo(supabase, p, (m) => console.log(m), options);
+        ajoutees.push(...r.idsNouvelles);
         if (r.erreurs.length)
           console.warn(`  ${p.libelle} : ${r.erreurs.length} erreur(s)`, r.erreurs.slice(0, 5));
       } catch (e) {
         console.error(`Collecte ${p.libelle} en échec : ${(e as Error).message}`);
+      }
+    }
+    // AWS (marches-publics.info) : très utilisé par les communes.
+    if (!sources || sources.includes("AWS")) {
+      try {
+        const r = await collecterAws(supabase, (m) => console.log(m), options);
+        ajoutees.push(...r.idsNouvelles);
+        if (r.erreurs.length)
+          console.warn(`  AWS : ${r.erreurs.length} erreur(s)`, r.erreurs.slice(0, 5));
+      } catch (e) {
+        console.error(`Collecte AWS en échec : ${(e as Error).message}`);
+      }
+    }
+    // Qualification IA tout de suite des annonces ajoutées depuis les plateformes.
+    if (ajoutees.length) {
+      try {
+        const q = await qualifierAnnonces(supabase, { ids: ajoutees, limit: 200 });
+        console.log(
+          `Qualification : ${q.qualifiees} / ${q.traitees}${q.ok ? "" : ` (${q.error})`}`,
+        );
+      } catch (e) {
+        console.error(`Qualification en échec : ${(e as Error).message}`);
       }
     }
   }

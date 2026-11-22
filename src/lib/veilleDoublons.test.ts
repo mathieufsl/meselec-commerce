@@ -31,3 +31,12 @@ describe("doublons de veille", () => {
     expect(dansZone(null, null)).toBe(true);
   });
 });
+
+describe("lecture AWS", async () => {
+  const { dateCourte } = await import("@/lib/veilleAws");
+  it("lit les dates courtes jj/mm/aa", () => {
+    expect(dateCourte("26/11/26 à 12h00")).toBe("2026-11-26");
+    expect(dateCourte("le 03/01/2027")).toBe("2027-01-03");
+    expect(dateCourte(undefined)).toBeNull();
+  });
+});
