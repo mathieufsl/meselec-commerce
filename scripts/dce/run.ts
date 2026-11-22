@@ -12,7 +12,15 @@
  * VEILLE_DCE_LIMIT, VEILLE_DCE_ANNONCE (id ou source_id), VEILLE_DCE_DIAGNOSTIC=1,
  * VEILLE_DCE_SANS_COLLECTE=1.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
@@ -426,6 +434,23 @@ async function main() {
   }
   console.log(`\nTerminé : ${annonces.length - echecs} traitée(s), ${echecs} en erreur`);
   if (echecs === annonces.length) process.exitCode = 1;
+  // Encore des demandes en file (hors échecs qui attendent le passage du lendemain) et
+  // ce passage a avancé : le workflow se relance pour vider la file.
+  if (!annonceCiblee && echecs < annonces.length) {
+    const { count } = await supabase
+      .from("veille_annonces")
+      .select("id", { count: "exact", head: true })
+      .eq("analyse_statut", "a_faire")
+      .or("analyse_tentatives.eq.0,analyse_erreur.is.null");
+    signalerReste(count ?? 0);
+  }
+}
+
+/** Nombre d'analyses encore en file, lu par le workflow pour se relancer. */
+function signalerReste(reste: number) {
+  console.log(`Analyses encore en file : ${reste}`);
+  const sortie = process.env["GITHUB_OUTPUT"];
+  if (sortie) appendFileSync(sortie, `reste=${reste}\n`);
 }
 
 main().catch((e) => {

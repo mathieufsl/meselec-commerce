@@ -18,7 +18,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useAbandonnerAnalyseDce, useDemanderAnalyseDce, useEtatRobotDce } from "@/hooks/useVeille";
 import { cn } from "@/lib/utils";
-import { analyseEnAttenteApresEchec, type VeilleAnnonceRow } from "@/lib/veille";
+import {
+  analyseEnAttenteApresEchec,
+  analyseEnAttenteDuRobot,
+  type VeilleAnnonceRow,
+} from "@/lib/veille";
 import { diagnostiquerAttente } from "@/lib/veilleRobot";
 import {
   EXIGENCE_LABELS,
@@ -138,10 +142,25 @@ function SuiviRobot({ annonce, canEdit }: { annonce: VeilleAnnonceRow; canEdit: 
   const etatRobot = useEtatRobotDce(pasDemarre);
   if (analyseEnAttenteApresEchec(annonce))
     return <EchecRobot annonce={annonce} canEdit={canEdit} />;
-  const diag =
+  const diagRobot =
     pasDemarre && annonce.analyse_etape_at && !etatRobot.isLoading
       ? diagnostiquerAttente(annonce.analyse_etape_at, etatRobot.data ?? null)
       : null;
+  // Aucune nouvelle du robot depuis 30 min : on ne fait pas croire que ça tourne.
+  const diag =
+    diagRobot ??
+    (analyseEnAttenteDuRobot(annonce)
+      ? {
+          texte: `En attente du robot${
+            annonce.analyse_etape_at
+              ? ` depuis ${formatDistanceToNow(new Date(annonce.analyse_etape_at), { locale: fr })}`
+              : ""
+          } : aucune analyse en cours`,
+          url: null,
+          alerte: true,
+          relancer: true,
+        }
+      : null);
   const etape =
     diag?.texte ??
     (annonce.analyse_etape ?? VEILLE_ANALYSE_STATUT_LABELS.a_faire) +

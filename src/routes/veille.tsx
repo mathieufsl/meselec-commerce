@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import { AO_SECTEUR_LABELS, type AoSecteurCode } from "@/lib/commerceTypes";
 import {
   analyseEnAttenteApresEchec,
+  analyseEnAttenteDuRobot,
   analyseEnCours,
   libelleMotif,
   MOTIFS_IGNORE,
@@ -504,6 +505,10 @@ function LigneAnnonce({
           {analyseEnAttenteApresEchec(a) ? (
             <span className="inline-flex items-center gap-0.5 text-amber-700 dark:text-amber-400">
               <AlertTriangle className="h-3 w-3" /> DCE non récupéré
+            </span>
+          ) : analyseEnAttenteDuRobot(a) ? (
+            <span className="inline-flex items-center gap-0.5 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-3 w-3" /> DCE en attente du robot
             </span>
           ) : a.analyse_dce ? (
             <span className="inline-flex items-center gap-0.5 text-emerald-700 dark:text-emerald-400">

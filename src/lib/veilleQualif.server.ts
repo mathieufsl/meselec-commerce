@@ -124,7 +124,14 @@ async function qualifierUne(
           qualif_error: null,
           qualif_usage: usage,
           qualified_at: new Date().toISOString(),
-          ...(demanderDce ? { analyse_statut: "a_faire", analyse_tentatives: 0 } : {}),
+          ...(demanderDce
+            ? {
+                analyse_statut: "a_faire",
+                analyse_tentatives: 0,
+                analyse_etape: "Prioritaire : analyse du DCE demandée au robot",
+                analyse_etape_at: new Date().toISOString(),
+              }
+            : {}),
         } as never)
         .eq("id", a.id);
       if (error) throw error;
@@ -205,7 +212,8 @@ export async function qualifierAnnonces(
       "id, source_id, intitule, acheteur, cpv, departement, date_limite, raw, analyse_statut",
     );
   if (options.ids?.length) query = query.in("id", options.ids);
-  else query = query.eq("qualif_statut", "a_qualifier").order("date_parution", { ascending: false });
+  else
+    query = query.eq("qualif_statut", "a_qualifier").order("date_parution", { ascending: false });
   const { data: annonces, error: aErr } = await query.limit(limit);
   if (aErr) throw aErr;
 
@@ -236,7 +244,9 @@ export async function rattraperVeille(
   if (options.idwebs?.length) {
     query = query.in("source_id", options.idwebs);
   } else {
-    const depuis = new Date(Date.now() - (options.jours ?? 14) * 86400000).toISOString().slice(0, 10);
+    const depuis = new Date(Date.now() - (options.jours ?? 14) * 86400000)
+      .toISOString()
+      .slice(0, 10);
     query = query.gte("date_parution", depuis);
   }
   const { data, error } = await query.limit(300);

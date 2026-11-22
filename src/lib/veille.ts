@@ -355,7 +355,22 @@ export function analyseEnAttenteApresEchec(a: VeilleAnnonceRow): boolean {
   return a.analyse_statut === "a_faire" && (a.analyse_tentatives ?? 0) > 0 && !!a.analyse_erreur;
 }
 
-/** Le robot DCE travaille réellement sur l'annonce (demande en cours, pas un échec en attente). */
+/** Sans nouvelle étape du robot depuis ce délai, l'analyse n'est plus « en cours ». */
+export const DELAI_ANALYSE_SANS_NOUVELLE_MS = 30 * 60_000;
+
+/**
+ * Analyse demandée mais le robot ne s'en occupe pas (pas encore lancé, file
+ * d'attente, exécution interrompue) : aucune étape depuis 30 min.
+ */
+export function analyseEnAttenteDuRobot(a: VeilleAnnonceRow, maintenant = Date.now()): boolean {
+  if (a.analyse_statut !== "a_faire" || analyseEnAttenteApresEchec(a)) return false;
+  const derniere = a.analyse_etape_at ? new Date(a.analyse_etape_at).getTime() : 0;
+  return maintenant - derniere > DELAI_ANALYSE_SANS_NOUVELLE_MS;
+}
+
+/** Le robot DCE travaille réellement sur l'annonce (étape récente, pas d'échec ni d'attente). */
 export function analyseEnCours(a: VeilleAnnonceRow): boolean {
-  return a.analyse_statut === "a_faire" && !analyseEnAttenteApresEchec(a);
+  return (
+    a.analyse_statut === "a_faire" && !analyseEnAttenteApresEchec(a) && !analyseEnAttenteDuRobot(a)
+  );
 }

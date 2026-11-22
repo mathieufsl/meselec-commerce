@@ -39,6 +39,8 @@ concurrency:
 
 permissions:
   contents: read
+  # Relance du workflow tant que des analyses restent en file.
+  actions: write
 
 jobs:
   analyse:
@@ -65,6 +67,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Collecte, DCE et analyse
+        id: robot
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -86,6 +89,12 @@ jobs:
           VEILLE_DCE_DIAGNOSTIC: ${{ github.event.inputs.diagnostic == 'true' && '1' || '0' }}
           VEILLE_PARAMETRES: ${{ github.event.inputs.parametres }}
         run: npx tsx --tsconfig scripts/dce/tsconfig.json scripts/dce/run.ts
+
+      - name: Relance si des analyses restent en file
+        if: success() && steps.robot.outputs.reste != '' && steps.robot.outputs.reste != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run veille-dce.yml --ref main -f collecte=false
 
       - name: Diagnostic
         if: always() && github.event.inputs.diagnostic == 'true'
