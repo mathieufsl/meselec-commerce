@@ -1477,6 +1477,65 @@ function VeillePage() {
           ? (items[Math.min(dernierIndex.current, items.length - 1)] ?? null)
           : null));
   const indexCourant = courante ? items.indexOf(courante) : -1;
+
+  // Pagination de la liste : 50 annonces par page.
+  const PAR_PAGE = 50;
+  const [page, setPage] = useState(0);
+  const nbPages = Math.max(1, Math.ceil(items.length / PAR_PAGE));
+  const pageAffichee = Math.min(page, nbPages - 1);
+  const itemsPage = items.slice(pageAffichee * PAR_PAGE, (pageAffichee + 1) * PAR_PAGE);
+  // Nouveau filtre ou nouvel onglet : retour en page 1.
+  useEffect(() => {
+    setPage(0);
+  }, [
+    filtre,
+    filtreSuivi,
+    filtreDecision,
+    filtreEntite,
+    filtreSource,
+    search,
+    periode,
+    periodeDu,
+    periodeAu,
+    voirHorsSujet,
+  ]);
+  // L'annonce ouverte (clic, J/K, passage à la suivante) est toujours sur la page affichée.
+  useEffect(() => {
+    if (indexCourant >= 0) setPage(Math.floor(indexCourant / PAR_PAGE));
+  }, [indexCourant]);
+  function allerPage(p: number) {
+    const cible = Math.min(Math.max(p, 0), nbPages - 1);
+    setPage(cible);
+    const premiere = items[cible * PAR_PAGE];
+    if (premiere) setSelectionId(premiere.id);
+  }
+  const pagination =
+    items.length > PAR_PAGE ? (
+      <div className="flex shrink-0 items-center justify-between gap-2 rounded-lg border bg-card px-2 py-1.5 text-xs">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs"
+          disabled={pageAffichee === 0}
+          onClick={() => allerPage(pageAffichee - 1)}
+        >
+          ‹ Précédente
+        </Button>
+        <span className="tabular-nums text-muted-foreground">
+          Page {pageAffichee + 1} / {nbPages} · {pageAffichee * PAR_PAGE + 1}–
+          {Math.min((pageAffichee + 1) * PAR_PAGE, items.length)} sur {items.length}
+        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs"
+          disabled={pageAffichee >= nbPages - 1}
+          onClick={() => allerPage(pageAffichee + 1)}
+        >
+          Suivante ›
+        </Button>
+      </div>
+    ) : null;
   useEffect(() => {
     definirAnnonceOuverte(courante?.id ?? null);
   }, [courante?.id]);
@@ -2084,7 +2143,8 @@ function VeillePage() {
           <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(340px,440px)_minmax(0,1fr)]">
             <div className="flex min-h-0 flex-col gap-2 lg:overflow-y-auto lg:pr-1">
               {listeVide}
-              {items.map((a) => (
+              {pagination}
+              {itemsPage.map((a) => (
                 <LigneAnnonce
                   key={a.id}
                   a={a}
@@ -2104,6 +2164,7 @@ function VeillePage() {
                   }}
                 />
               ))}
+              {pagination}
               {items.length > 0 && large ? (
                 <p className="px-1 py-2 text-center text-[11px] text-muted-foreground">
                   <kbd className="font-mono">J</kbd>/<kbd className="font-mono">K</kbd> naviguer ·{" "}
