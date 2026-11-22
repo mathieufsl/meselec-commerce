@@ -16,9 +16,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { useAbandonnerAnalyseDce, useDemanderAnalyseDce } from "@/hooks/useVeille";
+import { useAbandonnerAnalyseDce, useDemanderAnalyseDce, useEtatRobotDce } from "@/hooks/useVeille";
 import { cn } from "@/lib/utils";
 import { analyseEnAttenteApresEchec, type VeilleAnnonceRow } from "@/lib/veille";
+import { diagnostiquerAttente } from "@/lib/veilleRobot";
 import {
   EXIGENCE_LABELS,
   VEILLE_ANALYSE_STATUT_LABELS,
@@ -126,18 +127,44 @@ function EchecRobot({ annonce, canEdit }: { annonce: VeilleAnnonceRow; canEdit: 
 
 /** Suivi en direct du robot DCE : étape en cours, depuis quand, lien vers l'exécution. */
 function SuiviRobot({ annonce, canEdit }: { annonce: VeilleAnnonceRow; canEdit: boolean }) {
+  const demander = useDemanderAnalyseDce();
+  // Demande pas encore prise en main par le robot : on regarde où elle en est sur GitHub.
+  const pasDemarre =
+    annonce.analyse_statut === "a_faire" &&
+    !annonce.analyse_run_url &&
+    Boolean(annonce.analyse_etape_at) &&
+    !(annonce.analyse_etape ?? "").includes("7h17") &&
+    !analyseEnAttenteApresEchec(annonce);
+  const etatRobot = useEtatRobotDce(pasDemarre);
   if (analyseEnAttenteApresEchec(annonce))
     return <EchecRobot annonce={annonce} canEdit={canEdit} />;
+  const diag =
+    pasDemarre && annonce.analyse_etape_at && !etatRobot.isLoading
+      ? diagnostiquerAttente(annonce.analyse_etape_at, etatRobot.data ?? null)
+      : null;
   const etape =
+    diag?.texte ??
     (annonce.analyse_etape ?? VEILLE_ANALYSE_STATUT_LABELS.a_faire) +
-    (annonce.analyse_erreur ? ` (dernière erreur : ${annonce.analyse_erreur})` : "");
+      (annonce.analyse_erreur ? ` (dernière erreur : ${annonce.analyse_erreur})` : "");
+  const lien = annonce.analyse_run_url ?? diag?.url ?? null;
   return (
-    <span className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-      <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-      <span className="min-w-0 truncate" title={etape}>
+    <span
+      className={cn(
+        "inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded px-1.5 py-0.5 text-[11px] font-medium",
+        diag?.alerte
+          ? "bg-amber-500/10 text-amber-800 dark:text-amber-300"
+          : "bg-muted text-muted-foreground",
+      )}
+    >
+      {diag?.alerte ? (
+        <AlertTriangle className="h-3 w-3 shrink-0" />
+      ) : (
+        <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+      )}
+      <span className="min-w-0 [overflow-wrap:anywhere]" title={etape}>
         {etape}
       </span>
-      {annonce.analyse_etape_at ? (
+      {annonce.analyse_etape_at && !diag ? (
         <span className="opacity-70">
           ·{" "}
           {formatDistanceToNow(new Date(annonce.analyse_etape_at), {
@@ -146,9 +173,9 @@ function SuiviRobot({ annonce, canEdit }: { annonce: VeilleAnnonceRow; canEdit: 
           })}
         </span>
       ) : null}
-      {annonce.analyse_run_url ? (
+      {lien ? (
         <a
-          href={annonce.analyse_run_url}
+          href={lien}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-0.5 text-primary hover:underline"
@@ -156,6 +183,27 @@ function SuiviRobot({ annonce, canEdit }: { annonce: VeilleAnnonceRow; canEdit: 
           journal du robot
           <ExternalLink className="h-3 w-3" />
         </a>
+      ) : null}
+      {diag?.relancer && canEdit ? (
+        <Button
+          size="sm"
+          variant="secondary"
+          className="ml-1 h-6 px-2 text-[11px]"
+          disabled={demander.isPending}
+          onClick={() =>
+            demander.mutate(annonce.id, {
+              onSuccess: (res) =>
+                toast.success(
+                  res.lance ? "Robot relancé" : "Relance demandée pour le prochain passage",
+                ),
+              onError: (e: unknown) =>
+                toast.error(e instanceof Error ? e.message : "Relance impossible"),
+            })
+          }
+        >
+          {demander.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+          Relancer
+        </Button>
       ) : null}
     </span>
   );

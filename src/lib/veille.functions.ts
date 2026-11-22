@@ -167,6 +167,14 @@ export const demanderAnalyseDce = createServerFn({ method: "POST" })
     return { lance };
   });
 
+/** Dernières exécutions du robot DCE sur GitHub (file d'attente, échec au démarrage). */
+export const etatRobotDceFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { executionsRobotDce } = await import("@/lib/veilleDce.server");
+    return { executions: await executionsRobotDce() };
+  });
+
 /** Résumé IA de l'avis BOAMP d'une annonce (mis en cache dans `avis_resume`). */
 export const resumerAvisFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

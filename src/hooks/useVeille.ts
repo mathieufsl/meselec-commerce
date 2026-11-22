@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ajouterAnnonceParLienFn,
   demanderAnalyseDce,
+  etatRobotDceFn,
   qualifierVeille,
   rattraperVeilleFn,
   refreshVeille,
@@ -48,6 +49,18 @@ export function useDemanderAnalyseDce() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },
+  });
+}
+
+/** État du robot sur GitHub, interrogé seulement quand une demande n'a pas encore démarré. */
+export function useEtatRobotDce(actif: boolean) {
+  const run = useServerFn(etatRobotDceFn);
+  return useQuery({
+    queryKey: ["veille-robot-etat"],
+    queryFn: async () => (await run()).executions,
+    enabled: actif,
+    refetchInterval: actif ? 15_000 : false,
+    staleTime: 10_000,
   });
 }
 
