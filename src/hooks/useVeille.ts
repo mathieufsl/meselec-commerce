@@ -7,6 +7,7 @@ import {
   qualifierVeille,
   rattraperVeilleFn,
   refreshVeille,
+  type ParametresVeille,
 } from "@/lib/veille.functions";
 import type { AvisResume } from "@/lib/veilleResume";
 import type { QualificationProfil } from "@/lib/veilleQualif";
@@ -54,8 +55,7 @@ export function useRefreshVeille() {
   const qc = useQueryClient();
   const run = useServerFn(refreshVeille);
   return useMutation({
-    mutationFn: async (input?: { fenetreJours?: number; idfSeulement?: boolean }) =>
-      run({ data: input ?? {} }),
+    mutationFn: async (input?: ParametresVeille) => run({ data: input ?? {} }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["veille-annonces"] });
     },

@@ -1,15 +1,76 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type SourceVeille = "BOAMP" | "MAXIMILIEN" | "PLACE";
+
+export type ParametresVeille = {
+  fenetreJours?: number;
+  idfSeulement?: boolean;
+  /** Sources à interroger (toutes par défaut). */
+  sources?: SourceVeille[];
+  parutionDu?: string | null;
+  parutionAu?: string | null;
+  limiteDu?: string | null;
+  limiteAu?: string | null;
+  /** Départements ; null = France entière ; absent = IDF + 60 + 27. */
+  departements?: string[] | null;
+};
+
+const JOUR = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Veille (quotidienne ou manuelle) : le BOAMP est lu tout de suite ; Maximilien
+ * et PLACE sont lus par le robot (plusieurs minutes), lancé avec les mêmes critères.
+ */
 export const refreshVeille = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { fenetreJours?: number; idfSeulement?: boolean }) => ({
-    fenetreJours: Math.min(Math.max(input.fenetreJours ?? 7, 1), 60),
-    idfSeulement: input.idfSeulement ?? true,
-  }))
+  .inputValidator((input: ParametresVeille) => {
+    const jour = (v: unknown) => (typeof v === "string" && JOUR.test(v) ? v : null);
+    const sources = (
+      Array.isArray(input.sources) ? input.sources : ["BOAMP", "MAXIMILIEN", "PLACE"]
+    ).filter((s): s is SourceVeille => ["BOAMP", "MAXIMILIEN", "PLACE"].includes(s));
+    return {
+      fenetreJours: Math.min(Math.max(input.fenetreJours ?? 7, 1), 60),
+      idfSeulement: input.idfSeulement ?? true,
+      sources,
+      parutionDu: jour(input.parutionDu),
+      parutionAu: jour(input.parutionAu),
+      limiteDu: jour(input.limiteDu),
+      limiteAu: jour(input.limiteAu),
+      ...(input.departements === undefined
+        ? {}
+        : {
+            departements: Array.isArray(input.departements)
+              ? input.departements
+                  .map((d) => String(d).trim().toUpperCase())
+                  .filter((d) => /^(\d{2,3}|2[AB])$/.test(d))
+                  .slice(0, 101)
+              : null,
+          }),
+    };
+  })
   .handler(async ({ data, context }) => {
+    const { sources, ...options } = data;
+    const plateformes = sources.filter((s) => s !== "BOAMP");
+    const { lancerRobotDce } = await import("@/lib/veilleDce.server");
+    const plateformesLancees = plateformes.length
+      ? await lancerRobotDce({
+          collecte: true,
+          parametres: { ...options, sources: plateformes },
+        }).catch(() => false)
+      : false;
+    if (!sources.includes("BOAMP")) {
+      return {
+        ok: true as const,
+        collectees: 0,
+        retenues: 0,
+        nouvelles: 0,
+        idsNouvelles: [] as string[],
+        plateformesLancees,
+      };
+    }
     const { collecterVeille } = await import("@/lib/veilleCollect.server");
-    const res = await collecterVeille(context.supabase, data);
+    const res = await collecterVeille(context.supabase, options);
     if (!res.ok) {
       return {
         ok: false as const,
@@ -25,6 +86,7 @@ export const refreshVeille = createServerFn({ method: "POST" })
       retenues: res.retenues,
       nouvelles: res.nouvelles,
       idsNouvelles: res.idsNouvelles,
+      plateformesLancees,
     };
   });
 

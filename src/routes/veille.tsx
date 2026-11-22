@@ -25,6 +25,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/commerce/AppShell";
 import { VeilleAnalysePanel } from "@/components/commerce/VeilleAnalysePanel";
@@ -85,6 +86,7 @@ import {
 } from "@/hooks/useVeille";
 import { aplatirDonnees } from "@/lib/veilleAvis";
 import { useCommerceAuth } from "@/hooks/useCommerceAuth";
+import type { ParametresVeille, SourceVeille } from "@/lib/veille.functions";
 import {
   debuterActivite,
   definirAnnonceOuverte,
@@ -491,6 +493,11 @@ function LigneAnnonce({
               {AO_SECTEUR_LABELS[s] ?? s}
             </span>
           ))}
+          {a.source !== "BOAMP" ? (
+            <span className="rounded bg-violet-500/10 px-1.5 py-px font-medium text-violet-700 dark:text-violet-300">
+              {LIBELLES_SOURCE[a.source] ?? a.source}
+            </span>
+          ) : null}
           {a.entite && a.entite !== "aucune" ? (
             <span className="rounded border px-1.5 py-px font-medium">{a.entite}</span>
           ) : null}
@@ -623,6 +630,236 @@ function DialogueMotif({
           </Button>
           <Button disabled={!valide} onClick={() => valider()}>
             <EyeOff className="mr-1.5 h-4 w-4" /> Ignorer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const ZONES_VEILLE = [
+  { value: "idf_60_27", label: "IDF + Oise (60) + Eure (27)", departements: undefined },
+  {
+    value: "idf",
+    label: "Île-de-France",
+    departements: ["75", "77", "78", "91", "92", "93", "94", "95"],
+  },
+  { value: "france", label: "France entière", departements: null },
+  { value: "choix", label: "Départements choisis…", departements: [] },
+] as const;
+
+function jourIso(decalage: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + decalage);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Veille manuelle : sources, plage de dates (parution ou dépôt) et zone. */
+function DialogueVeille({
+  ouvert,
+  enCours,
+  onFermer,
+  onLancer,
+}: {
+  ouvert: boolean;
+  enCours: boolean;
+  onFermer: () => void;
+  onLancer: (p: ParametresVeille) => void;
+}) {
+  const [sources, setSources] = useState<SourceVeille[]>(["BOAMP", "MAXIMILIEN", "PLACE"]);
+  const [critere, setCritere] = useState<"parution" | "limite">("parution");
+  const [du, setDu] = useState(jourIso(-7));
+  const [au, setAu] = useState("");
+  const [zone, setZone] = useState<(typeof ZONES_VEILLE)[number]["value"]>("idf_60_27");
+  const [deps, setDeps] = useState("");
+
+  const raccourcis =
+    critere === "parution"
+      ? [
+          { label: "7 derniers jours", du: jourIso(-7), au: "" },
+          { label: "14 jours", du: jourIso(-14), au: "" },
+          { label: "30 jours", du: jourIso(-30), au: "" },
+        ]
+      : [
+          { label: "Dépôt sous 15 jours", du: jourIso(0), au: jourIso(15) },
+          { label: "Sous 30 jours", du: jourIso(0), au: jourIso(30) },
+          { label: "Sous 60 jours", du: jourIso(0), au: jourIso(60) },
+        ];
+
+  const departementsChoisis = deps
+    .split(/[^0-9AB]+/i)
+    .map((d) => d.trim().toUpperCase())
+    .filter((d) => /^(\d{2,3}|2[AB])$/.test(d));
+  const valide =
+    sources.length > 0 && (zone !== "choix" || departementsChoisis.length > 0) && Boolean(du || au);
+
+  function lancer() {
+    if (!valide) return;
+    const z = ZONES_VEILLE.find((x) => x.value === zone);
+    onLancer({
+      sources,
+      ...(critere === "parution"
+        ? { parutionDu: du || null, parutionAu: au || null }
+        : { limiteDu: du || null, limiteAu: au || null }),
+      ...(zone === "choix"
+        ? { departements: departementsChoisis }
+        : z && z.departements !== undefined
+          ? { departements: z.departements ? [...z.departements] : null }
+          : {}),
+    });
+  }
+
+  return (
+    <Dialog open={ouvert} onOpenChange={(o) => !o && !enCours && onFermer()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Lancer une veille</DialogTitle>
+          <DialogDescription>
+            Les AO déjà présents ne sont pas ajoutés une seconde fois, quelle que soit la source.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 text-sm">
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Sources</p>
+            <div className="flex flex-wrap gap-2">
+              {(["BOAMP", "MAXIMILIEN", "PLACE"] as const).map((src) => {
+                const actif = sources.includes(src);
+                return (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() =>
+                      setSources(actif ? sources.filter((x) => x !== src) : [...sources, src])
+                    }
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium",
+                      actif
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground",
+                    )}
+                  >
+                    {actif ? <Check className="h-3.5 w-3.5" /> : null}
+                    {LIBELLES_SOURCE[src]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Dates</p>
+            <div className="mb-2 inline-flex rounded-lg border p-0.5">
+              {(
+                [
+                  ["parution", "Date de parution"],
+                  ["limite", "Date limite de dépôt"],
+                ] as const
+              ).map(([v, l]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => {
+                    setCritere(v);
+                    setDu(v === "parution" ? jourIso(-7) : jourIso(0));
+                    setAu(v === "parution" ? "" : jourIso(30));
+                  }}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-xs font-medium",
+                    critere === v ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {raccourcis.map((r) => (
+                <button
+                  key={r.label}
+                  type="button"
+                  onClick={() => {
+                    setDu(r.du);
+                    setAu(r.au);
+                  }}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-xs",
+                    du === r.du && au === r.au
+                      ? "border-primary text-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="space-y-1 text-xs text-muted-foreground">
+                Du
+                <Input
+                  type="date"
+                  value={du}
+                  max={au || undefined}
+                  onChange={(e) => setDu(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                Au (vide = sans limite)
+                <Input
+                  type="date"
+                  value={au}
+                  min={du || undefined}
+                  onChange={(e) => setAu(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Zone</p>
+            <Select value={zone} onValueChange={(v) => setZone(v as typeof zone)}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ZONES_VEILLE.map((z) => (
+                  <SelectItem key={z.value} value={z.value}>
+                    {z.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {zone === "choix" ? (
+              <Input
+                autoFocus
+                placeholder="Ex. 75 92 93 60"
+                value={deps}
+                onChange={(e) => setDeps(e.target.value)}
+                className="mt-2 h-9"
+              />
+            ) : null}
+          </div>
+          {sources.some((x) => x !== "BOAMP") ? (
+            <p className="text-xs text-muted-foreground">
+              Maximilien et PLACE sont lus par le robot : comptez quelques minutes, les annonces
+              apparaissent au fur et à mesure.
+            </p>
+          ) : null}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onFermer} disabled={enCours}>
+            Annuler
+          </Button>
+          <Button onClick={lancer} disabled={!valide || enCours}>
+            {enCours ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+            )}
+            Lancer
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1009,6 +1246,14 @@ function normalizeSearch(value: string) {
   return value.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
 }
 
+/** Origine des annonces (collectes automatiques et ajout manuel par lien). */
+const LIBELLES_SOURCE: Record<string, string> = {
+  BOAMP: "BOAMP",
+  MAXIMILIEN: "Maximilien",
+  PLACE: "PLACE",
+  MANUEL: "Ajout par lien",
+};
+
 const RANG_DECISION: Record<string, number> = { prioritaire: 0, a_creuser: 1, hors_sujet: 3 };
 
 /** Ordre de tri : prioritaires, à creuser, non qualifiées, hors sujet ; puis score, puis échéance. */
@@ -1067,10 +1312,12 @@ function VeillePage() {
   const large = useEcranLarge();
   const [filtre, setFiltre] = useEtatMemorise<VeilleStatut | "tous">("filtre", "nouveau");
   const [filtreSuivi, setFiltreSuivi] = useState<"aucun" | "en_cours" | "a_revoir">("aucun");
-  const [idfSeulement, setIdfSeulement] = useState(true);
+  const [veilleOuverte, setVeilleOuverte] = useState(false);
   const [search, setSearch] = useState("");
   const [voirHorsSujet, setVoirHorsSujet] = useEtatMemorise("horsSujet", false);
   const [filtreEntite, setFiltreEntite] = useEtatMemorise<string>("entite", "toutes");
+  const [filtreSource, setFiltreSource] = useEtatMemorise<string>("source", "toutes");
+  const [suiviCollecteJusqua, setSuiviCollecteJusqua] = useState(0);
   const [filtreDecision, setFiltreDecision] = useEtatMemorise<string>("decision", "toutes");
   const [selectionId, setSelectionId, selectionChargee] = useEtatMemorise<string | null>(
     "annonce",
@@ -1116,6 +1363,7 @@ function VeillePage() {
         (a) => voirHorsSujet || filtreDecision === "hors_sujet" || a.decision !== "hors_sujet",
       )
       .filter((a) => filtreEntite === "toutes" || a.entite === filtreEntite)
+      .filter((a) => filtreSource === "toutes" || a.source === filtreSource)
       .filter((a) =>
         filtreDecision === "toutes"
           ? true
@@ -1143,6 +1391,7 @@ function VeillePage() {
     search,
     voirHorsSujet,
     filtreEntite,
+    filtreSource,
     filtreDecision,
     periode,
     periodeDu,
@@ -1156,6 +1405,21 @@ function VeillePage() {
   }, [matching]);
 
   // Traitements en cours par annonce : robot DCE, qualification IA, envois et résumés.
+  // Après « Lancer la veille », le robot lit Maximilien et PLACE : on rafraîchit la liste.
+  const qcPage = useQueryClient();
+  useEffect(() => {
+    if (suiviCollecteJusqua <= Date.now()) return;
+    const t = window.setInterval(() => {
+      if (Date.now() > suiviCollecteJusqua) {
+        window.clearInterval(t);
+        setSuiviCollecteJusqua(0);
+        return;
+      }
+      void qcPage.invalidateQueries({ queryKey: ["veille-annonces"] });
+    }, 30_000);
+    return () => window.clearInterval(t);
+  }, [suiviCollecteJusqua, qcPage]);
+
   const suivi = useSuiviVeille();
   const activitesDe = (a: VeilleAnnonceRow): string[] => {
     const l = Object.values(suivi.activites[a.id] ?? {});
@@ -1312,25 +1576,34 @@ function VeillePage() {
     );
   }
 
-  function lancerVeille() {
-    refresh.mutate(
-      { fenetreJours: 7, idfSeulement },
-      {
-        onSuccess: (res) => {
-          if (!res.ok) {
-            toast.error(res.error);
-            return;
-          }
+  function lancerVeille(parametres: ParametresVeille) {
+    refresh.mutate(parametres, {
+      onSuccess: (res) => {
+        setVeilleOuverte(false);
+        if (!res.ok) {
+          toast.error(res.error);
+          return;
+        }
+        if (parametres.sources?.includes("BOAMP") ?? true) {
           toast.success(
-            `${res.nouvelles} nouvelle(s) annonce(s) · ${res.retenues} dans le périmètre sur ${res.collectees} collectées`,
+            `BOAMP : ${res.nouvelles} nouvelle(s) annonce(s) · ${res.retenues} dans le périmètre sur ${res.collectees} collectées`,
           );
-          // Qualification IA des seules annonces qui viennent d'arriver (pas de l'historique).
-          if (res.idsNouvelles.length > 0) qualifierEnAttente(true, res.idsNouvelles);
-        },
-        onError: (e: unknown) =>
-          toast.error(e instanceof Error ? e.message : "Échec de la collecte"),
+        }
+        if (res.plateformesLancees) {
+          const noms = (parametres.sources ?? ["MAXIMILIEN", "PLACE"])
+            .filter((x) => x !== "BOAMP")
+            .map((x) => LIBELLES_SOURCE[x] ?? x)
+            .join(" et ");
+          toast.info(
+            `${noms} : lecture en cours par le robot (quelques minutes), les annonces apparaîtront ici.`,
+          );
+          setSuiviCollecteJusqua(Date.now() + 8 * 60_000);
+        }
+        // Qualification IA des seules annonces qui viennent d'arriver (pas de l'historique).
+        if (res.idsNouvelles.length > 0) qualifierEnAttente(true, res.idsNouvelles);
       },
-    );
+      onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Échec de la collecte"),
+    });
   }
 
   /** Passe à l'annonce suivante (ou précédente en fin de liste) après une décision. */
@@ -1421,7 +1694,8 @@ function VeillePage() {
         profilOuvert ||
         destinatairesOuvert ||
         motifPour ||
-        ajoutOuvert
+        ajoutOuvert ||
+        veilleOuverte
       )
         return;
       const cible = e.target as HTMLElement | null;
@@ -1460,6 +1734,7 @@ function VeillePage() {
     setSelectionId,
     motifPour,
     ajoutOuvert,
+    veilleOuverte,
   ]);
 
   const listeVide =
@@ -1490,7 +1765,7 @@ function VeillePage() {
   return (
     <AppShell
       title="Veille AO"
-      subtitle={`Collecte BOAMP · ${idfSeulement ? "IDF + 60 + 27" : "France entière"}`}
+      subtitle="BOAMP · Maximilien · PLACE · IDF + 60 + 27 chaque matin"
       titleIcon={Radar}
       back={{ to: "/appels-offres", label: "Appels d'offres" }}
       actions={
@@ -1502,7 +1777,7 @@ function VeillePage() {
             </Button>
           ) : null}
           {canEdit ? (
-            <Button size="sm" onClick={lancerVeille} disabled={refresh.isPending}>
+            <Button size="sm" onClick={() => setVeilleOuverte(true)} disabled={refresh.isPending}>
               {refresh.isPending ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (
@@ -1539,19 +1814,6 @@ function VeillePage() {
                   <DropdownMenuSeparator />
                 </>
               ) : null}
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Périmètre de collecte
-              </DropdownMenuLabel>
-              {[
-                { v: true, label: "IDF + Oise (60) + Eure (27)" },
-                { v: false, label: "France entière" },
-              ].map((p) => (
-                <DropdownMenuItem key={p.label} onSelect={() => setIdfSeulement(p.v)}>
-                  <MapPin className="mr-2 h-4 w-4" />
-                  <span className="flex-1">{p.label}</span>
-                  {idfSeulement === p.v ? <Check className="h-4 w-4" /> : null}
-                </DropdownMenuItem>
-              ))}
               {canEdit ? (
                 <>
                   <DropdownMenuSeparator />
@@ -1649,6 +1911,19 @@ function VeillePage() {
               <SelectItem value="aucune">Aucune</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={filtreSource} onValueChange={setFiltreSource}>
+            <SelectTrigger className="h-8 w-36 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="toutes">Toutes sources</SelectItem>
+              {Object.entries(LIBELLES_SOURCE).map(([v, l]) => (
+                <SelectItem key={v} value={v}>
+                  {l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Popover open={periodeOuverte} onOpenChange={setPeriodeOuverte}>
             <PopoverTrigger asChild>
               <Button
@@ -1734,6 +2009,7 @@ function VeillePage() {
           </label>
           {filtreDecision !== "toutes" ||
           filtreEntite !== "toutes" ||
+          filtreSource !== "toutes" ||
           periode !== "toutes" ||
           voirHorsSujet ||
           search.trim() ||
@@ -1743,6 +2019,7 @@ function VeillePage() {
               onClick={() => {
                 setFiltreDecision("toutes");
                 setFiltreEntite("toutes");
+                setFiltreSource("toutes");
                 setPeriode("toutes");
                 setPeriodeDu("");
                 setPeriodeAu("");
@@ -1849,6 +2126,12 @@ function VeillePage() {
           </div>
         )}
       </div>
+      <DialogueVeille
+        ouvert={veilleOuverte}
+        enCours={refresh.isPending}
+        onFermer={() => setVeilleOuverte(false)}
+        onLancer={lancerVeille}
+      />
       <DialogueAjoutLien
         ouvert={ajoutOuvert}
         onFermer={() => setAjoutOuvert(false)}

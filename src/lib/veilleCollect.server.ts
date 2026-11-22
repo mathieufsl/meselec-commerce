@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  DEPARTEMENTS_VEILLE,
   domainesDetectes,
-  estIdf,
   secteursFromDomaines,
   type VeilleAnnonce,
 } from "@/lib/veille";
@@ -16,9 +16,7 @@ function texte(record: OdsRecord, ...cles: string[]): string {
   for (const cle of cles) {
     const val = record[cle];
     if (val == null) continue;
-    const str = Array.isArray(val)
-      ? val.filter(Boolean).map(String).join(" ")
-      : String(val);
+    const str = Array.isArray(val) ? val.filter(Boolean).map(String).join(" ") : String(val);
     if (str.trim()) return str.trim();
   }
   return "";
@@ -107,24 +105,70 @@ export type CollecteVeilleResultat =
  * Collecte les annonces BOAMP, les filtre sur le périmètre métier puis les
  * enregistre dans `veille_annonces`. Renvoie les annonces réellement nouvelles.
  */
+export type OptionsCollecte = {
+  /** Fenêtre de parution en jours (collecte quotidienne), si aucune date n'est donnée. */
+  fenetreJours?: number;
+  idfSeulement?: boolean;
+  /** Veille manuelle : bornes AAAA-MM-JJ incluses. */
+  parutionDu?: string | null;
+  parutionAu?: string | null;
+  limiteDu?: string | null;
+  limiteAu?: string | null;
+  /** Départements retenus ; null = France entière. Par défaut : IDF + 60 + 27. */
+  departements?: string[] | null;
+};
+
+const JOUR_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Zone retenue : liste de départements, ou null pour la France entière. */
+export function zoneCollecte(options: OptionsCollecte): string[] | null {
+  if (options.departements !== undefined) return options.departements;
+  return (options.idfSeulement ?? true) ? DEPARTEMENTS_VEILLE : null;
+}
+
+/** « 75 92 60 » ou « 2A, 93 » : l'annonce est-elle dans la zone ? */
+export function dansZone(departement: string | null, zone: string[] | null): boolean {
+  if (!zone) return true;
+  const codes = (departement ?? "").split(/[^0-9AB]+/i).filter(Boolean);
+  return codes.some((c) => zone.includes(c.padStart(2, "0")) || zone.includes(c));
+}
+
 export async function collecterVeille(
   client: SupabaseClient,
-  options: { fenetreJours?: number; idfSeulement?: boolean } = {},
+  options: OptionsCollecte = {},
 ): Promise<CollecteVeilleResultat> {
   const fenetreJours = Math.min(Math.max(options.fenetreJours ?? 7, 1), 60);
-  const idfSeulement = options.idfSeulement ?? true;
+  const zone = zoneCollecte(options);
+  const jour = (v: string | null | undefined) => (v && JOUR_ISO.test(v) ? v : null);
+  const parutionDu = jour(options.parutionDu);
+  const parutionAu = jour(options.parutionAu);
+  const limiteDu = jour(options.limiteDu);
+  const limiteAu = jour(options.limiteAu);
+  const manuelle = Boolean(parutionDu || parutionAu || limiteDu || limiteAu);
 
-  const dateMin = new Date(Date.now() - fenetreJours * 86400000)
-    .toISOString()
-    .slice(0, 10);
+  const conditions = [`nature = "APPEL_OFFRE"`];
+  if (!manuelle) {
+    const dateMin = new Date(Date.now() - fenetreJours * 86400000).toISOString().slice(0, 10);
+    conditions.push(`dateparution >= date'${dateMin}'`);
+  }
+  if (parutionDu) conditions.push(`dateparution >= date'${parutionDu}'`);
+  if (parutionAu) conditions.push(`dateparution <= date'${parutionAu}'`);
+  if (limiteDu) conditions.push(`datelimitereponse >= date'${limiteDu}'`);
+  if (limiteAu) conditions.push(`datelimitereponse <= date'${limiteAu}T23:59:59'`);
+  if (zone) {
+    // L'API écrit « 2 » pour l'Aisne : on demande les deux formes.
+    const codes = [...new Set(zone.flatMap((c) => [c, c.replace(/^0/, "")]))];
+    conditions.push(`(${codes.map((c) => `code_departement = "${c}"`).join(" or ")})`);
+  }
 
   const collected: OdsRecord[] = [];
   const pageSize = 100;
+  const maxPages = manuelle ? 40 : 10;
 
-  for (let page = 0; page < 10; page += 1) {
+  for (let page = 0; page < maxPages; page += 1) {
     const url = `${BASE_URL}?${new URLSearchParams({
       // Uniquement les avis de marché : pas les résultats (ATTRIBUTION), rectificatifs, annulations…
-      where: `dateparution >= date'${dateMin}' and nature = "APPEL_OFFRE"`,
+      where: conditions.join(" and "),
       order_by: "dateparution desc",
       limit: String(pageSize),
       offset: String(page * pageSize),
@@ -154,11 +198,11 @@ export async function collecterVeille(
     .map(normaliser)
     .filter((a): a is VeilleAnnonceCollectee => a !== null)
     .filter((a) => a.domaines.length > 0)
-    .filter((a) => !idfSeulement || estIdf(a.departement ?? ""));
+    .filter((a) => dansZone(a.departement, zone));
 
   const uniques = new Map<string, VeilleAnnonceCollectee>();
   for (const a of normalisees) uniques.set(`${a.source}::${a.source_id}`, a);
-  const annonces = [...uniques.values()];
+  let annonces = [...uniques.values()];
 
   if (annonces.length === 0) {
     return {
@@ -181,6 +225,32 @@ export async function collecterVeille(
     );
   if (existErr) throw existErr;
   const known = new Set((existing ?? []).map((r: { source_id: string }) => r.source_id));
+
+  // Nouvelles annonces déjà connues par une autre source (Maximilien, PLACE, lien) : écartées.
+  const doublons = new Set<string>();
+  const { trouverDoublon } = await import("@/lib/veilleDoublons.server");
+  for (const a of annonces) {
+    if (known.has(a.source_id)) continue;
+    const id = await trouverDoublon(client, {
+      source: a.source,
+      source_id: a.source_id,
+      intitule: a.intitule,
+      date_limite: a.date_limite,
+      liens: [a.url_dce, a.lien],
+    });
+    if (id) doublons.add(a.source_id);
+  }
+  annonces = annonces.filter((a) => !doublons.has(a.source_id));
+  if (annonces.length === 0) {
+    return {
+      ok: true,
+      collectees: collected.length,
+      retenues: 0,
+      nouvelles: 0,
+      annoncesNouvelles: [],
+      idsNouvelles: [],
+    };
+  }
 
   const rows = annonces.map((a) => ({
     source: a.source,

@@ -25,7 +25,8 @@ import {
   PLATEFORMES_GEREES,
   type VeillePlateforme,
 } from "../../src/lib/veilleAvis";
-import { collecterVeille } from "../../src/lib/veilleCollect.server";
+import { collecterVeille, type OptionsCollecte } from "../../src/lib/veilleCollect.server";
+import { collecterAtexo, PLATEFORMES_ATEXO } from "../../src/lib/veilleAtexo.server";
 import { analyserAnnonce } from "./analyse";
 import { deplierDce, selectionnerPieces } from "./fichiers";
 import { identifiantsPour, telechargerDce } from "./plateformes";
@@ -322,12 +323,38 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
 
 async function main() {
   if (process.env["VEILLE_DCE_SANS_COLLECTE"] !== "1" && !annonceCiblee) {
-    const collecte = await collecterVeille(supabase, { fenetreJours: 3, idfSeulement: true });
-    console.log(
-      collecte.ok
-        ? `Collecte BOAMP : ${collecte.nouvelles} nouvelle(s), ${collecte.retenues} retenue(s) / ${collecte.collectees}`
-        : `Collecte BOAMP en échec : ${collecte.error}`,
-    );
+    // Veille manuelle lancée depuis l'application : sources et critères choisis
+    // (le BOAMP est alors déjà lu par l'application).
+    let parametres: (OptionsCollecte & { sources?: string[] }) | null = null;
+    try {
+      parametres = process.env["VEILLE_PARAMETRES"]
+        ? (JSON.parse(process.env["VEILLE_PARAMETRES"]) as OptionsCollecte & { sources?: string[] })
+        : null;
+    } catch {
+      console.warn("Paramètres de veille illisibles : collecte habituelle");
+    }
+    const { sources, ...options } = parametres ?? {};
+    if (!parametres) {
+      const collecte = await collecterVeille(supabase, { fenetreJours: 3, idfSeulement: true });
+      console.log(
+        collecte.ok
+          ? `Collecte BOAMP : ${collecte.nouvelles} nouvelle(s), ${collecte.retenues} retenue(s) / ${collecte.collectees}`
+          : `Collecte BOAMP en échec : ${collecte.error}`,
+      );
+    } else {
+      console.log("Veille manuelle :", JSON.stringify(parametres));
+    }
+    // Plateformes Atexo (Maximilien, PLACE) : les MAPA qui ne passent pas au BOAMP.
+    for (const p of PLATEFORMES_ATEXO) {
+      if (sources && !sources.includes(p.source)) continue;
+      try {
+        const r = await collecterAtexo(supabase, p, (m) => console.log(m), options);
+        if (r.erreurs.length)
+          console.warn(`  ${p.libelle} : ${r.erreurs.length} erreur(s)`, r.erreurs.slice(0, 5));
+      } catch (e) {
+        console.error(`Collecte ${p.libelle} en échec : ${(e as Error).message}`);
+      }
+    }
   }
 
   const annonces = await annoncesATraiter();

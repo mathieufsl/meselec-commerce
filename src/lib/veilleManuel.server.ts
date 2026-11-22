@@ -274,6 +274,16 @@ export async function ajouterAnnonceParLien(
   const domaines = domainesDetectes(cpv ?? "", `${intitule} ${texte.slice(0, 3000)}`);
   const urlDce = ext?.url_dce && /^https?:\/\//.test(ext.url_dce) ? ext.url_dce : url.href;
 
+  const { trouverDoublon } = await import("@/lib/veilleDoublons.server");
+  const doublon = await trouverDoublon(client, {
+    source: "MANUEL",
+    source_id: sourceId,
+    intitule,
+    date_limite: dateIso(ext?.date_limite),
+    liens: [url.href, urlDce],
+  });
+  if (doublon) return { ok: true, id: doublon, deja: true, intitule, analyseIa: ia != null };
+
   const { data, error } = await client
     .from("veille_annonces")
     .insert({
