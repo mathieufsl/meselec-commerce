@@ -301,6 +301,44 @@ export function guessDcePieceType(fileName: string): AoDocumentType {
 }
 
 /**
+ * Range une pièce de DCE (RC, CCTP, ZIP…) dans les documents de l'AO : fichier dans
+ * le bucket des AO et ligne `ao_documents`, avec un type deviné d'après le nom.
+ */
+export async function ajouterPieceDceAuxDocumentsAo(params: {
+  aoId: string;
+  nom: string;
+  fichier: Blob;
+  mime?: string | null;
+}): Promise<void> {
+  const { aoId, nom, fichier } = params;
+  const { data: auth } = await supabase.auth.getUser();
+  const type = guessDcePieceType(nom);
+  const storagePath = buildAoDocumentStoragePath(aoId, type, nom);
+  const mime = params.mime || fichier.type || null;
+  const { error: uErr } = await supabase.storage
+    .from(AO_DOCUMENTS_BUCKET)
+    .upload(storagePath, fichier, { upsert: false, ...(mime ? { contentType: mime } : {}) });
+  if (uErr) throw uErr;
+  const { error: iErr } = await supabase.from("ao_documents").insert({
+    ao_id: aoId,
+    type,
+    nom_fichier: nom,
+    storage_path: storagePath,
+    fichier_url: storagePath,
+    taille_octets: fichier.size,
+    mime_type: mime,
+    version: 1,
+    notes: "Déposé sur la Veille AO",
+    uploaded_by: auth.user?.id ?? null,
+    uploaded_by_email: auth.user?.email ?? null,
+  });
+  if (iErr) {
+    await supabase.storage.from(AO_DOCUMENTS_BUCKET).remove([storagePath]);
+    throw iErr;
+  }
+}
+
+/**
  * Recopie dans les documents de l'AO les pièces déposées à la main sur une annonce
  * de veille (`veille-dce/<annonce>/depot/`). Renvoie le nombre de fichiers copiés et
  * ceux qui ont échoué : un échec ne bloque pas l'envoi de l'annonce vers les AO.
@@ -314,7 +352,6 @@ export async function copierDepotVeilleVersAo(params: {
   const { data: fichiers, error } = await supabase.storage.from("veille-dce").list(dossier);
   if (error) return { copies: 0, echecs: [`liste des fichiers : ${error.message}`] };
 
-  const { data: auth } = await supabase.auth.getUser();
   let copies = 0;
   const echecs: string[] = [];
   for (const f of fichiers ?? []) {
@@ -325,30 +362,12 @@ export async function copierDepotVeilleVersAo(params: {
         .from("veille-dce")
         .download(`${dossier}/${f.name}`);
       if (dErr || !blob) throw dErr ?? new Error("téléchargement vide");
-      const type = guessDcePieceType(f.name);
-      const storagePath = buildAoDocumentStoragePath(aoId, type, f.name);
-      const mime = blob.type || (f.metadata as { mimetype?: string } | null)?.mimetype || null;
-      const { error: uErr } = await supabase.storage
-        .from(AO_DOCUMENTS_BUCKET)
-        .upload(storagePath, blob, { upsert: false, ...(mime ? { contentType: mime } : {}) });
-      if (uErr) throw uErr;
-      const { error: iErr } = await supabase.from("ao_documents").insert({
-        ao_id: aoId,
-        type,
-        nom_fichier: f.name,
-        storage_path: storagePath,
-        fichier_url: storagePath,
-        taille_octets: blob.size,
-        mime_type: mime,
-        version: 1,
-        notes: "Déposé sur la Veille AO",
-        uploaded_by: auth.user?.id ?? null,
-        uploaded_by_email: auth.user?.email ?? null,
+      await ajouterPieceDceAuxDocumentsAo({
+        aoId,
+        nom: f.name,
+        fichier: blob,
+        mime: (f.metadata as { mimetype?: string } | null)?.mimetype ?? null,
       });
-      if (iErr) {
-        await supabase.storage.from(AO_DOCUMENTS_BUCKET).remove([storagePath]);
-        throw iErr;
-      }
       copies += 1;
     } catch (e) {
       echecs.push(`${f.name} : ${e instanceof Error ? e.message : "échec"}`);

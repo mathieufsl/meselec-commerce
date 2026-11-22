@@ -1,8 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, Radar, ScanSearch, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { VeilleAnalysePanel } from "@/components/commerce/VeilleAnalysePanel";
+import { VeilleDepotDce } from "@/components/commerce/VeilleDepotDce";
+import { useDemanderAnalyseDce } from "@/hooks/useVeille";
 import { cn } from "@/lib/utils";
 import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow } from "@/lib/veille";
 import { VEILLE_DECISION_LABELS } from "@/lib/veilleQualif";
@@ -38,6 +41,21 @@ function Liste({ titre, items }: { titre: string; items: string[] | undefined })
  * se termine après l'envoi vers les AO apparaît ici aussi.
  */
 export function AoVeilleAnalyse({ aoId, canEdit }: { aoId: string; canEdit: boolean }) {
+  const qc = useQueryClient();
+  const demanderDce = useDemanderAnalyseDce();
+  const analyser = (a: VeilleAnnonceRow) =>
+    demanderDce.mutate(a.id, {
+      onSuccess: (res) => {
+        void qc.invalidateQueries({ queryKey: ["ao-veille", aoId] });
+        toast.success(
+          res.lance
+            ? "Analyse du DCE lancée : résultat dans quelques minutes"
+            : "Analyse demandée : elle sera faite au prochain passage du robot",
+        );
+      },
+      onError: (e: unknown) =>
+        toast.error(e instanceof Error ? e.message : "Impossible de lancer l'analyse"),
+    });
   const { data: annonce, isLoading } = useQuery({
     queryKey: ["ao-veille", aoId],
     queryFn: async (): Promise<AnnonceVeille | null> => {
@@ -157,6 +175,7 @@ export function AoVeilleAnalyse({ aoId, canEdit }: { aoId: string; canEdit: bool
           <ScanSearch className="h-3.5 w-3.5" /> Analyse du DCE
         </p>
         <VeilleAnalysePanel annonce={a} canEdit={canEdit} defaultOpen />
+        {canEdit ? <VeilleDepotDce a={a} aoId={aoId} onAnalyser={analyser} /> : null}
       </section>
 
       {/* Résumé IA de l'avis */}
