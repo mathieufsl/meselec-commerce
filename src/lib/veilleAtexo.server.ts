@@ -161,6 +161,7 @@ async function dejaConnue(
       intitule: c.intitule,
       date_limite: c.date_limite,
       liens: [c.lien],
+      acheteur: c.organisme?.replace(/\s*\(\d{4,5}\s*-[^)]*\)\s*$/, "") ?? null,
     })) != null
   );
 }

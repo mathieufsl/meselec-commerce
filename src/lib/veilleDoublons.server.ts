@@ -69,6 +69,8 @@ export type CandidatDoublon = {
   intitule: string;
   date_limite: string | null;
   liens: Array<string | null | undefined>;
+  /** Acheteur : même acheteur + même intitulé = même AO, même si la date a changé. */
+  acheteur?: string | null;
 };
 
 /** Identifiant de l'annonce déjà présente pour le même AO, sinon null. */
@@ -93,6 +95,18 @@ export async function trouverDoublon(
         (r.source_id.endsWith(`-${num}`) ||
           numerosConsultation(r.lien, r.url_dce, r.dce_url).includes(num)),
     );
+    if (trouve) return trouve.id as string;
+  }
+
+  // Avis republié avec une nouvelle date limite (sans numéro de consultation dans le lien).
+  if (c.acheteur && titreNormalise(c.intitule).length > 15) {
+    const { data } = await client
+      .from("veille_annonces")
+      .select("id, source, source_id, intitule")
+      .ilike("acheteur", c.acheteur.replace(/[%_]/g, " ").trim())
+      .limit(100);
+    const t = titreNormalise(c.intitule);
+    const trouve = (data ?? []).find((r) => autre(r) && titreNormalise(r.intitule) === t);
     if (trouve) return trouve.id as string;
   }
 

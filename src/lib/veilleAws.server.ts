@@ -128,6 +128,7 @@ export async function collecterAws(
         intitule: c.intitule,
         date_limite: c.date_limite,
         liens: [c.lien, c.url_dce],
+        acheteur: c.acheteur,
       });
       if (doublon) continue;
 

@@ -27,14 +27,23 @@ export function useVeilleAnnonces() {
   return useQuery({
     queryKey: ["veille-annonces"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("veille_annonces")
-        // Pas de `raw` (avis complet, volumineux) dans la liste.
-        .select(VEILLE_ANNONCE_COLONNES)
-        .order("date_parution", { ascending: false, nullsFirst: false })
-        .limit(500);
-      if (error) throw error;
-      return (data ?? []) as unknown as VeilleAnnonceRow[];
+      // Toute la veille, par tranches de 1 000 (limite d'une requête Supabase) :
+      // avec plusieurs sources, on dépasse vite quelques centaines d'annonces.
+      const toutes: VeilleAnnonceRow[] = [];
+      const TRANCHE = 1000;
+      for (let debut = 0; debut < 20_000; debut += TRANCHE) {
+        const { data, error } = await supabase
+          .from("veille_annonces")
+          // Pas de `raw` (avis complet, volumineux) dans la liste.
+          .select(VEILLE_ANNONCE_COLONNES)
+          .order("date_parution", { ascending: false, nullsFirst: false })
+          .order("id", { ascending: true })
+          .range(debut, debut + TRANCHE - 1);
+        if (error) throw error;
+        toutes.push(...((data ?? []) as unknown as VeilleAnnonceRow[]));
+        if (!data || data.length < TRANCHE) break;
+      }
+      return toutes;
     },
     // Tant qu'une analyse est en cours, on rafraîchit pour suivre le robot étape par étape.
     refetchInterval: (query) => (query.state.data?.some(analyseEnCours) ? 5_000 : false),

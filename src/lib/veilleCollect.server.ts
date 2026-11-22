@@ -226,19 +226,61 @@ export async function collecterVeille(
   if (existErr) throw existErr;
   const known = new Set((existing ?? []).map((r: { source_id: string }) => r.source_id));
 
-  // Nouvelles annonces déjà connues par une autre source (Maximilien, PLACE, lien) : écartées.
+  // Nouvelles annonces déjà connues (autre source, ou avis BOAMP republié pour la même
+  // consultation) : écartées. Un avis plus récent qui change la date limite met à jour
+  // l'annonce existante au lieu d'en créer une seconde.
   const doublons = new Set<string>();
-  const { trouverDoublon } = await import("@/lib/veilleDoublons.server");
-  for (const a of annonces) {
+  const { trouverDoublon, numerosConsultation, titreNormalise } =
+    await import("@/lib/veilleDoublons.server");
+  // Dans un même lot, l'avis le plus récent passe en premier.
+  const parRecence = [...annonces].sort((x, y) =>
+    (y.date_parution ?? "").localeCompare(x.date_parution ?? ""),
+  );
+  const retenus: Array<{ nums: string[]; titre: string; acheteur: string }> = [];
+  for (const a of parRecence) {
     if (known.has(a.source_id)) continue;
+    const nums = numerosConsultation(a.url_dce, a.lien);
+    const titre = titreNormalise(a.intitule);
+    const acheteur = titreNormalise(a.acheteur);
+    if (
+      retenus.some(
+        (r) =>
+          r.nums.some((n) => nums.includes(n)) ||
+          (titre.length > 15 && r.titre === titre && r.acheteur === acheteur),
+      )
+    ) {
+      doublons.add(a.source_id);
+      continue;
+    }
     const id = await trouverDoublon(client, {
       source: a.source,
       source_id: a.source_id,
       intitule: a.intitule,
       date_limite: a.date_limite,
       liens: [a.url_dce, a.lien],
+      acheteur: a.acheteur,
     });
-    if (id) doublons.add(a.source_id);
+    if (id) {
+      doublons.add(a.source_id);
+      const { data: existante } = await client
+        .from("veille_annonces")
+        .select("date_parution, date_limite")
+        .eq("id", id)
+        .maybeSingle();
+      if (
+        existante &&
+        a.date_limite &&
+        a.date_limite !== existante.date_limite &&
+        (a.date_parution ?? "") > (existante.date_parution ?? "")
+      ) {
+        await client
+          .from("veille_annonces")
+          .update({ date_limite: a.date_limite } as never)
+          .eq("id", id);
+      }
+      continue;
+    }
+    retenus.push({ nums, titre, acheteur });
   }
   annonces = annonces.filter((a) => !doublons.has(a.source_id));
   if (annonces.length === 0) {
