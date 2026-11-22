@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -326,88 +326,9 @@ export type Database = {
           },
         ]
       }
-      ce_dossiers: {
-        Row: {
-          activite: string | null
-          ca_estime: number | null
-          created_at: string
-          created_by: string | null
-          date_closing_cible: string | null
-          date_detection: string | null
-          date_echeance_offre: string | null
-          ebitda_estime: number | null
-          effectif: number | null
-          id: string
-          interlocuteur: string | null
-          lieu: string | null
-          nom_cible: string
-          notes: string | null
-          reference: string
-          situation_juridique: string
-          societe_acheteuse_id: string | null
-          statut: string
-          titre: string
-          updated_at: string
-          valorisation_estimee: number | null
-        }
-        Insert: {
-          activite?: string | null
-          ca_estime?: number | null
-          created_at?: string
-          created_by?: string | null
-          date_closing_cible?: string | null
-          date_detection?: string | null
-          date_echeance_offre?: string | null
-          ebitda_estime?: number | null
-          effectif?: number | null
-          id?: string
-          interlocuteur?: string | null
-          lieu?: string | null
-          nom_cible: string
-          notes?: string | null
-          reference: string
-          situation_juridique?: string
-          societe_acheteuse_id?: string | null
-          statut?: string
-          titre: string
-          updated_at?: string
-          valorisation_estimee?: number | null
-        }
-        Update: {
-          activite?: string | null
-          ca_estime?: number | null
-          created_at?: string
-          created_by?: string | null
-          date_closing_cible?: string | null
-          date_detection?: string | null
-          date_echeance_offre?: string | null
-          ebitda_estime?: number | null
-          effectif?: number | null
-          id?: string
-          interlocuteur?: string | null
-          lieu?: string | null
-          nom_cible?: string
-          notes?: string | null
-          reference?: string
-          situation_juridique?: string
-          societe_acheteuse_id?: string | null
-          statut?: string
-          titre?: string
-          updated_at?: string
-          valorisation_estimee?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ce_dossiers_societe_acheteuse_id_fkey"
-            columns: ["societe_acheteuse_id"]
-            isOneToOne: false
-            referencedRelation: "societes_exploitation"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       appels_offres: {
         Row: {
+          annonce_url: string | null
           chantier_erp_id: string | null
           created_at: string
           created_by: string | null
@@ -422,15 +343,15 @@ export type Database = {
           montant_estime: number | null
           notes: string | null
           reference: string
-          societe_attribuee_id: string | null
-          annonce_url: string | null
           sharepoint_url: string | null
+          societe_attribuee_id: string | null
           statut: string
           titre: string
           type_marche: string | null
           updated_at: string
         }
         Insert: {
+          annonce_url?: string | null
           chantier_erp_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -445,15 +366,15 @@ export type Database = {
           montant_estime?: number | null
           notes?: string | null
           reference: string
-          societe_attribuee_id?: string | null
-          annonce_url?: string | null
           sharepoint_url?: string | null
+          societe_attribuee_id?: string | null
           statut?: string
           titre: string
           type_marche?: string | null
           updated_at?: string
         }
         Update: {
+          annonce_url?: string | null
           chantier_erp_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -468,9 +389,8 @@ export type Database = {
           montant_estime?: number | null
           notes?: string | null
           reference?: string
-          societe_attribuee_id?: string | null
-          annonce_url?: string | null
           sharepoint_url?: string | null
+          societe_attribuee_id?: string | null
           statut?: string
           titre?: string
           type_marche?: string | null
@@ -596,6 +516,340 @@ export type Database = {
           },
         ]
       }
+      ce_dossiers: {
+        Row: {
+          activite: string | null
+          ca_estime: number | null
+          created_at: string
+          created_by: string | null
+          date_closing_cible: string | null
+          date_detection: string | null
+          date_echeance_offre: string | null
+          ebitda_estime: number | null
+          effectif: number | null
+          id: string
+          interlocuteur: string | null
+          lieu: string | null
+          nom_cible: string
+          notes: string | null
+          reference: string
+          situation_juridique: string
+          societe_acheteuse_id: string | null
+          statut: string
+          titre: string
+          updated_at: string
+          valorisation_estimee: number | null
+        }
+        Insert: {
+          activite?: string | null
+          ca_estime?: number | null
+          created_at?: string
+          created_by?: string | null
+          date_closing_cible?: string | null
+          date_detection?: string | null
+          date_echeance_offre?: string | null
+          ebitda_estime?: number | null
+          effectif?: number | null
+          id?: string
+          interlocuteur?: string | null
+          lieu?: string | null
+          nom_cible: string
+          notes?: string | null
+          reference: string
+          situation_juridique?: string
+          societe_acheteuse_id?: string | null
+          statut?: string
+          titre: string
+          updated_at?: string
+          valorisation_estimee?: number | null
+        }
+        Update: {
+          activite?: string | null
+          ca_estime?: number | null
+          created_at?: string
+          created_by?: string | null
+          date_closing_cible?: string | null
+          date_detection?: string | null
+          date_echeance_offre?: string | null
+          ebitda_estime?: number | null
+          effectif?: number | null
+          id?: string
+          interlocuteur?: string | null
+          lieu?: string | null
+          nom_cible?: string
+          notes?: string | null
+          reference?: string
+          situation_juridique?: string
+          societe_acheteuse_id?: string | null
+          statut?: string
+          titre?: string
+          updated_at?: string
+          valorisation_estimee?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ce_dossiers_societe_acheteuse_id_fkey"
+            columns: ["societe_acheteuse_id"]
+            isOneToOne: false
+            referencedRelation: "societes_exploitation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_conversations: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          titre: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          titre?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          titre?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chiffrage_parametres: {
+        Row: {
+          activite: string
+          cle: string
+          created_at: string
+          id: string
+          libelle: string
+          unite: string | null
+          updated_at: string
+          valeur: number
+        }
+        Insert: {
+          activite: string
+          cle: string
+          created_at?: string
+          id?: string
+          libelle: string
+          unite?: string | null
+          updated_at?: string
+          valeur: number
+        }
+        Update: {
+          activite?: string
+          cle?: string
+          created_at?: string
+          id?: string
+          libelle?: string
+          unite?: string | null
+          updated_at?: string
+          valeur?: number
+        }
+        Relationships: []
+      }
+      chiffrage_postes: {
+        Row: {
+          aleas_ht: number | null
+          created_at: string
+          decomposition_origine: string | null
+          designation: string
+          detail: string | null
+          dimensions: Json
+          famille: string | null
+          feuille: string | null
+          fichier: string | null
+          fournisseur: string | null
+          fourniture_ht: number | null
+          frais_generaux_ht: number | null
+          heures_mo: number | null
+          id: string
+          ligne: number | null
+          marge_nette_ht: number | null
+          mo_ht: number | null
+          montant_ht: number | null
+          numero: string | null
+          ordre: number
+          pu_brouillon_ht: number | null
+          pu_ht: number | null
+          quantite: number | null
+          section: string | null
+          source_id: string
+          sous_traitance_ht: number | null
+          sous_traitant: string | null
+          unite: string | null
+          updated_at: string
+        }
+        Insert: {
+          aleas_ht?: number | null
+          created_at?: string
+          decomposition_origine?: string | null
+          designation: string
+          detail?: string | null
+          dimensions?: Json
+          famille?: string | null
+          feuille?: string | null
+          fichier?: string | null
+          fournisseur?: string | null
+          fourniture_ht?: number | null
+          frais_generaux_ht?: number | null
+          heures_mo?: number | null
+          id?: string
+          ligne?: number | null
+          marge_nette_ht?: number | null
+          mo_ht?: number | null
+          montant_ht?: number | null
+          numero?: string | null
+          ordre?: number
+          pu_brouillon_ht?: number | null
+          pu_ht?: number | null
+          quantite?: number | null
+          section?: string | null
+          source_id: string
+          sous_traitance_ht?: number | null
+          sous_traitant?: string | null
+          unite?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aleas_ht?: number | null
+          created_at?: string
+          decomposition_origine?: string | null
+          designation?: string
+          detail?: string | null
+          dimensions?: Json
+          famille?: string | null
+          feuille?: string | null
+          fichier?: string | null
+          fournisseur?: string | null
+          fourniture_ht?: number | null
+          frais_generaux_ht?: number | null
+          heures_mo?: number | null
+          id?: string
+          ligne?: number | null
+          marge_nette_ht?: number | null
+          mo_ht?: number | null
+          montant_ht?: number | null
+          numero?: string | null
+          ordre?: number
+          pu_brouillon_ht?: number | null
+          pu_ht?: number | null
+          quantite?: number | null
+          section?: string | null
+          source_id?: string
+          sous_traitance_ht?: number | null
+          sous_traitant?: string | null
+          unite?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chiffrage_postes_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "chiffrage_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chiffrage_sources: {
+        Row: {
+          activite: string
+          annee: number | null
+          ao_id: string | null
+          client: string | null
+          code: string
+          created_at: string
+          fichier_decomposition: string | null
+          fichier_reponse: string | null
+          id: string
+          nom: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          activite?: string
+          annee?: number | null
+          ao_id?: string | null
+          client?: string | null
+          code: string
+          created_at?: string
+          fichier_decomposition?: string | null
+          fichier_reponse?: string | null
+          id?: string
+          nom: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activite?: string
+          annee?: number | null
+          ao_id?: string | null
+          client?: string | null
+          code?: string
+          created_at?: string
+          fichier_decomposition?: string | null
+          fichier_reponse?: string | null
+          id?: string
+          nom?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chiffrage_sources_ao_id_fkey"
+            columns: ["ao_id"]
+            isOneToOne: false
+            referencedRelation: "appels_offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           adresse: string | null
@@ -644,21 +898,6 @@ export type Database = {
         }
         Relationships: []
       }
-      commerce_allowed_emails: {
-        Row: {
-          created_at: string
-          email: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-        }
-        Relationships: []
-      }
       commerce_account_manager_emails: {
         Row: {
           created_at: string
@@ -674,27 +913,18 @@ export type Database = {
         }
         Relationships: []
       }
-      commerce_user_module_access: {
+      commerce_allowed_emails: {
         Row: {
           created_at: string
-          id: string
-          module: string
-          role: string
-          user_id: string
+          email: string
         }
         Insert: {
           created_at?: string
-          id?: string
-          module: string
-          role?: string
-          user_id: string
+          email: string
         }
         Update: {
           created_at?: string
-          id?: string
-          module?: string
-          role?: string
-          user_id?: string
+          email?: string
         }
         Relationships: []
       }
@@ -743,6 +973,30 @@ export type Database = {
         }
         Relationships: []
       }
+      commerce_user_module_access: {
+        Row: {
+          created_at: string
+          id: string
+          module: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          module: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          module?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cron_config: {
         Row: {
           created_at: string
@@ -760,6 +1014,1271 @@ export type Database = {
           value?: string
         }
         Relationships: []
+      }
+      daf_allowed_emails: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
+      daf_cca_forecast: {
+        Row: {
+          account_label: string
+          account_number: string
+          amount: number
+          created_at: string
+          id: string
+          kind: string
+          month_key: string
+          notes: string | null
+          societe_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_label: string
+          account_number: string
+          amount?: number
+          created_at?: string
+          id?: string
+          kind: string
+          month_key: string
+          notes?: string | null
+          societe_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string
+          account_number?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          month_key?: string
+          notes?: string | null
+          societe_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_cca_forecast_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_client_payment_terms: {
+        Row: {
+          active: boolean
+          client_name: string
+          created_at: string
+          delay_days: number
+          id: string
+          payment_terms_label: string
+          societe_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          client_name: string
+          created_at?: string
+          delay_days?: number
+          id?: string
+          payment_terms_label?: string
+          societe_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          client_name?: string
+          created_at?: string
+          delay_days?: number
+          id?: string
+          payment_terms_label?: string
+          societe_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_client_payment_terms_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_cost_killing_levers: {
+        Row: {
+          account_label: string | null
+          account_number: string | null
+          active: boolean
+          created_at: string
+          expected_monthly_saving: number
+          id: string
+          lever_name: string
+          notes: string | null
+          reduction_percent: number
+          societe_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_label?: string | null
+          account_number?: string | null
+          active?: boolean
+          created_at?: string
+          expected_monthly_saving?: number
+          id?: string
+          lever_name: string
+          notes?: string | null
+          reduction_percent?: number
+          societe_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string | null
+          account_number?: string | null
+          active?: boolean
+          created_at?: string
+          expected_monthly_saving?: number
+          id?: string
+          lever_name?: string
+          notes?: string | null
+          reduction_percent?: number
+          societe_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_cost_killing_levers_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_deals: {
+        Row: {
+          acquereur_entite_id: string | null
+          cible_entite_id: string
+          complement_prix: number
+          created_at: string
+          date_closing: string | null
+          date_complement_prix: string | null
+          dette_nette_reprise: number | null
+          ebe_reference: number | null
+          frais_acquisition: number
+          id: string
+          mode: string | null
+          nom: string
+          notes: string | null
+          pct_capital_vise: number | null
+          prix: number
+          probabilite: number
+          scenario_id: string | null
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          acquereur_entite_id?: string | null
+          cible_entite_id: string
+          complement_prix?: number
+          created_at?: string
+          date_closing?: string | null
+          date_complement_prix?: string | null
+          dette_nette_reprise?: number | null
+          ebe_reference?: number | null
+          frais_acquisition?: number
+          id?: string
+          mode?: string | null
+          nom: string
+          notes?: string | null
+          pct_capital_vise?: number | null
+          prix?: number
+          probabilite?: number
+          scenario_id?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          acquereur_entite_id?: string | null
+          cible_entite_id?: string
+          complement_prix?: number
+          created_at?: string
+          date_closing?: string | null
+          date_complement_prix?: string | null
+          dette_nette_reprise?: number | null
+          ebe_reference?: number | null
+          frais_acquisition?: number
+          id?: string
+          mode?: string | null
+          nom?: string
+          notes?: string | null
+          pct_capital_vise?: number | null
+          prix?: number
+          probabilite?: number
+          scenario_id?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_deals_acquereur_entite_id_fkey"
+            columns: ["acquereur_entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_deals_cible_entite_id_fkey"
+            columns: ["cible_entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_deals_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "daf_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_entites: {
+        Row: {
+          code: string
+          created_at: string
+          daf_societe_id: string | null
+          date_entree: string | null
+          date_sortie: string | null
+          forme_juridique: string | null
+          id: string
+          nom: string
+          notes: string | null
+          perimetre: string
+          secteur: string | null
+          siren: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          daf_societe_id?: string | null
+          date_entree?: string | null
+          date_sortie?: string | null
+          forme_juridique?: string | null
+          id?: string
+          nom: string
+          notes?: string | null
+          perimetre?: string
+          secteur?: string | null
+          siren?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          daf_societe_id?: string | null
+          date_entree?: string | null
+          date_sortie?: string | null
+          forme_juridique?: string | null
+          id?: string
+          nom?: string
+          notes?: string | null
+          perimetre?: string
+          secteur?: string | null
+          siren?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_entites_daf_societe_id_fkey"
+            columns: ["daf_societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_financements: {
+        Row: {
+          amortissement: string
+          apporteur_entite_id: string | null
+          created_at: string
+          date_versement: string
+          deal_id: string | null
+          differe_mois: number
+          duree_mois: number | null
+          id: string
+          montant: number
+          notes: string | null
+          porteur_entite_id: string
+          preteur: string | null
+          scenario_id: string | null
+          taux_annuel: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amortissement?: string
+          apporteur_entite_id?: string | null
+          created_at?: string
+          date_versement: string
+          deal_id?: string | null
+          differe_mois?: number
+          duree_mois?: number | null
+          id?: string
+          montant: number
+          notes?: string | null
+          porteur_entite_id: string
+          preteur?: string | null
+          scenario_id?: string | null
+          taux_annuel?: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amortissement?: string
+          apporteur_entite_id?: string | null
+          created_at?: string
+          date_versement?: string
+          deal_id?: string | null
+          differe_mois?: number
+          duree_mois?: number | null
+          id?: string
+          montant?: number
+          notes?: string | null
+          porteur_entite_id?: string
+          preteur?: string | null
+          scenario_id?: string | null
+          taux_annuel?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_financements_apporteur_entite_id_fkey"
+            columns: ["apporteur_entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_financements_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "daf_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_financements_porteur_entite_id_fkey"
+            columns: ["porteur_entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_financements_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "daf_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_forecast_opex_lines: {
+        Row: {
+          account_label: string
+          account_number: string
+          amount: number
+          created_at: string
+          id: string
+          month_key: string
+          notes: string | null
+          societe_id: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          account_label: string
+          account_number: string
+          amount?: number
+          created_at?: string
+          id?: string
+          month_key: string
+          notes?: string | null
+          societe_id?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string
+          account_number?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          month_key?: string
+          notes?: string | null
+          societe_id?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_forecast_opex_lines_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_participations: {
+        Row: {
+          created_at: string
+          date_effet: string
+          date_fin: string | null
+          deal_id: string | null
+          detenteur_entite_id: string
+          detenue_entite_id: string
+          id: string
+          nature: string
+          nb_titres: number | null
+          notes: string | null
+          pct_capital: number
+          pct_dividendes: number | null
+          pct_votes: number | null
+          prix_revient: number | null
+          scenario_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_effet: string
+          date_fin?: string | null
+          deal_id?: string | null
+          detenteur_entite_id: string
+          detenue_entite_id: string
+          id?: string
+          nature?: string
+          nb_titres?: number | null
+          notes?: string | null
+          pct_capital: number
+          pct_dividendes?: number | null
+          pct_votes?: number | null
+          prix_revient?: number | null
+          scenario_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_effet?: string
+          date_fin?: string | null
+          deal_id?: string | null
+          detenteur_entite_id?: string
+          detenue_entite_id?: string
+          id?: string
+          nature?: string
+          nb_titres?: number | null
+          notes?: string | null
+          pct_capital?: number
+          pct_dividendes?: number | null
+          pct_votes?: number | null
+          prix_revient?: number | null
+          scenario_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_participations_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "daf_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_participations_detenteur_entite_id_fkey"
+            columns: ["detenteur_entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_participations_detenue_entite_id_fkey"
+            columns: ["detenue_entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_participations_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "daf_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_payroll_assumptions: {
+        Row: {
+          mutuelle_rate: number
+          retraite_rate: number
+          societe_id: string
+          updated_at: string
+          urssaf_rate: number
+        }
+        Insert: {
+          mutuelle_rate?: number
+          retraite_rate?: number
+          societe_id: string
+          updated_at?: string
+          urssaf_rate?: number
+        }
+        Update: {
+          mutuelle_rate?: number
+          retraite_rate?: number
+          societe_id?: string
+          updated_at?: string
+          urssaf_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_payroll_assumptions_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_payroll_lines: {
+        Row: {
+          active: boolean
+          category: string | null
+          created_at: string
+          effective_from: string | null
+          effective_to: string | null
+          full_name: string
+          id: string
+          net_monthly: number
+          sector: string | null
+          societe_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          full_name: string
+          id?: string
+          net_monthly?: number
+          sector?: string | null
+          societe_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          full_name?: string
+          id?: string
+          net_monthly?: number
+          sector?: string | null
+          societe_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_payroll_lines_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_pnl_budget_lines: {
+        Row: {
+          account_label: string
+          account_number: string
+          category: string | null
+          created_at: string
+          id: string
+          month_key: string
+          notes: string | null
+          planned_amount: number
+          societe_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_label: string
+          account_number: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          month_key: string
+          notes?: string | null
+          planned_amount?: number
+          societe_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string
+          account_number?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          month_key?: string
+          notes?: string | null
+          planned_amount?: number
+          societe_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_pnl_budget_lines_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_politiques_remontee: {
+        Row: {
+          beneficiaire_fees_entite_id: string | null
+          created_at: string
+          entite_id: string
+          id: string
+          mois_distribution: number
+          multiple_ebe: number
+          notes: string | null
+          scenario_id: string
+          taux_distribution: number
+          taux_is: number
+          updated_at: string
+        }
+        Insert: {
+          beneficiaire_fees_entite_id?: string | null
+          created_at?: string
+          entite_id: string
+          id?: string
+          mois_distribution?: number
+          multiple_ebe?: number
+          notes?: string | null
+          scenario_id: string
+          taux_distribution?: number
+          taux_is?: number
+          updated_at?: string
+        }
+        Update: {
+          beneficiaire_fees_entite_id?: string | null
+          created_at?: string
+          entite_id?: string
+          id?: string
+          mois_distribution?: number
+          multiple_ebe?: number
+          notes?: string | null
+          scenario_id?: string
+          taux_distribution?: number
+          taux_is?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_politiques_remontee_beneficiaire_fees_entite_id_fkey"
+            columns: ["beneficiaire_fees_entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_politiques_remontee_entite_id_fkey"
+            columns: ["entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_politiques_remontee_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "daf_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_previsions_entites: {
+        Row: {
+          achats_sous_traitance: number
+          autres_charges: number
+          ca: number
+          capex: number
+          created_at: string
+          dotations: number
+          entite_id: string
+          id: string
+          management_fees: number
+          masse_salariale: number
+          month_key: string
+          notes: string | null
+          scenario_id: string
+          updated_at: string
+          variation_bfr: number
+        }
+        Insert: {
+          achats_sous_traitance?: number
+          autres_charges?: number
+          ca?: number
+          capex?: number
+          created_at?: string
+          dotations?: number
+          entite_id: string
+          id?: string
+          management_fees?: number
+          masse_salariale?: number
+          month_key: string
+          notes?: string | null
+          scenario_id: string
+          updated_at?: string
+          variation_bfr?: number
+        }
+        Update: {
+          achats_sous_traitance?: number
+          autres_charges?: number
+          ca?: number
+          capex?: number
+          created_at?: string
+          dotations?: number
+          entite_id?: string
+          id?: string
+          management_fees?: number
+          masse_salariale?: number
+          month_key?: string
+          notes?: string | null
+          scenario_id?: string
+          updated_at?: string
+          variation_bfr?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_previsions_entites_entite_id_fkey"
+            columns: ["entite_id"]
+            isOneToOne: false
+            referencedRelation: "daf_entites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daf_previsions_entites_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "daf_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_recurring_payments: {
+        Row: {
+          account_label: string
+          account_number: string
+          active: boolean
+          amount_ht: number
+          amount_ttc: number
+          amount_tva: number
+          created_at: string
+          ends_on: string | null
+          id: string
+          notes: string | null
+          periodicity: string
+          provider_name: string
+          societe_id: string | null
+          starts_on: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_label: string
+          account_number: string
+          active?: boolean
+          amount_ht?: number
+          amount_ttc?: number
+          amount_tva?: number
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          notes?: string | null
+          periodicity: string
+          provider_name: string
+          societe_id?: string | null
+          starts_on?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string
+          account_number?: string
+          active?: boolean
+          amount_ht?: number
+          amount_ttc?: number
+          amount_tva?: number
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          notes?: string | null
+          periodicity?: string
+          provider_name?: string
+          societe_id?: string | null
+          starts_on?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_recurring_payments_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_scenarios: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      daf_settings: {
+        Row: {
+          alert_treso_threshold: number
+          exercise_end: string | null
+          exercise_start: string | null
+          societe_id: string
+          tva_credit_reported: number
+          tva_standard_rate: number
+          updated_at: string
+        }
+        Insert: {
+          alert_treso_threshold?: number
+          exercise_end?: string | null
+          exercise_start?: string | null
+          societe_id: string
+          tva_credit_reported?: number
+          tva_standard_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          alert_treso_threshold?: number
+          exercise_end?: string | null
+          exercise_start?: string | null
+          societe_id?: string
+          tva_credit_reported?: number
+          tva_standard_rate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_settings_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_societes: {
+        Row: {
+          actif: boolean
+          code: string
+          created_at: string
+          groupe: string
+          id: string
+          nom: string
+          pennylane_key_env: string
+          siren: string | null
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          code: string
+          created_at?: string
+          groupe?: string
+          id?: string
+          nom: string
+          pennylane_key_env: string
+          siren?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          code?: string
+          created_at?: string
+          groupe?: string
+          id?: string
+          nom?: string
+          pennylane_key_env?: string
+          siren?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      daf_store_snapshots: {
+        Row: {
+          snapshot: Json
+          societe_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          snapshot?: Json
+          societe_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          snapshot?: Json
+          societe_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_store_snapshots_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_treso_flux: {
+        Row: {
+          affacture: boolean | null
+          categorie: string | null
+          chantier: string | null
+          created_at: string
+          date_flux: string | null
+          id: string
+          libelle: string
+          montant_ht: number
+          recurrence: string
+          recurrence_fin: string | null
+          recurrence_mois: number | null
+          ref_id: string | null
+          sens: string
+          societe_id: string
+          statut: string | null
+          supprime: boolean
+          taux_tva: number
+          type_client: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          affacture?: boolean | null
+          categorie?: string | null
+          chantier?: string | null
+          created_at?: string
+          date_flux?: string | null
+          id?: string
+          libelle?: string
+          montant_ht?: number
+          recurrence?: string
+          recurrence_fin?: string | null
+          recurrence_mois?: number | null
+          ref_id?: string | null
+          sens?: string
+          societe_id: string
+          statut?: string | null
+          supprime?: boolean
+          taux_tva?: number
+          type_client?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          affacture?: boolean | null
+          categorie?: string | null
+          chantier?: string | null
+          created_at?: string
+          date_flux?: string | null
+          id?: string
+          libelle?: string
+          montant_ht?: number
+          recurrence?: string
+          recurrence_fin?: string | null
+          recurrence_mois?: number | null
+          ref_id?: string | null
+          sens?: string
+          societe_id?: string
+          statut?: string | null
+          supprime?: boolean
+          taux_tva?: number
+          type_client?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_treso_flux_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_treso_frozen_ref: {
+        Row: {
+          amount: number
+          month_key: string
+          societe_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          month_key: string
+          societe_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          month_key?: string
+          societe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_treso_frozen_ref_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_treso_reglages: {
+        Row: {
+          reglages: Json
+          societe_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          reglages?: Json
+          societe_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          reglages?: Json
+          societe_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_treso_reglages_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daf_treso_snapshot: {
+        Row: {
+          closing_balance: number
+          month_key: string
+          notes: string | null
+          opening_balance: number
+          refreshed_at: string
+          societe_id: string
+        }
+        Insert: {
+          closing_balance?: number
+          month_key: string
+          notes?: string | null
+          opening_balance?: number
+          refreshed_at?: string
+          societe_id: string
+        }
+        Update: {
+          closing_balance?: number
+          month_key?: string
+          notes?: string | null
+          opening_balance?: number
+          refreshed_at?: string
+          societe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daf_treso_snapshot_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_cache_bank_summary: {
+        Row: {
+          payload: Json
+          refreshed_at: string | null
+          societe_id: string
+          updated_at: string
+        }
+        Insert: {
+          payload?: Json
+          refreshed_at?: string | null
+          societe_id: string
+          updated_at?: string
+        }
+        Update: {
+          payload?: Json
+          refreshed_at?: string | null
+          societe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_cache_bank_summary_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_cache_ca_projete: {
+        Row: {
+          refreshed_at: string | null
+          rows: Json
+          societe_id: string
+          updated_at: string
+        }
+        Insert: {
+          refreshed_at?: string | null
+          rows?: Json
+          societe_id: string
+          updated_at?: string
+        }
+        Update: {
+          refreshed_at?: string | null
+          rows?: Json
+          societe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_cache_ca_projete_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_cache_chantiers: {
+        Row: {
+          refreshed_at: string | null
+          rows: Json
+          societe_id: string
+          updated_at: string
+        }
+        Insert: {
+          refreshed_at?: string | null
+          rows?: Json
+          societe_id: string
+          updated_at?: string
+        }
+        Update: {
+          refreshed_at?: string | null
+          rows?: Json
+          societe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_cache_chantiers_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_cache_client_invoices: {
+        Row: {
+          customers_by_id: Json
+          invoices: Json
+          refreshed_at: string | null
+          societe_id: string
+          updated_at: string
+        }
+        Insert: {
+          customers_by_id?: Json
+          invoices?: Json
+          refreshed_at?: string | null
+          societe_id: string
+          updated_at?: string
+        }
+        Update: {
+          customers_by_id?: Json
+          invoices?: Json
+          refreshed_at?: string | null
+          societe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_cache_client_invoices_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       erp_cache_clients: {
         Row: {
@@ -824,11 +2343,41 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_cache_supplier_invoices: {
+        Row: {
+          invoices: Json
+          refreshed_at: string | null
+          societe_id: string
+          updated_at: string
+        }
+        Insert: {
+          invoices?: Json
+          refreshed_at?: string | null
+          societe_id: string
+          updated_at?: string
+        }
+        Update: {
+          invoices?: Json
+          refreshed_at?: string | null
+          societe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_cache_supplier_invoices_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: true
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       erp_cache_sync_runs: {
         Row: {
           created_at: string
           details: Json
           id: string
+          societe_id: string | null
           source: string
           status: string
         }
@@ -836,6 +2385,7 @@ export type Database = {
           created_at?: string
           details?: Json
           id?: string
+          societe_id?: string | null
           source: string
           status: string
         }
@@ -843,10 +2393,51 @@ export type Database = {
           created_at?: string
           details?: Json
           id?: string
+          societe_id?: string | null
           source?: string
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "erp_cache_sync_runs_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_cache_trial_balance_months: {
+        Row: {
+          error: string | null
+          month_key: string
+          refreshed_at: string
+          rows: Json
+          societe_id: string
+        }
+        Insert: {
+          error?: string | null
+          month_key: string
+          refreshed_at?: string
+          rows?: Json
+          societe_id: string
+        }
+        Update: {
+          error?: string | null
+          month_key?: string
+          refreshed_at?: string
+          rows?: Json
+          societe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_cache_trial_balance_months_societe_id_fkey"
+            columns: ["societe_id"]
+            isOneToOne: false
+            referencedRelation: "daf_societes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fournisseurs_commerciaux: {
         Row: {
@@ -935,10 +2526,11 @@ export type Database = {
           contacts_json: Json
           gestion: string | null
           gestion_voirie: string | null
-          porte_entree: string | null
           notes: string
+          porte_entree: string | null
           prestataire: string
-          prestataire_voirie: string | null
+          prestataire_voirie: string
+          responsables: string[]
           status: string
           updated_at: string
           updated_by: string | null
@@ -949,10 +2541,11 @@ export type Database = {
           contacts_json?: Json
           gestion?: string | null
           gestion_voirie?: string | null
-          porte_entree?: string | null
           notes?: string
+          porte_entree?: string | null
           prestataire?: string
-          prestataire_voirie?: string | null
+          prestataire_voirie?: string
+          responsables?: string[]
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -963,10 +2556,11 @@ export type Database = {
           contacts_json?: Json
           gestion?: string | null
           gestion_voirie?: string | null
-          porte_entree?: string | null
           notes?: string
+          porte_entree?: string | null
           prestataire?: string
-          prestataire_voirie?: string | null
+          prestataire_voirie?: string
+          responsables?: string[]
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -1012,6 +2606,51 @@ export type Database = {
         }
         Relationships: []
       }
+      qualification_profil: {
+        Row: {
+          actif: boolean
+          certifications_detenues: string[]
+          certifications_manquantes: string[]
+          departements: string[]
+          entite: string
+          hors_perimetre: string[]
+          id: string
+          metiers: string[]
+          montant_max: number | null
+          montant_min: number | null
+          regles: string
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          certifications_detenues?: string[]
+          certifications_manquantes?: string[]
+          departements?: string[]
+          entite: string
+          hors_perimetre?: string[]
+          id?: string
+          metiers?: string[]
+          montant_max?: number | null
+          montant_min?: number | null
+          regles?: string
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          certifications_detenues?: string[]
+          certifications_manquantes?: string[]
+          departements?: string[]
+          entite?: string
+          hors_perimetre?: string[]
+          id?: string
+          metiers?: string[]
+          montant_max?: number | null
+          montant_min?: number | null
+          regles?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       societes_exploitation: {
         Row: {
           actif: boolean
@@ -1050,6 +2689,7 @@ export type Database = {
       }
       veille_annonces: {
         Row: {
+          acheteur: string | null
           analyse_at: string | null
           analyse_dce: Json | null
           analyse_erreur: string | null
@@ -1058,29 +2698,49 @@ export type Database = {
           analyse_run_url: string | null
           analyse_statut: string
           analyse_tentatives: number
-          avis_indices: Json
-          dce_fichiers: Json
-          plateforme: string | null
-          url_dce: string | null
-          acheteur: string | null
           ao_id: string | null
+          avis_indices: Json
+          avis_resume: Json | null
+          avis_resume_at: string | null
+          certif_manquante: boolean
           cpv: string | null
           created_at: string
           date_limite: string | null
           date_parution: string | null
+          dce_fichiers: Json
+          dce_url: string | null
+          decision: string | null
           departement: string | null
           domaines: string[]
+          entite: string | null
+          exigences: Json
           id: string
+          interet_relationnel: boolean
           intitule: string
           lien: string | null
+          motif_ignore: string | null
+          motif_ignore_note: string | null
+          plateforme: string | null
+          points_rouges: string[]
+          qualif_error: string | null
+          qualif_model: string | null
+          qualif_statut: string
+          qualif_usage: Json | null
+          qualified_at: string | null
+          raisons: string[]
           raw: Json
+          resume: string | null
+          score: number | null
           secteurs: string[]
           source: string
           source_id: string
           statut: string
+          type_marche: string | null
           updated_at: string
+          url_dce: string | null
         }
         Insert: {
+          acheteur?: string | null
           analyse_at?: string | null
           analyse_dce?: Json | null
           analyse_erreur?: string | null
@@ -1089,29 +2749,49 @@ export type Database = {
           analyse_run_url?: string | null
           analyse_statut?: string
           analyse_tentatives?: number
-          avis_indices?: Json
-          dce_fichiers?: Json
-          plateforme?: string | null
-          url_dce?: string | null
-          acheteur?: string | null
           ao_id?: string | null
+          avis_indices?: Json
+          avis_resume?: Json | null
+          avis_resume_at?: string | null
+          certif_manquante?: boolean
           cpv?: string | null
           created_at?: string
           date_limite?: string | null
           date_parution?: string | null
+          dce_fichiers?: Json
+          dce_url?: string | null
+          decision?: string | null
           departement?: string | null
           domaines?: string[]
+          entite?: string | null
+          exigences?: Json
           id?: string
+          interet_relationnel?: boolean
           intitule?: string
           lien?: string | null
+          motif_ignore?: string | null
+          motif_ignore_note?: string | null
+          plateforme?: string | null
+          points_rouges?: string[]
+          qualif_error?: string | null
+          qualif_model?: string | null
+          qualif_statut?: string
+          qualif_usage?: Json | null
+          qualified_at?: string | null
+          raisons?: string[]
           raw?: Json
+          resume?: string | null
+          score?: number | null
           secteurs?: string[]
           source?: string
           source_id: string
           statut?: string
+          type_marche?: string | null
           updated_at?: string
+          url_dce?: string | null
         }
         Update: {
+          acheteur?: string | null
           analyse_at?: string | null
           analyse_dce?: Json | null
           analyse_erreur?: string | null
@@ -1120,27 +2800,46 @@ export type Database = {
           analyse_run_url?: string | null
           analyse_statut?: string
           analyse_tentatives?: number
-          avis_indices?: Json
-          dce_fichiers?: Json
-          plateforme?: string | null
-          url_dce?: string | null
-          acheteur?: string | null
           ao_id?: string | null
+          avis_indices?: Json
+          avis_resume?: Json | null
+          avis_resume_at?: string | null
+          certif_manquante?: boolean
           cpv?: string | null
           created_at?: string
           date_limite?: string | null
           date_parution?: string | null
+          dce_fichiers?: Json
+          dce_url?: string | null
+          decision?: string | null
           departement?: string | null
           domaines?: string[]
+          entite?: string | null
+          exigences?: Json
           id?: string
+          interet_relationnel?: boolean
           intitule?: string
           lien?: string | null
+          motif_ignore?: string | null
+          motif_ignore_note?: string | null
+          plateforme?: string | null
+          points_rouges?: string[]
+          qualif_error?: string | null
+          qualif_model?: string | null
+          qualif_statut?: string
+          qualif_usage?: Json | null
+          qualified_at?: string | null
+          raisons?: string[]
           raw?: Json
+          resume?: string | null
+          score?: number | null
           secteurs?: string[]
           source?: string
           source_id?: string
           statut?: string
+          type_marche?: string | null
           updated_at?: string
+          url_dce?: string | null
         }
         Relationships: [
           {
@@ -1214,6 +2913,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      commerce_apply_module_policies: {
+        Args: { p_module: string; p_table: string }
+        Returns: undefined
+      }
       commerce_can_edit_module: {
         Args: { _module: string; _user_id: string }
         Returns: boolean
@@ -1248,17 +2951,90 @@ export type Database = {
           allowed_at: string
           email: string
           has_auth_user: boolean
-          last_sign_in_at: string | null
+          last_sign_in_at: string
           module_roles: Json
-          nom: string | null
-          prenom: string | null
-          telephone: string | null
-          user_id: string | null
+          nom: string
+          prenom: string
+          telephone: string
+          user_id: string
         }[]
       }
       commerce_set_user_module_roles: {
         Args: { p_module_roles: Json; p_user_id: string }
         Returns: undefined
+      }
+      daf_detention_transparente: {
+        Args: { p_date: string; p_racine: string; p_scenario: string }
+        Returns: {
+          chemins: string
+          controle: boolean
+          entite_id: string
+          niveau_min: number
+          pct_capital: number
+          pct_dividendes: number
+        }[]
+      }
+      daf_echeancier: {
+        Args: { p_scenario: string }
+        Returns: {
+          capital: number
+          crd: number
+          deal_id: string
+          financement_id: string
+          interets: number
+          month_key: string
+          porteur_entite_id: string
+          type: string
+        }[]
+      }
+      daf_flux_groupe: {
+        Args: { p_debut?: string; p_fin?: string; p_scenario: string }
+        Returns: {
+          categorie: string
+          contrepartie_entite_id: string
+          deal_id: string
+          entite_id: string
+          libelle: string
+          montant: number
+          montant_pondere: number
+          month_key: string
+        }[]
+      }
+      daf_has_access: { Args: never; Returns: boolean }
+      daf_positions: {
+        Args: { p_date?: string; p_scenario: string }
+        Returns: {
+          detenteur_entite_id: string
+          detenue_entite_id: string
+          nature: string
+          participation_id: string
+          pct_capital: number
+          pct_dividendes: number
+          pct_votes: number
+          prix_revient: number
+          source: string
+        }[]
+      }
+      daf_valeur_positions: {
+        Args: { p_date: string; p_racine: string; p_scenario: string }
+        Returns: {
+          chemins: string
+          code: string
+          controle: boolean
+          dette_financiere: number
+          ebe_12m: number
+          entite_id: string
+          multiple_ebe: number
+          niveau: number
+          nom: string
+          pct_capital_transparent: number
+          pct_dividendes_transparent: number
+          perimetre: string
+          prix_revient_direct: number
+          valeur_entreprise: number
+          valeur_quote_part: number
+          valeur_titres_100: number
+        }[]
       }
       get_ao_comments: {
         Args: { p_ao_id: string; p_limit?: number }
