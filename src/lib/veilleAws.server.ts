@@ -17,7 +17,7 @@ import type { CollecteAtexoResultat } from "@/lib/veilleAtexo.server";
 
 const BASE = "https://www.marches-publics.info";
 const PAUSE_MS = 300;
-const MAX_PAGES_PAR_ONGLET = 10;
+const MAX_PAGES_PAR_ONGLET = 40;
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

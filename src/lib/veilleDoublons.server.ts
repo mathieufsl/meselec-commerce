@@ -25,11 +25,42 @@ export function titreNormalise(t: string | null | undefined): string {
     .trim();
 }
 
+/** Mots trop courants dans les intitulés pour distinguer deux marchés. */
+const MOTS_GENERIQUES = new Set(
+  (
+    "travaux marche marches public publics accord cadre accords relatif relative relatifs " +
+    "relatives presente consultation objet pour dans avec sans entre leur leurs mission " +
+    "missions prestation prestations fourniture fournitures service services realisation " +
+    "entretien maintenance lots lot commune ville departement site sites batiment batiments " +
+    "projet operation operations ensemble differents differentes generale general cette " +
+    "creation construction renovation rehabilitation amenagement amenagements locaux"
+  ).split(" "),
+);
+
+function motsSignificatifs(t: string | null | undefined): Set<string> {
+  return new Set(
+    titreNormalise(t)
+      .split(" ")
+      .filter((m) => m.length >= 4 && !MOTS_GENERIQUES.has(m)),
+  );
+}
+
 export function memeTitre(a: string | null | undefined, b: string | null | undefined): boolean {
   const x = titreNormalise(a);
   const y = titreNormalise(b);
   if (x.length < 15 || y.length < 15) return x === y && x.length > 0;
-  return x === y || x.includes(y) || y.includes(x);
+  if (x === y || x.includes(y) || y.includes(x)) return true;
+  // Intitulés rédigés différemment selon la source (« Extension de l'administration
+  // de la maison d'arrêt d'Osny-Pontoise SPIP 95 » / « … travaux d'extension de
+  // l'administration du centre pénitentiaire d'Osny-Pontoise … SPIP 95 ») : mêmes mots
+  // distinctifs. Utilisé seulement à date limite identique.
+  const mx = motsSignificatifs(a);
+  const my = motsSignificatifs(b);
+  const petit = Math.min(mx.size, my.size);
+  if (petit < 3) return false;
+  let communs = 0;
+  for (const m of mx) if (my.has(m)) communs += 1;
+  return communs >= 3 && communs / petit >= 0.6;
 }
 
 export type CandidatDoublon = {

@@ -22,6 +22,20 @@ describe("doublons de veille", () => {
       ),
     ).toBe(true);
     expect(memeTitre("Travaux de voirie", "Travaux d'assainissement")).toBe(false);
+    // Même AO, intitulés rédigés différemment (BOAMP / PLACE).
+    expect(
+      memeTitre(
+        "EXTENSION DE L'ADMINISTRATION DE LA MAISON D'ARRET D'OSNY-PONTOISE SPIP 95",
+        "La présente consultation a pour objet des travaux d'extension de l'administration du centre pénitentiaire d'Osny-Pontoise (Construction d'un étage R+2 pour la création des locaux du SPIP 95).",
+      ),
+    ).toBe(true);
+    // Deux marchés différents aux intitulés génériques proches.
+    expect(
+      memeTitre(
+        "Accord-cadre de travaux d'entretien de voirie de la commune de Morangis",
+        "Accord-cadre de travaux d'entretien des bâtiments de la commune de Chatou",
+      ),
+    ).toBe(false);
   });
 
   it("filtre la zone sur des codes département exacts", () => {

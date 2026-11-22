@@ -77,7 +77,7 @@ export const MOTS_RECHERCHE_ATEXO = [
 
 const UA = "rms-commerce-veille/1.0 (veille appels d'offres)";
 const PAUSE_MS = 400;
-const MAX_PAGES_PAR_MOT = 8;
+const MAX_PAGES_PAR_MOT = 40;
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
