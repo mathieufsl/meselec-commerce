@@ -49,7 +49,7 @@ function formulaire(mot: string, zone: string[] | null) {
   return new URLSearchParams(champs);
 }
 
-async function chercher(mot: string, zone: string[] | null): Promise<ConsultationAws[]> {
+export async function chercherAws(mot: string, zone: string[] | null): Promise<ConsultationAws[]> {
   const lire = sessionHttp();
   await lire(`${BASE}/Annonces/rechercher`);
   const html = await lire(`${BASE}/Annonces/lister`, formulaire(mot, zone));
@@ -94,7 +94,7 @@ export async function collecterAws(
 
   for (const mot of MOTS_RECHERCHE_ATEXO) {
     try {
-      const trouvees = await chercher(mot, zone);
+      const trouvees = await chercherAws(mot, zone);
       res.lues += trouvees.length;
       for (const c of trouvees) {
         if (c.date_limite && c.date_limite < (limiteDu ?? aujourdhui)) continue;
@@ -102,7 +102,6 @@ export async function collecterAws(
         if (parutionDu && (!c.date_parution || c.date_parution < parutionDu)) continue;
         if (parutionAu && (!c.date_parution || c.date_parution > parutionAu)) continue;
         if (c.departement && !dansZone(c.departement, zone)) continue;
-        if (domainesDetectes("", c.intitule).length === 0) continue;
         candidates.set(c.id, c);
       }
     } catch (e) {
@@ -111,7 +110,7 @@ export async function collecterAws(
     await pause(PAUSE_MS);
   }
   res.retenues = candidates.size;
-  journal(`AWS : ${res.lues} lues, ${res.retenues} dans la zone et nos métiers`);
+  journal(`AWS : ${res.lues} lues, ${res.retenues} ouvertes dans la zone`);
 
   const lireAvis = sessionHttp();
   for (const [sourceId, c] of candidates) {
@@ -136,7 +135,7 @@ export async function collecterAws(
       const { texte } = texteDeLaPage(await lireAvis(c.lien));
       const lu = extraireSansIa(texte);
       const cpv = lu.cpv.join(" ") || null;
-      const domaines = domainesDetectes(cpv ?? "", c.intitule);
+      const domaines = domainesDetectes(cpv ?? "", `${c.intitule} ${texte.slice(0, 4000)}`);
       const { data, error } = await client
         .from("veille_annonces")
         .insert({

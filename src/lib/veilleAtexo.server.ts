@@ -62,6 +62,17 @@ export const MOTS_RECHERCHE_ATEXO = [
   "eau potable",
   "canalisation",
   "raccordement",
+  "signalisation",
+  "feux tricolores",
+  "irve",
+  "borne de recharge",
+  "courant faible",
+  "electrotechnique",
+  "espaces publics",
+  "chaussee",
+  "trottoir",
+  "enrobe",
+  "eaux pluviales",
 ];
 
 const UA = "rms-commerce-veille/1.0 (veille appels d'offres)";
@@ -101,7 +112,7 @@ function decoderAttribut(v: string) {
 }
 
 /** Toutes les consultations d'une recherche par mot-clé (pages suivantes comprises). */
-async function chercher(p: PlateformeAtexo, mot: string): Promise<ConsultationAtexo[]> {
+export async function chercher(p: PlateformeAtexo, mot: string): Promise<ConsultationAtexo[]> {
   const lire = sessionHttp();
   let html = await lire(
     `${p.base}/?page=Entreprise.EntrepriseAdvancedSearch&searchAnnCons&keyWord=${encodeURIComponent(mot)}`,
@@ -195,7 +206,8 @@ export async function collecterAtexo(
         if (parutionAu && (!c.date_parution || c.date_parution > parutionAu)) continue;
         // Zone : départements du lieu d'exécution ; sans lieu connu, on vérifie sur la fiche.
         if (c.departements.length && !dansLaZone(c.departements)) continue;
-        if (domainesDetectes("", `${c.intitule} ${c.objet ?? ""}`).length === 0) continue;
+        // Pas de filtre métier sur l'intitulé : la recherche a déjà trouvé un de nos
+        // mots ; la fiche (CPV, texte) puis la qualification IA font le tri.
         candidates.set(`${c.org}-${c.id}`, c);
       }
     } catch (e) {
@@ -204,7 +216,7 @@ export async function collecterAtexo(
     await pause(PAUSE_MS);
   }
   res.retenues = candidates.size;
-  journal(`${plateforme.libelle} : ${res.lues} lues, ${res.retenues} dans la zone et nos métiers`);
+  journal(`${plateforme.libelle} : ${res.lues} lues, ${res.retenues} ouvertes dans la zone`);
 
   const lireFiche = sessionHttp();
   for (const [sourceId, c] of candidates) {
@@ -219,7 +231,10 @@ export async function collecterAtexo(
         if (!dansLaZone(departements)) continue;
       }
       const cpv = fiche.cpv.join(" ") || null;
-      const domaines = domainesDetectes(cpv ?? "", `${c.intitule} ${c.objet ?? ""}`);
+      const domaines = domainesDetectes(
+        cpv ?? "",
+        `${c.intitule} ${c.objet ?? ""} ${fiche.texte.slice(0, 4000)}`,
+      );
       const acheteur = c.organisme?.replace(/\s*\(\d{4,5}\s*-[^)]*\)\s*$/, "") || null;
       const { data, error } = await client
         .from("veille_annonces")

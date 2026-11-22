@@ -42,12 +42,39 @@ export const DEPARTEMENTS_IDF = ["75", "77", "78", "91", "92", "93", "94", "95"]
 /** Zone de veille : Île-de-France élargie à l'Oise (60) et l'Eure (27). */
 export const DEPARTEMENTS_VEILLE = [...DEPARTEMENTS_IDF, "60", "27"];
 
+/**
+ * Codes CPV surveillés par métier. On prend de préférence les codes « parents » :
+ * la comparaison se fait sur le début du code (45316000 attrape 45316110,
+ * 45316212…). Le CPV seul ne suffit pas (beaucoup d'avis portent 45000000) :
+ * les mots-clés ci-dessous complètent, et la qualification IA trie ensuite.
+ */
 export const CPV_PREFIXES: Record<VeilleDomaine, string[]> = {
-  "Éclairage public": ["45316110", "34928500", "50232100"],
-  Illuminations: ["45316100", "51110000"],
-  "Réseaux électriques": ["45231400", "45232210", "45314300"],
-  "CFO / installations électriques": ["45310000", "45311000", "45315000"],
-  "VRD / voirie": ["45233140", "45232000", "45112500", "45231000"],
+  "Éclairage public": [
+    "45316000", // installation de systèmes d'éclairage et de signalisation (dont 45316110, 45316212)
+    "50232000", // entretien de l'éclairage public et des feux de signalisation
+    "34928500", // matériel d'éclairage public (candélabres, lanternes)
+    "31527200", // éclairage extérieur (fourniture)
+  ],
+  Illuminations: [
+    "45316100", // installation de matériel d'éclairage extérieur
+    "31522000", // guirlandes lumineuses
+    "51110000", // installation de matériel électrique
+  ],
+  "Réseaux électriques": [
+    "45231400", // construction de lignes électriques
+    "45232200", // ouvrages connexes pour lignes électriques (dont 45232210)
+    "45314300", // infrastructures de câblage
+  ],
+  "CFO / installations électriques": [
+    "45310000", // travaux d'équipement électrique (dont 45311000, 45315000, 45317000)
+    "31681500", // équipement de recharge (bornes IRVE)
+  ],
+  "VRD / voirie": [
+    "45233000", // construction, fondation et surface de routes (dont 45233140, 45233221)
+    "45232000", // ouvrages connexes (canalisations, réseaux)
+    "45112500", // terrassement
+    "45231000", // canalisations, lignes de communication et lignes électriques
+  ],
   Hydraulique: ["45232150", "45232400", "45232420", "45252100", "45240000"],
   "Fournitures éclairage / électrique": [
     "31500000",
@@ -59,47 +86,105 @@ export const CPV_PREFIXES: Record<VeilleDomaine, string[]> = {
   ],
 };
 
+/**
+ * Mots-clés cherchés par mot entier dans l'intitulé (et le descripteur), sans
+ * accents. Volontairement larges : mieux vaut un avis de trop, que la
+ * qualification IA classe « hors sujet », qu'un AO raté.
+ */
 export const MOTS_CLES: Record<VeilleDomaine, string[]> = {
   "Éclairage public": [
     "eclairage public",
+    "eclairage",
+    "eclairages",
     "candelabre",
+    "candelabres",
     "mat d'eclairage",
     "point lumineux",
+    "points lumineux",
     "luminaire",
+    "luminaires",
     "led",
+    "signalisation lumineuse",
+    "signalisation tricolore",
+    "feux tricolores",
+    "feux de signalisation",
+    "feux de circulation",
   ],
-  Illuminations: ["illumination", "eclairage festif", "decoration lumineuse", "guirlande"],
+  Illuminations: [
+    "illumination",
+    "illuminations",
+    "eclairage festif",
+    "decoration lumineuse",
+    "decorations lumineuses",
+    "guirlande",
+    "guirlandes",
+    "motifs lumineux",
+  ],
   "Réseaux électriques": [
     "reseau electrique",
+    "reseaux electriques",
     "raccordement electrique",
     "raccordement enedis",
     "branchement electrique",
     "enedis",
     "ligne aerienne",
+    "lignes aeriennes",
     "poste transformation",
+    "poste de transformation",
     "basse tension",
     "haute tension",
+    "hta",
+    "enfouissement",
+    "enfouissement des reseaux",
   ],
   "CFO / installations électriques": [
     "courant fort",
+    "courants forts",
+    "courant faible",
+    "courants faibles",
     "installation electrique",
+    "installations electriques",
     "cfo",
+    "cfa",
     "distribution electrique",
     "tableau electrique",
+    "electricite",
+    "electrique",
+    "electriques",
+    "electrotechnique",
+    "eclairage de securite",
+    "baes",
+    "irve",
+    "borne de recharge",
+    "bornes de recharge",
   ],
   "VRD / voirie": [
     "vrd",
     "voirie",
+    "voiries",
     "terrassement",
+    "terrassements",
     "tranchee",
+    "tranchees",
     "genie civil",
     "canalisation",
+    "canalisations",
     "reseaux secs",
+    "reseaux divers",
     "amenagement urbain",
+    "espaces publics",
+    "espace public",
+    "chaussee",
+    "chaussees",
+    "trottoir",
+    "trottoirs",
+    "marquage routier",
+    "enrobes",
   ],
   Hydraulique: [
     "aep",
     "alimentation en eau potable",
+    "eau potable",
     "assainissement",
     "epuration",
     "step",
@@ -110,6 +195,7 @@ export const MOTS_CLES: Record<VeilleDomaine, string[]> = {
     "bassin d'orage",
     "dessalement",
     "eaux usees",
+    "eaux pluviales",
   ],
   "Fournitures éclairage / électrique": [
     "fourniture de luminaires",

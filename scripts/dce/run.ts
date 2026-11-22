@@ -325,8 +325,8 @@ async function traiter(annonce: Annonce, navigateur: Browser | null) {
 
 async function main() {
   if (process.env["VEILLE_DCE_SANS_COLLECTE"] !== "1" && !annonceCiblee) {
-    // Veille manuelle lancée depuis l'application : sources et critères choisis
-    // (le BOAMP est alors déjà lu par l'application).
+    // Veille manuelle : sources et critères choisis. Depuis l'application, le BOAMP
+    // est déjà lu par le serveur ; il ne passe ici que s'il est dans les sources.
     let parametres: (OptionsCollecte & { sources?: string[] }) | null = null;
     try {
       parametres = process.env["VEILLE_PARAMETRES"]
@@ -337,15 +337,18 @@ async function main() {
     }
     const { sources, ...options } = parametres ?? {};
     const ajoutees: string[] = [];
-    if (!parametres) {
-      const collecte = await collecterVeille(supabase, { fenetreJours: 3, idfSeulement: true });
+    if (parametres) console.log("Veille manuelle :", JSON.stringify(parametres));
+    if (!parametres || sources?.includes("BOAMP")) {
+      const collecte = await collecterVeille(
+        supabase,
+        parametres ? options : { fenetreJours: 3, idfSeulement: true },
+      );
+      if (collecte.ok) ajoutees.push(...collecte.idsNouvelles);
       console.log(
         collecte.ok
           ? `Collecte BOAMP : ${collecte.nouvelles} nouvelle(s), ${collecte.retenues} retenue(s) / ${collecte.collectees}`
           : `Collecte BOAMP en échec : ${collecte.error}`,
       );
-    } else {
-      console.log("Veille manuelle :", JSON.stringify(parametres));
     }
     // Plateformes Atexo (Maximilien, PLACE) : les MAPA qui ne passent pas au BOAMP.
     for (const p of PLATEFORMES_ATEXO) {
@@ -370,10 +373,19 @@ async function main() {
         console.error(`Collecte AWS en échec : ${(e as Error).message}`);
       }
     }
-    // Qualification IA tout de suite des annonces ajoutées depuis les plateformes.
-    if (ajoutees.length) {
+    // Qualification IA tout de suite : annonces ajoutées, et celles des plateformes
+    // encore en attente (ajoutées avant que le robot ne qualifie lui-même).
+    const { data: enAttente } = await supabase
+      .from("veille_annonces")
+      .select("id")
+      .in("source", ["MAXIMILIEN", "PLACE", "AWS"])
+      .eq("qualif_statut", "a_qualifier")
+      .limit(500);
+    const aQualifier = [...new Set([...ajoutees, ...(enAttente ?? []).map((r) => r.id as string)])];
+    for (let i = 0; i < aQualifier.length; i += 200) {
+      const lot = aQualifier.slice(i, i + 200);
       try {
-        const q = await qualifierAnnonces(supabase, { ids: ajoutees, limit: 200 });
+        const q = await qualifierAnnonces(supabase, { ids: lot, limit: 200 });
         console.log(
           `Qualification : ${q.qualifiees} / ${q.traitees}${q.ok ? "" : ` (${q.error})`}`,
         );

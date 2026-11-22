@@ -29,10 +29,13 @@ describe("domainesDetectes", () => {
     );
   });
 
-  it("compare le CPV au préfixe défini (pas aux 5 premiers chiffres)", () => {
-    // 45316000 (installation d'éclairage générique) ne doit pas valoir 45316110 (EP).
-    expect(domainesDetectes("45316000", "Travaux")).not.toContain("Éclairage public");
+  it("compare le CPV au préfixe défini (codes parents)", () => {
+    // Codes parents : 45316000 couvre l'éclairage et la signalisation (45316110, 45316212…).
+    expect(domainesDetectes("45316000", "Travaux")).toContain("Éclairage public");
+    expect(domainesDetectes("45316212", "Travaux")).toContain("Éclairage public");
     expect(domainesDetectes("45316110", "Travaux")).toContain("Éclairage public");
+    // Mais pas un code voisin hors du parent.
+    expect(domainesDetectes("45317000", "Travaux")).not.toContain("Éclairage public");
     expect(domainesDetectes("31527200", "Lot unique")).toContain(
       "Fournitures éclairage / électrique",
     );
