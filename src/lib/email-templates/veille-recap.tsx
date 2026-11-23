@@ -14,6 +14,7 @@ import {
 import type { TemplateEntry } from './registry'
 
 export interface VeilleRecapAnnonce {
+  source?: string | null
   intitule: string
   acheteur: string | null
   departement: string | null
@@ -42,6 +43,27 @@ interface Props {
   collectees?: number
   retenues?: number
   appUrl?: string
+}
+
+/** Au-delà, le mail renvoie vers l'écran Veille plutôt que de tout lister. */
+const MAX_A_CREUSER = 10
+const MAX_NON_QUALIFIEES = 10
+
+const LIBELLES_SOURCE: Record<string, string> = {
+  BOAMP: 'BOAMP',
+  MAXIMILIEN: 'Maximilien',
+  PLACE: 'PLACE',
+  AWS: 'AWS',
+  MANUEL: 'ajout manuel',
+}
+
+function parSource(annonces: VeilleRecapAnnonce[]): string {
+  const n = new Map<string, number>()
+  for (const a of annonces) {
+    const s = LIBELLES_SOURCE[a.source ?? ''] ?? a.source ?? 'autre'
+    n.set(s, (n.get(s) ?? 0) + 1)
+  }
+  return [...n].sort((x, y) => y[1] - x[1]).map(([s, c]) => `${s} ${c}`).join(', ')
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -126,8 +148,6 @@ const Email = ({
   date,
   annonces = [],
   qualifIndisponible = false,
-  collectees = 0,
-  retenues = 0,
   appUrl,
 }: Props) => {
   const { prioritaires, aCreuser, nonQualifiees, horsSujet } = trierAnnoncesRecap(annonces)
@@ -145,11 +165,11 @@ const Email = ({
           <Heading style={title}>Veille appels d'offres</Heading>
           <Text style={subtitle}>Récapitulatif quotidien — {date ?? "aujourd\u2019hui"}</Text>
 
-          {qualifIndisponible ? (
+          {qualifIndisponible && nonQualifiees.length > 0 ? (
             <Section style={warnBox}>
               <Text style={warnText}>
-                Qualification IA indisponible aujourd'hui : les annonces ci-dessous ne sont pas
-                triées.
+                Qualification IA indisponible ce matin : {nonQualifiees.length} annonce(s) ne
+                sont pas encore triées. Elles le seront au prochain passage.
               </Text>
             </Section>
           ) : null}
@@ -157,8 +177,9 @@ const Email = ({
           <Section style={statsBox}>
             <Text style={statsText}>
               <strong>{prioritaires.length}</strong> prioritaire(s) ·{' '}
-              <strong>{aCreuser.length}</strong> à creuser · {annonces.length} nouvelle(s) ·{' '}
-              {retenues} dans le filtre sur {collectees} collectées (BOAMP)
+              <strong>{aCreuser.length}</strong> à creuser · {annonces.length} nouvelle(s) à
+              trier depuis hier{annonces.length > 0 ? ` (${parSource(annonces)})` : ''}
+              {horsSujet.length > 0 ? `, dont ${horsSujet.length} hors sujet` : ''}
             </Text>
           </Section>
 
@@ -175,16 +196,35 @@ const Email = ({
           ))}
 
           {aCreuser.length > 0 ? <Heading as="h2" style={h2}>À creuser</Heading> : null}
-          {aCreuser.map((a, i) => (
+          {aCreuser.slice(0, MAX_A_CREUSER).map((a, i) => (
             <Carte key={`c${i}`} a={a} />
           ))}
+          {aCreuser.length > MAX_A_CREUSER ? (
+            <Text style={cardMeta}>
+              + {aCreuser.length - MAX_A_CREUSER} autre(s) à creuser (scores plus bas)
+              {appUrl ? (
+                <>
+                  {' — '}
+                  <Link href={appUrl} style={cardLink}>
+                    voir dans l'écran Veille
+                  </Link>
+                </>
+              ) : null}
+            </Text>
+          ) : null}
 
           {nonQualifiees.length > 0 ? (
             <Heading as="h2" style={h2}>Non qualifiées</Heading>
           ) : null}
-          {nonQualifiees.slice(0, 20).map((a, i) => (
+          {nonQualifiees.slice(0, MAX_NON_QUALIFIEES).map((a, i) => (
             <Carte key={`n${i}`} a={a} />
           ))}
+          {nonQualifiees.length > MAX_NON_QUALIFIEES ? (
+            <Text style={cardMeta}>
+              + {nonQualifiees.length - MAX_NON_QUALIFIEES} autre(s) non qualifiée(s) dans l'écran
+              Veille
+            </Text>
+          ) : null}
 
           {horsSujet.length > 0 ? (
             <Text style={cardMeta}>
@@ -210,7 +250,7 @@ const Email = ({
 
           <Hr style={hr} />
           <Text style={footer}>
-            RMS Commerce — veille automatique BOAMP, qualifiée par IA. Vous recevez cet e-mail car
+            RMS Commerce — veille automatique (BOAMP, Maximilien, PLACE, AWS), qualifiée par IA. Vous recevez cet e-mail car
             votre adresse est dans la liste des destinataires de la veille.
           </Text>
         </Container>

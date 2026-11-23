@@ -129,8 +129,11 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
         let requete = supabaseAdmin
           .from("veille_annonces")
           .select(
-            "intitule, acheteur, departement, date_limite, lien, domaines, url_dce, analyse_dce, analyse_statut, avis_indices, entite, decision, score, resume, certif_manquante, interet_relationnel, exigences, plateforme, dce_url, qualif_statut",
+            "source, intitule, acheteur, departement, date_limite, lien, domaines, url_dce, analyse_dce, analyse_statut, avis_indices, entite, decision, score, resume, certif_manquante, interet_relationnel, exigences, plateforme, dce_url, qualif_statut",
           )
+          // Seulement ce qui reste à trier : une annonce déjà ignorée ou envoyée
+          // dans les AO depuis l'écran Veille ne revient pas dans le mail.
+          .eq("statut", "nouveau")
           .order("date_parution", { ascending: false });
         requete = depuis
           ? requete.gte("date_parution", depuis)
