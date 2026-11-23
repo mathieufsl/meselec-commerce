@@ -29,7 +29,7 @@ describe("classerPiece", () => {
 });
 
 describe("selectionnerPieces", () => {
-  it("garde RC, CCTP et visite, PDF prioritaire sur Word", () => {
+  it("garde RC, CCTP, visite et DPGF, PDF prioritaire sur Word", () => {
     const sel = selectionnerPieces([
       "/d/CCTP.docx",
       "/d/CCTP.pdf",
@@ -42,6 +42,7 @@ describe("selectionnerPieces", () => {
       "RC.pdf",
       "Attestation_visite.pdf",
       "CCTP.pdf",
+      "DPGF.xlsx",
     ]);
   });
 

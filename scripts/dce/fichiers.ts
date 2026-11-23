@@ -6,8 +6,9 @@
  * dossier, on borne la taille et on refuse tout fichier sorti du dossier.
  */
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { basename, extname, join, relative } from "node:path";
+import * as XLSX from "xlsx";
 
 export type TypePiece =
   "rc" | "cctp" | "ccap" | "visite" | "ae" | "bpu" | "dpgf" | "dqe" | "plan" | "autre";
@@ -32,7 +33,8 @@ export function classerPiece(chemin: string): TypePiece {
   if (/\bcctp\b|clauses? techniques/.test(fichier)) return "cctp";
   if (/\bccap\b|clauses? administratives/.test(fichier)) return "ccap";
   if (/\brc\b|r c |reglement (de |du )?(la )?consultation|\breglement\b/.test(fichier)) return "rc";
-  if (/\bdpgf\b/.test(fichier)) return "dpgf";
+  if (/\bdpgf\b|decomposition (globale )?(du |des )?prix|cadre de (reponse )?prix/.test(fichier))
+    return "dpgf";
   if (/\bbpu\b|bordereau des prix/.test(fichier)) return "bpu";
   if (/\bdqe\b|detail quantitatif/.test(fichier)) return "dqe";
   if (/\bae\b|acte d engagement/.test(fichier)) return "ae";
@@ -43,7 +45,14 @@ export function classerPiece(chemin: string): TypePiece {
   return "autre";
 }
 
-const EXT_LISIBLES = new Set([".pdf", ".docx", ".odt", ".txt", ".rtf", ".doc"]);
+const EXT_TABLEURS = new Set([".xlsx", ".xlsm", ".xls", ".ods", ".csv"]);
+const EXT_LISIBLES = new Set([".pdf", ".docx", ".odt", ".txt", ".rtf", ".doc", ...EXT_TABLEURS]);
+
+export function estTableur(chemin: string): boolean {
+  return EXT_TABLEURS.has(extname(chemin).toLowerCase());
+}
+
+const PIECES_PRIX: TypePiece[] = ["dpgf", "bpu", "dqe"];
 const EXT_ARCHIVES = new Set([".zip", ".7z", ".rar"]);
 
 export function estLisible(chemin: string): boolean {
@@ -51,8 +60,9 @@ export function estLisible(chemin: string): boolean {
 }
 
 /**
- * Pièces à faire lire par l'IA : RC et CCTP, plus le CCAP si le RC manque, et
- * tout document « visite ».
+ * Pièces à faire lire par l'IA : RC et CCTP, plus le CCAP si le RC manque, tout
+ * document « visite », et un seul cadre de prix (DPGF, sinon BPU ou DQE ; un
+ * tableur de préférence au PDF, et à défaut un tableur sans type reconnu).
  */
 export function selectionnerPieces(chemins: string[]): Array<{ chemin: string; type: TypePiece }> {
   const pieces = chemins
@@ -70,8 +80,24 @@ export function selectionnerPieces(chemins: string[]): Array<{ chemin: string; t
     const existant = parCle.get(cle);
     if (!existant || extname(p.chemin).toLowerCase() === ".pdf") parCle.set(cle, p);
   }
-  const ordre: TypePiece[] = ["rc", "ccap", "visite", "cctp"];
-  return [...parCle.values()].sort((a, b) => ordre.indexOf(a.type) - ordre.indexOf(b.type));
+  const ordre: TypePiece[] = ["rc", "ccap", "visite", "cctp", ...PIECES_PRIX];
+  const prix = choisirCadrePrix(pieces);
+  return [...parCle.values(), ...(prix ? [prix] : [])].sort(
+    (a, b) => ordre.indexOf(a.type) - ordre.indexOf(b.type),
+  );
+}
+
+function choisirCadrePrix(
+  pieces: Array<{ chemin: string; type: TypePiece }>,
+): { chemin: string; type: TypePiece } | null {
+  for (const type of PIECES_PRIX) {
+    const candidats = pieces.filter((p) => p.type === type);
+    const choisi = candidats.find((p) => estTableur(p.chemin)) ?? candidats[0];
+    if (choisi) return choisi;
+  }
+  // Tableur déposé sans nom parlant (ex. « Annexe 3.xlsx ») : lu comme cadre de prix.
+  const tableur = pieces.find((p) => p.type === "autre" && estTableur(p.chemin));
+  return tableur ? { chemin: tableur.chemin, type: "dpgf" } : null;
 }
 
 function listerFichiers(dossier: string): string[] {
@@ -189,6 +215,7 @@ export function texteDePiece(chemin: string): string {
         execFileSync("unzip", ["-p", chemin, "content.xml"], opts).toString("utf8"),
       );
     }
+    if (EXT_TABLEURS.has(ext)) return texteTableur(chemin);
     if (ext === ".txt" || ext === ".rtf") {
       return execFileSync("cat", [chemin], opts).toString("utf8");
     }
@@ -204,4 +231,24 @@ export function texteDePiece(chemin: string): string {
 export function texteSuffisant(texte: string, octets: number): boolean {
   const lettres = texte.replace(/\s+/g, "").length;
   return lettres > 400 || (octets < 200_000 && lettres > 100);
+}
+
+/** Tableur (DPGF, BPU, DQE) en texte : une section par feuille, colonnes séparées par « | », sans lignes vides. */
+export function texteTableur(chemin: string): string {
+  // read() plutôt que readFile() : la version ESM de SheetJS n'a pas accès à fs.
+  const classeur = XLSX.read(readFileSync(chemin), { cellDates: true });
+  return classeur.SheetNames.map((nom) => {
+    const feuille = classeur.Sheets[nom];
+    if (!feuille) return "";
+    const csv = XLSX.utils
+      // Tabulation : pas de guillemets autour des libellés qui contiennent des espaces.
+      .sheet_to_csv(feuille, { FS: "\t", blankrows: false, strip: true })
+      .split("\n")
+      .map((l) => l.replace(/\t+$/, "").split("\t").join(" | ").trim())
+      .filter((l) => l.replace(/[\s|]/g, "").length > 0)
+      .join("\n");
+    return csv ? `## Feuille « ${nom} »\n${csv}` : "";
+  })
+    .filter(Boolean)
+    .join("\n\n");
 }

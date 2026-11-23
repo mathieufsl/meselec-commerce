@@ -134,14 +134,14 @@ export function VeilleDepotDce({
         <Upload className="h-4 w-4 shrink-0 text-muted-foreground" />
         <p className="min-w-0 flex-1 text-muted-foreground">
           {aoId
-            ? "Glisse ici le RC, le CCTP ou le ZIP, en une ou plusieurs fois : ils sont rangés dans les documents de l'AO et lus par l'analyse."
-            : "DCE téléchargé toi-même ? Glisse ici le RC, le CCTP ou le ZIP, en une ou plusieurs fois, puis lance l'analyse."}
+            ? "Glisse ici le RC, le CCTP, la DPGF (Excel) ou le ZIP, en une ou plusieurs fois : ils sont rangés dans les documents de l'AO et lus par l'analyse."
+            : "DCE téléchargé toi-même ? Glisse ici le RC, le CCTP, la DPGF (Excel) ou le ZIP, en une ou plusieurs fois, puis lance l'analyse."}
         </p>
         <input
           ref={input}
           type="file"
           multiple
-          accept=".pdf,.zip,.7z,.rar,.doc,.docx,.odt"
+          accept=".pdf,.zip,.7z,.rar,.doc,.docx,.odt,.xlsx,.xlsm,.xls,.ods,.csv"
           className="hidden"
           onChange={(e) => void deposer(e.target.files)}
         />

@@ -45,15 +45,18 @@ function extraitsUtiles(texte: string): string {
 /** Au-delà, le texte d'une pièce est coupé (et c'est signalé à l'IA et dans l'analyse). */
 const MAX_CARACTERES_PIECE = 150_000;
 const MAX_OCTETS_PDF = 20 * 1024 * 1024;
+/** Cadre de prix : l'ampleur suffit, pas besoin de tous les postes. */
+const MAX_CARACTERES_PRIX = 40_000;
 
 const SYSTEME = `Tu assistes le service commercial de Meselec, entreprise d'électricité (éclairage public, illuminations, réseaux électriques, CFO, VRD) qui répond aux marchés publics en Île-de-France.
 
-On te donne l'avis de publication d'un appel d'offres et, quand ils ont pu être récupérés, des pièces du dossier de consultation (règlement de la consultation, CCTP, éventuellement CCAP). Relève précisément ce qui conditionne la décision de répondre :
+On te donne l'avis de publication d'un appel d'offres et, quand ils ont pu être récupérés, des pièces du dossier de consultation (règlement de la consultation, CCTP, éventuellement CCAP et cadre de prix). Relève précisément ce qui conditionne la décision de répondre :
 
 - Visite : obligatoire, facultative ou non mentionnée ; dates/créneaux, modalités (prise de rendez-vous, contact, lieu, attestation à joindre). Une visite seulement « conseillée » ou « recommandée » compte comme facultative.
 - Certifications et qualifications demandées aux candidats (Qualifelec, Qualibat, FNTP, ISO, MASE, habilitations électriques, AIPR, CACES…), en distinguant : exigée, acceptée « ou équivalent », ou simplement appréciée. Garde les codes précis (ex. Qualifelec EP3, FNTP 5131).
 - Autres exigences de candidature notables : chiffre d'affaires minimum, références, assurances, moyens, échantillons, etc.
 - La date limite pour poser des questions si elle est donnée.
+- Si un cadre de prix est fourni (DPGF, BPU ou DQE) : son ampleur (nombre de postes, grandes parties, quantités marquantes, matériels ou marques imposés, prestations inhabituelles pour Meselec), à signaler dans les points d'attention et le résumé quand c'est utile pour décider.
 
 Pour chaque élément, indique la source (pièce et article/page si possible). N'invente rien : si une information est absente, dis-le (visite « non_mentionnee », liste vide). Le résumé fait 2 à 4 phrases et les points d'attention signalent ce qui pourrait écarter Meselec ou demander une action rapide. Réponds en français.`;
 
@@ -102,10 +105,13 @@ export async function analyserAnnonce(params: {
       });
       documentsAnalyses.push(`${nom} (passages utiles)`);
     } else if (texteSuffisant(texte, octets)) {
-      const coupe = texte.length > MAX_CARACTERES_PIECE;
+      const max = ["dpgf", "bpu", "dqe"].includes(piece.type)
+        ? MAX_CARACTERES_PRIX
+        : MAX_CARACTERES_PIECE;
+      const coupe = texte.length > max;
       contenu.push({
         type: "text",
-        text: `<piece titre="${titre}"${coupe ? ' tronquee="oui"' : ""}>\n${texte.slice(0, MAX_CARACTERES_PIECE)}\n</piece>`,
+        text: `<piece titre="${titre}"${coupe ? ' tronquee="oui"' : ""}>\n${texte.slice(0, max)}\n</piece>`,
       });
       documentsAnalyses.push(coupe ? `${nom} (début seulement)` : nom);
     } else if (piece.type === "cctp") {

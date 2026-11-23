@@ -297,6 +297,9 @@ export function guessDcePieceType(fileName: string): AoDocumentType {
   if (connu) return connu;
   const n = fileName.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
   if (/(^|[^a-z])rc([^a-z]|$)|reglement/.test(n)) return "rc";
+  // Cadre de prix (BPU, DQE, décomposition du prix) ou tableur : rangé avec la DPGF.
+  if (/(^|[^a-z])(bpu|dqe)([^a-z]|$)|decomposition du prix|bordereau/.test(n)) return "dpgf";
+  if (/\.(xlsx|xlsm|xls|ods|csv)$/.test(n)) return "dpgf";
   return "dce";
 }
 
