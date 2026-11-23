@@ -101,9 +101,12 @@ async function qualifierUne(
   for (let tentative = 0; tentative < 2; tentative += 1) {
     try {
       const { qualification: q, usage } = await appelerClaude(system, user, model, apiKey);
-      // Une annonce prioritaire part directement au robot DCE (si rien n'a encore été demandé).
+      // L'analyse du DCE (Sonnet, 5 à 30 centimes) ne part que sur clic. Mettre
+      // VEILLE_DCE_AUTO=1 pour l'envoyer d'office au robot sur les prioritaires.
       const demanderDce =
-        q.decision === "prioritaire" && (a.analyse_statut ?? "non_demande") === "non_demande";
+        process.env["VEILLE_DCE_AUTO"] === "1" &&
+        q.decision === "prioritaire" &&
+        (a.analyse_statut ?? "non_demande") === "non_demande";
       const { error } = await client
         .from("veille_annonces")
         .update({
