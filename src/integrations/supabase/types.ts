@@ -2719,6 +2719,7 @@ export type Database = {
           intitule: string
           lien: string | null
           motif_ignore: string | null
+          mail_envoye_at: string | null
           motif_ignore_note: string | null
           plateforme: string | null
           points_rouges: string[]
@@ -2770,6 +2771,7 @@ export type Database = {
           intitule?: string
           lien?: string | null
           motif_ignore?: string | null
+          mail_envoye_at?: string | null
           motif_ignore_note?: string | null
           plateforme?: string | null
           points_rouges?: string[]
@@ -2821,6 +2823,7 @@ export type Database = {
           intitule?: string
           lien?: string | null
           motif_ignore?: string | null
+          mail_envoye_at?: string | null
           motif_ignore_note?: string | null
           plateforme?: string | null
           points_rouges?: string[]

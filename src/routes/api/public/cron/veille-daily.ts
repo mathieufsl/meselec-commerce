@@ -120,8 +120,9 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           timeZone: "Europe/Paris",
         });
 
-        // Annonces arrivées depuis le dernier mail (24 h), qu'elles viennent de
-        // cette collecte, du robot DCE du matin ou d'une collecte manuelle.
+        // Annonces jamais présentées dans un mail, qu'elles viennent de cette
+        // collecte, du robot DCE du matin ou d'une collecte manuelle. Une annonce
+        // envoyée un jour ne revient pas le lendemain.
         const { pointsRecap } = await import("@/lib/veilleAnalyse");
         const depuis = opts.inclureExistantes
           ? new Date(Date.now() - fenetreJours * 86400000).toISOString().slice(0, 10)
@@ -129,7 +130,7 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
         let requete = supabaseAdmin
           .from("veille_annonces")
           .select(
-            "source, intitule, acheteur, departement, date_limite, lien, domaines, url_dce, analyse_dce, analyse_statut, avis_indices, entite, decision, score, resume, certif_manquante, interet_relationnel, exigences, plateforme, dce_url, qualif_statut",
+            "id, source, intitule, acheteur, departement, date_limite, lien, domaines, url_dce, analyse_dce, analyse_statut, avis_indices, entite, decision, score, resume, certif_manquante, interet_relationnel, exigences, plateforme, dce_url, qualif_statut",
           )
           // Seulement ce qui reste à trier : une annonce déjà ignorée ou envoyée
           // dans les AO depuis l'écran Veille ne revient pas dans le mail.
@@ -137,19 +138,22 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           .order("date_parution", { ascending: false });
         requete = depuis
           ? requete.gte("date_parution", depuis)
-          : requete.gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+          : requete
+              .is("mail_envoye_at", null)
+              .gte("created_at", new Date(Date.now() - 14 * 86400000).toISOString());
         const { data: rows, error: rowsErr } = await requete;
         if (rowsErr) {
           return Response.json({ ok: false, error: rowsErr.message }, { status: 500 });
         }
         type LigneRecap = VeilleRecapAnnonce & {
+          id: string;
           domaines: string[] | null;
           analyse_dce: VeilleAnalyse | null;
           analyse_statut: string | null;
           avis_indices: NonNullable<Parameters<typeof pointsRecap>[0]["avis_indices"]> | null;
         };
         const annonces: VeilleRecapAnnonce[] = ((rows ?? []) as unknown as LigneRecap[]).map(
-          ({ analyse_dce, analyse_statut, avis_indices, ...r }) => ({
+          ({ id: _id, analyse_dce, analyse_statut, avis_indices, ...r }) => ({
             ...r,
             domaines: (r.domaines ?? []) as string[],
             points: pointsRecap({ analyse_dce, analyse_statut, avis_indices }),
@@ -180,6 +184,21 @@ export const Route = createFileRoute("/api/public/cron/veille-daily")({
           const out = await sendVeilleEmail(r.email, subject, html);
           if (out.ok) sent += 1;
           else failed += 1;
+        }
+
+        // Marquer comme envoyées les annonces triées présentées dans le mail. Les
+        // non qualifiées attendent leur tri et partiront dans un prochain mail.
+        if (sent > 0 && !depuis) {
+          const ids = ((rows ?? []) as Array<{ id: string; qualif_statut: string | null }>)
+            .filter((r) => r.qualif_statut === "qualifie")
+            .map((r) => r.id);
+          for (let i = 0; i < ids.length; i += 200) {
+            const { error: e } = await supabaseAdmin
+              .from("veille_annonces")
+              .update({ mail_envoye_at: new Date().toISOString() })
+              .in("id", ids.slice(i, i + 200));
+            if (e) console.error("[veille-daily] marquage envoi:", e.message);
+          }
         }
 
         return Response.json({

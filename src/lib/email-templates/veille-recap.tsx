@@ -47,7 +47,6 @@ interface Props {
 
 /** Au-delà, le mail renvoie vers l'écran Veille plutôt que de tout lister. */
 const MAX_A_CREUSER = 10
-const MAX_NON_QUALIFIEES = 10
 
 const LIBELLES_SOURCE: Record<string, string> = {
   BOAMP: 'BOAMP',
@@ -151,7 +150,7 @@ const Email = ({
   appUrl,
 }: Props) => {
   const { prioritaires, aCreuser, nonQualifiees, horsSujet } = trierAnnoncesRecap(annonces)
-  const aMontrer = prioritaires.length + aCreuser.length + nonQualifiees.length
+  const aMontrer = prioritaires.length + aCreuser.length
   return (
     <Html lang="fr" dir="ltr">
       <Head />
@@ -168,8 +167,8 @@ const Email = ({
           {qualifIndisponible && nonQualifiees.length > 0 ? (
             <Section style={warnBox}>
               <Text style={warnText}>
-                Qualification IA indisponible ce matin : {nonQualifiees.length} annonce(s) ne
-                sont pas encore triées. Elles le seront au prochain passage.
+                Qualification IA indisponible ce matin : {nonQualifiees.length} annonce(s) pas
+                encore triée(s). Elles arriveront dans un prochain mail une fois triées.
               </Text>
             </Section>
           ) : null}
@@ -213,16 +212,10 @@ const Email = ({
             </Text>
           ) : null}
 
-          {nonQualifiees.length > 0 ? (
-            <Heading as="h2" style={h2}>Non qualifiées</Heading>
-          ) : null}
-          {nonQualifiees.slice(0, MAX_NON_QUALIFIEES).map((a, i) => (
-            <Carte key={`n${i}`} a={a} />
-          ))}
-          {nonQualifiees.length > MAX_NON_QUALIFIEES ? (
+          {nonQualifiees.length > 0 && !qualifIndisponible ? (
             <Text style={cardMeta}>
-              + {nonQualifiees.length - MAX_NON_QUALIFIEES} autre(s) non qualifiée(s) dans l'écran
-              Veille
+              {nonQualifiees.length} annonce(s) en cours de tri : elles arriveront dans un
+              prochain mail.
             </Text>
           ) : null}
 
