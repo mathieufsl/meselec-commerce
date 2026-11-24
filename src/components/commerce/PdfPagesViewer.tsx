@@ -145,7 +145,13 @@ export function PdfPagesViewer({ src }: { src: string }) {
   return (
     <div
       ref={conteneur}
-      className="absolute inset-0 overflow-y-auto overscroll-contain bg-muted/40 px-2 py-2 [-webkit-overflow-scrolling:touch]"
+      // La fiche AO ouverte en dessous (Sheet Radix) verrouille le défilement de la
+      // page et peut avaler la molette ou le doigt hors de sa propre couche : on
+      // garde ces événements ici, le navigateur fait défiler le lecteur normalement.
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      tabIndex={0}
+      className="absolute inset-0 overflow-y-auto overscroll-contain bg-muted/40 px-2 py-2 outline-none [-webkit-overflow-scrolling:touch]"
     >
       {erreur ? (
         <p className="p-6 text-center text-sm text-destructive">{erreur}</p>

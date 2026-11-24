@@ -38,6 +38,9 @@ export function AoDocumentFullscreenViewer({
   return (
     <DialogPrimitive.Root open onOpenChange={(o) => (o ? undefined : onClose())}>
       <DialogPrimitive.Portal>
+        {/* L'overlay porte le verrou de défilement Radix : sans lui, celui de la fiche
+            ouverte en dessous reste au-dessus et bloque la molette dans le lecteur. */}
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[70] bg-background" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => e.preventDefault()}
