@@ -179,7 +179,7 @@ export function AppShell({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-9 w-9 gap-1 p-0 sm:h-8 sm:w-auto sm:px-3 shrink-0"
+                          className="-ml-1.5 h-9 w-9 gap-1 p-0 max-sm:border-transparent max-sm:bg-transparent max-sm:shadow-none sm:ml-0 sm:h-8 sm:w-auto sm:px-3 shrink-0"
                           onClick={back.onNavigate}
                         >
                           <ChevronLeft className="h-4 w-4" />
@@ -190,7 +190,7 @@ export function AppShell({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-9 w-9 gap-1 p-0 sm:h-8 sm:w-auto sm:px-3"
+                            className="-ml-1.5 h-9 w-9 gap-1 p-0 max-sm:border-transparent max-sm:bg-transparent max-sm:shadow-none sm:ml-0 sm:h-8 sm:w-auto sm:px-3"
                           >
                             <ChevronLeft className="h-4 w-4" />
                             <span className="sr-only sm:not-sr-only">{back.label ?? "Retour"}</span>
@@ -203,11 +203,11 @@ export function AppShell({
                         <TitleIcon className="hidden h-5 w-5 shrink-0 text-primary sm:block" strokeWidth={2.2} />
                       ) : null}
                       <div className="min-w-0">
-                        <h1 className="truncate text-base font-semibold leading-tight tracking-tight lg:text-xl lg:font-bold">
+                        <h1 className="truncate text-[17px] font-semibold leading-tight tracking-tight lg:text-xl lg:font-bold">
                           {title}
                         </h1>
                         {(subtitle || syncLabel) && (
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          <p className="mt-0.5 hidden truncate text-xs text-muted-foreground sm:block">
                             {subtitle}
                             {subtitle && syncLabel ? (
                               <span className="hidden sm:inline">
@@ -245,7 +245,7 @@ export function AppShell({
                         <span className="sr-only sm:not-sr-only">{primaryAction.label}</span>
                       </Button>
                     ) : null}
-                    <ThemeSegmentToggle />
+                    <ThemeSegmentToggle className="hidden sm:flex" />
                     <CommerceProfileMenu className="shrink-0" />
                   </div>
                 </div>

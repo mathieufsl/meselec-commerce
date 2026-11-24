@@ -1833,13 +1833,14 @@ function VeillePage() {
       subtitle="BOAMP · Maximilien · PLACE · AWS · IDF + 60 + 27 chaque matin"
       titleIcon={Radar}
       back={{ to: "/appels-offres", label: "Appels d'offres" }}
-      actions={
-        <div className="flex items-center gap-2">
+      inlineAction={
+        <div className="flex items-center gap-1 sm:gap-2">
           {canEdit ? (
             <Button
               size="sm"
               variant="outline"
               onClick={() => setAjoutOuvert(true)}
+              className="max-sm:h-9 max-sm:w-9 max-sm:border-transparent max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none"
               aria-label="Ajouter par lien"
               title="Ajouter par lien"
             >
@@ -1848,7 +1849,12 @@ function VeillePage() {
             </Button>
           ) : null}
           {canEdit ? (
-            <Button size="sm" onClick={() => setVeilleOuverte(true)} disabled={refresh.isPending}>
+            <Button
+              size="sm"
+              className="max-sm:h-8 max-sm:px-2.5"
+              onClick={() => setVeilleOuverte(true)}
+              disabled={refresh.isPending}
+            >
               {refresh.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin sm:mr-1.5" />
               ) : (
@@ -1860,7 +1866,12 @@ function VeillePage() {
           ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="px-2" aria-label="Plus d'actions">
+              <Button
+                variant="outline"
+                size="sm"
+                className="px-2 max-sm:h-9 max-sm:w-9 max-sm:border-transparent max-sm:bg-transparent max-sm:shadow-none"
+                aria-label="Plus d'actions"
+              >
                 {rattraper.isPending || qualifier.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (

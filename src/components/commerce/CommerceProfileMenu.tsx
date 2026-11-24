@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Moon, Settings, Sun, User } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,8 @@ export function CommerceProfileMenu({ className }: { className?: string }) {
   const { user, signOut } = useCommerceAuth();
   const navigate = useNavigate();
   const { displayName: profileDisplayName } = useCommerceProfile(user?.id);
+  const { resolvedTheme, setTheme } = useTheme();
+  const sombre = resolvedTheme === "dark";
   const prenom = profileDisplayName?.split(/\s+/)[0] || profileDisplayName || getPrenom(user);
 
   const handleSignOut = async () => {
@@ -30,7 +33,7 @@ export function CommerceProfileMenu({ className }: { className?: string }) {
         <Button
           variant="outline"
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border-border/60 bg-background/95 p-0 transition-colors hover:bg-muted/70 lg:h-10 lg:w-auto lg:justify-start lg:gap-2.5 lg:px-2.5",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-transparent bg-transparent p-0 shadow-none sm:rounded-md sm:border-border/60 sm:bg-background/95 sm:shadow-xs transition-colors hover:bg-muted/70 lg:h-10 lg:w-auto lg:justify-start lg:gap-2.5 lg:px-2.5",
             className,
           )}
         >
@@ -57,6 +60,14 @@ export function CommerceProfileMenu({ className }: { className?: string }) {
             <Settings className="h-4 w-4" />
             Paramètres
           </Link>
+        </DropdownMenuItem>
+        {/* Sur mobile, le choix du thème est ici (pas de place dans l'en-tête). */}
+        <DropdownMenuItem
+          onClick={() => setTheme(sombre ? "light" : "dark")}
+          className="flex cursor-pointer items-center gap-2 sm:hidden"
+        >
+          {sombre ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {sombre ? "Thème clair" : "Thème sombre"}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => void handleSignOut()}
