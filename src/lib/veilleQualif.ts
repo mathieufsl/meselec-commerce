@@ -12,6 +12,9 @@ export const VEILLE_DECISION_LABELS: Record<VeilleDecision, string> = {
   hors_sujet: "Hors sujet",
 };
 
+/** Puces « Pour » / « Points rouges » affichées au plus (les anciennes qualifs en ont jusqu'à 4). */
+export const MAX_PUCES_QUALIF = 2;
+
 export const DEFAULT_QUALIF_MODEL = "claude-haiku-5-5";
 export const QUALIF_TOOL_NAME = "enregistrer_qualification";
 
@@ -30,13 +33,21 @@ export interface QualificationProfil {
   updated_at?: string;
 }
 
-const nullableString = z.string().nullable().optional().transform((v) => v ?? null);
+const nullableString = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => v ?? null);
 
 export const exigencesSchema = z.object({
   certifications: z.array(z.string()).default([]),
   chiffre_affaires_min: nullableString,
   references: nullableString,
-  visite_obligatoire: z.boolean().nullable().optional().transform((v) => v ?? null),
+  visite_obligatoire: z
+    .boolean()
+    .nullable()
+    .optional()
+    .transform((v) => v ?? null),
   date_visite: nullableString,
   montant_estime: nullableString,
   duree: nullableString,
@@ -173,8 +184,8 @@ Pour l'avis fourni :
 - score 0-100 : adéquation métier (50), zone (15), faisabilité/exigences (20), taille/intérêt (15).
 - Extrais UNIQUEMENT ce qui est écrit dans l'avis ; n'invente rien. Si une info est absente, mets null.
 - resume : 2 lignes maximum, factuel.
-- raisons : 2 à 4 puces courtes justifiant la décision.
-- points_rouges : exigences ou clauses risquées (certifs, CA mini, références, délais courts, pénalités, visite obligatoire).
+- raisons : 0 à 2 puces très courtes, UNIQUEMENT un argument décisif pour y aller ; liste vide si rien de marquant. Ne répète ni le resume, ni la zone, ni le montant.
+- points_rouges : 0 à 2 puces très courtes, UNIQUEMENT un vrai obstacle (certification exigée, CA mini élevé, références imposées, délai intenable, visite obligatoire, pénalités lourdes) ; liste vide sinon. Pas de « info non précisée dans l'avis ».
 - Indique si l'avis est trop pauvre pour décider (exigences.avis_insuffisant=true) : il faudra alors lire le RC.
 
 Réponds uniquement en appelant l'outil ${QUALIF_TOOL_NAME}.`;
@@ -226,7 +237,9 @@ export function parseQualificationResponse(json: unknown): {
   if (!bloc) throw new Error("Réponse sans appel à l'outil de qualification.");
   const parsed = qualificationSchema.safeParse(bloc.input);
   if (!parsed.success) {
-    throw new Error(`Sortie invalide : ${parsed.error.issues.map((i) => i.path.join(".") + " " + i.message).join("; ")}`);
+    throw new Error(
+      `Sortie invalide : ${parsed.error.issues.map((i) => i.path.join(".") + " " + i.message).join("; ")}`,
+    );
   }
   const q = parsed.data;
   // Règle métier : certification manquante → score plafonné à 60, jamais « prioritaire ».

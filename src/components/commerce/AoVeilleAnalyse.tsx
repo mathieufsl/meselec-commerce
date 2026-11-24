@@ -9,7 +9,7 @@ import { VeilleDepotDce } from "@/components/commerce/VeilleDepotDce";
 import { useDemanderAnalyseDce } from "@/hooks/useVeille";
 import { cn } from "@/lib/utils";
 import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow } from "@/lib/veille";
-import { VEILLE_DECISION_LABELS } from "@/lib/veilleQualif";
+import { MAX_PUCES_QUALIF, VEILLE_DECISION_LABELS } from "@/lib/veilleQualif";
 
 type AnnonceVeille = VeilleAnnonceRow;
 
@@ -27,7 +27,7 @@ function Liste({ titre, items }: { titre: string; items: string[] | undefined })
         {titre}
       </p>
       <ul className="list-disc space-y-0.5 pl-5 text-sm">
-        {items.map((r, i) => (
+        {items.slice(0, MAX_PUCES_QUALIF).map((r, i) => (
           <li key={i}>{r}</li>
         ))}
       </ul>

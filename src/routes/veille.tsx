@@ -74,7 +74,7 @@ import {
   type VeilleAnnonceRow,
   type VeilleStatut,
 } from "@/lib/veille";
-import { VEILLE_DECISION_LABELS, type VeilleDecision } from "@/lib/veilleQualif";
+import { MAX_PUCES_QUALIF, VEILLE_DECISION_LABELS, type VeilleDecision } from "@/lib/veilleQualif";
 import {
   useAjouterAnnonceParLien,
   useDemanderAnalyseDce,
@@ -182,7 +182,7 @@ function ListeDetail({ titre, items }: { titre: string; items: string[] | undefi
         {titre}
       </p>
       <ul className="list-disc space-y-0.5 pl-5 text-sm">
-        {items.map((r, i) => (
+        {items.slice(0, MAX_PUCES_QUALIF).map((r, i) => (
           <li key={i}>{r}</li>
         ))}
       </ul>
