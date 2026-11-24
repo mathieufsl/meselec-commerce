@@ -301,6 +301,22 @@ export function extraireCpv(donnees: unknown): string[] {
   return [...found];
 }
 
+/**
+ * Intitulés des lots de l'avis (eForms et formulaire simplifié). Un marché
+ * « tous corps d'état » cache souvent son lot électricité dans la liste des lots,
+ * pas dans l'intitulé général.
+ */
+export function intitulesLots(donnees: unknown): string[] {
+  const out: string[] = [];
+  for (const f of feuilles(parseDonnees(donnees))) {
+    const c = f.chemin;
+    const eforms = /ProcurementProjectLot.*ProcurementProject\.cbc:Name/.test(c) && !/@/.test(c);
+    const fns = /\blots\b.*\blot\b.*\.(description|intitule|intituleLot|objet)$/i.test(c);
+    if (eforms || fns) out.push(f.valeur.slice(0, 300));
+  }
+  return [...new Set(out)];
+}
+
 /** Toutes les URLs http(s) de l'avis, `&amp;` décodé, sans ponctuation finale. */
 export function extraireUrls(donnees: unknown): string[] {
   const brut = typeof donnees === "string" ? donnees : JSON.stringify(donnees ?? "");

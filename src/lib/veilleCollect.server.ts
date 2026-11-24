@@ -5,7 +5,7 @@ import {
   secteursFromDomaines,
   type VeilleAnnonce,
 } from "@/lib/veille";
-import { extraireCpv, lireAvis } from "@/lib/veilleAvis";
+import { extraireCpv, intitulesLots, lireAvis } from "@/lib/veilleAvis";
 
 const BASE_URL =
   "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
@@ -45,8 +45,10 @@ export function normaliser(record: OdsRecord): VeilleAnnonceCollectee | null {
   const departement = texte(record, "code_departement", "departement", "dc");
   const descripteur = texte(record, "descripteur", "descripteur_libelle");
 
-  // Mots-clés sur l'intitulé et le descripteur seulement (pas le nom de l'acheteur).
-  const domaines = domainesDetectes(cpv, [intitule, descripteur].join(" "));
+  // Mots-clés sur l'intitulé, le descripteur et les intitulés des lots (pas le nom
+  // de l'acheteur) : un lot « électricité » d'un marché multi-lots compte.
+  const lots = intitulesLots(record["donnees"]);
+  const domaines = domainesDetectes(cpv, [intitule, descripteur, ...lots].join(" "));
   const avis = lireAvis(record);
 
   return {

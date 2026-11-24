@@ -195,3 +195,39 @@ describe("buildSystemPrompt", () => {
     expect(p).toContain("Règle test");
   });
 });
+
+describe("intitulesLots", () => {
+  it("retrouve le lot électricité d'un marché tous corps d'état (eForms)", async () => {
+    const { intitulesLots } = await import("@/lib/veilleAvis");
+    const donnees = JSON.stringify({
+      EFORMS: {
+        ContractNotice: {
+          "cac:ProcurementProjectLot": [
+            { "cac:ProcurementProject": { "cbc:Name": { "@languageID": "FRA", "#text": "Macro-lot 1 : Gros œuvre" } } },
+            {
+              "cac:ProcurementProject": {
+                "cbc:Name": {
+                  "@languageID": "FRA",
+                  "#text": "Macro-lot 4 : Travaux d'électricité courants forts et faibles",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    const lots = intitulesLots(donnees);
+    expect(lots).toHaveLength(2);
+    expect(
+      domainesDetectes("45453000", ["Rénovation du gymnase existant", "Tous corps d'état", ...lots].join(" ")),
+    ).not.toEqual([]);
+  });
+
+  it("lit les lots du formulaire simplifié", async () => {
+    const { intitulesLots } = await import("@/lib/veilleAvis");
+    const donnees = JSON.stringify({
+      FNSimple: { initial: { lots: { lot: [{ description: "Lot 1 - DÉMOLITION" }, { description: "Lot 7 - ÉLECTRICITÉ" }] } } },
+    });
+    expect(intitulesLots(donnees)).toEqual(["Lot 1 - DÉMOLITION", "Lot 7 - ÉLECTRICITÉ"]);
+  });
+});
