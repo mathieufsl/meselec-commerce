@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   ArrowRight,
   CalendarRange,
   Check,
+  ChevronLeft,
   Mail,
   MapPin,
   MoreHorizontal,
@@ -29,6 +30,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/commerce/AppShell";
 import { VeilleAnalysePanel } from "@/components/commerce/VeilleAnalysePanel";
+import { VeilleAvisDetail } from "@/components/commerce/VeilleAvisDetail";
 import { VeilleDepotDce } from "@/components/commerce/VeilleDepotDce";
 import { VeilleRecipientsDialog } from "@/components/commerce/VeilleRecipientsDialog";
 import { VeilleProfilDialog } from "@/components/commerce/VeilleProfilDialog";
@@ -82,7 +84,6 @@ import {
   useRefreshVeille,
   useSetVeilleStatut,
   useVeilleAnnonces,
-  useResumerAvis,
   useVeilleAvisComplet,
 } from "@/hooks/useVeille";
 import { aplatirDonnees } from "@/lib/veilleAvis";
@@ -202,100 +203,6 @@ function lignesLisibles(donnees: unknown): string[] {
       if (/\b(code|id|identifier)$/i.test(cle) && !/\s/.test(val)) return false;
       return val.length > 0;
     });
-}
-
-function ResumeIa({ id }: { id: string }) {
-  const { data, isLoading } = useVeilleAvisComplet(id);
-  const resumer = useResumerAvis();
-  const resume = data?.avis_resume ?? null;
-  // Le panneau garde ce composant d'une annonce à l'autre : on n'affiche l'état
-  // (chargement, erreur) que s'il concerne l'annonce affichée.
-  const pourCetteAnnonce = resumer.variables?.id === id;
-  const enCours = resumer.isPending && pourCetteAnnonce;
-  const secondes = useSecondes(enCours);
-  function lancer(force = false) {
-    debuterActivite(id, "resume", "Résumé IA");
-    resumer.mutate(
-      { id, force },
-      {
-        onSuccess: (res) => finirActivite(id, "resume", res.ok ? "pret" : "erreur"),
-        onError: () => finirActivite(id, "resume", "erreur"),
-      },
-    );
-  }
-  // Pas de génération automatique : le résumé IA n'est lancé qu'au clic sur « Résumer l'avis ».
-
-  const erreur = !pourCetteAnnonce
-    ? null
-    : resumer.data && !resumer.data.ok
-      ? resumer.data.error
-      : resumer.error instanceof Error
-        ? resumer.error.message
-        : null;
-
-  return (
-    <section className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
-          <Sparkles className="h-3.5 w-3.5" /> Résumé IA de l'avis
-        </p>
-        {resume ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground"
-            disabled={enCours}
-            onClick={() => lancer(true)}
-          >
-            <RefreshCw className={cn("mr-1 h-3 w-3", enCours && "animate-spin")} />
-            Régénérer
-          </Button>
-        ) : null}
-      </div>
-      {enCours && !resume ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-          <span>
-            Claude lit l&apos;avis et rédige le résumé…{" "}
-            <span className="tabular-nums">{secondes} s</span>
-            {secondes >= 20 ? (
-              <span className="block text-xs">
-                Ça prend d&apos;habitude 10 à 30 s. Au-delà de 90 s, l&apos;erreur s&apos;affichera
-                ici.
-              </span>
-            ) : null}
-          </span>
-        </div>
-      ) : resume ? (
-        <div className="space-y-3 text-sm">
-          <p className="font-medium leading-relaxed">{resume.en_bref}</p>
-          {resume.sections.map((s) => (
-            <div key={s.titre}>
-              <p className="mb-1 text-xs font-semibold text-muted-foreground">{s.titre}</p>
-              <ul className="list-disc space-y-0.5 pl-5 leading-relaxed [overflow-wrap:anywhere]">
-                {s.points.map((p, i) => (
-                  <li key={i}>{p}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      ) : erreur ? (
-        <div className="space-y-2">
-          <p className="text-xs text-destructive">{erreur}</p>
-          <Button size="sm" variant="outline" onClick={() => lancer()}>
-            Réessayer
-          </Button>
-        </div>
-      ) : !isLoading && !data?.raw ? (
-        <p className="text-xs text-muted-foreground">Texte de l'avis non disponible.</p>
-      ) : (
-        <Button size="sm" variant="outline" onClick={() => lancer()}>
-          <Sparkles className="mr-1.5 h-4 w-4" /> Résumer l'avis
-        </Button>
-      )}
-    </section>
-  );
 }
 
 function TexteAvis({ id }: { id: string }) {
@@ -989,10 +896,13 @@ function PanneauAnnonce({
   a,
   canEdit,
   actions,
+  onRetour,
 }: {
   a: VeilleAnnonceRow;
   canEdit: boolean;
   actions: ActionsAnnonce;
+  /** Mobile : revenir à la liste (la fiche s'ouvre en plein écran). */
+  onRetour?: () => void;
 }) {
   const ex = a.exigences ?? {};
   const dce = a.dce_url ?? a.url_dce;
@@ -1013,6 +923,15 @@ function PanneauAnnonce({
     <div className="min-w-0">
       {/* En-tête collant : titre + décision, toujours à portée de main. */}
       <div className="sticky top-0 z-10 space-y-3 border-b bg-card/95 px-4 pb-3 pt-4 backdrop-blur sm:px-5">
+        {onRetour ? (
+          <button
+            type="button"
+            onClick={onRetour}
+            className="-ml-1 -mt-1 inline-flex items-center gap-1 rounded-md py-1 pr-2 text-sm font-medium text-primary hover:bg-primary/5"
+          >
+            <ChevronLeft className="h-4 w-4" /> Liste des annonces
+          </button>
+        ) : null}
         <div>
           <h2 className="text-base font-semibold leading-snug">{a.intitule}</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -1114,8 +1033,11 @@ function PanneauAnnonce({
             </span>
           </p>
         ) : null}
-        {/* 1. Verdict de la qualification IA */}
-        <section className="space-y-2">
+        {/* 1. Analyse IA de l'avis : verdict (automatique) + détail de l'avis (au clic) */}
+        <section className="space-y-2 rounded-xl border p-3.5">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5" /> Analyse IA de l&apos;avis
+          </p>
           <div className="flex flex-wrap items-center gap-2">
             <DecisionBadge a={a} />
             {a.entite && a.entite !== "aucune" ? (
@@ -1150,6 +1072,12 @@ function PanneauAnnonce({
             <ListeDetail titre="Pour" items={a.raisons} />
             <ListeDetail titre="Points rouges" items={a.points_rouges} />
           </div>
+          <VeilleAvisDetail
+            key={`avis-${a.id}`}
+            id={a.id}
+            onDebut={() => debuterActivite(a.id, "resume", "Détail de l'avis")}
+            onFin={(ok) => finirActivite(a.id, "resume", ok ? "pret" : "erreur")}
+          />
         </section>
 
         {/* 2. Analyse du DCE (visite, certifications) */}
@@ -1169,10 +1097,7 @@ function PanneauAnnonce({
           ) : null}
         </section>
 
-        {/* 3. Résumé IA de l'avis, généré automatiquement */}
-        <ResumeIa id={a.id} />
-
-        {/* 4. Infos clés */}
+        {/* 3. Infos clés */}
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
           {lignes
             .filter(([, v]) => v && v !== "—")
@@ -1330,6 +1255,24 @@ function VeillePage() {
     null,
   );
   const [mobileOuvert, setMobileOuvert] = useState(false);
+  // Mobile : la fiche ouverte prend une entrée d'historique, pour que le geste ou
+  // le bouton « retour » du téléphone ramène à la liste au lieu de quitter la page.
+  useEffect(() => {
+    if (!mobileOuvert) return;
+    if (!(window.history.state as { veilleFiche?: boolean } | null)?.veilleFiche) {
+      window.history.pushState({ ...(window.history.state ?? {}), veilleFiche: true }, "");
+    }
+    const surRetour = () => setMobileOuvert(false);
+    window.addEventListener("popstate", surRetour);
+    return () => window.removeEventListener("popstate", surRetour);
+  }, [mobileOuvert]);
+  const fermerFicheMobile = useCallback(() => {
+    if ((window.history.state as { veilleFiche?: boolean } | null)?.veilleFiche) {
+      window.history.back();
+    } else {
+      setMobileOuvert(false);
+    }
+  }, []);
   const [motifPour, setMotifPour] = useState<VeilleAnnonceRow | null>(null);
   const [ajoutOuvert, setAjoutOuvert] = useState(false);
   const [periode, setPeriode] = useEtatMemorise<Periode>("periode", "toutes");
@@ -1676,7 +1619,7 @@ function VeillePage() {
     const i = items.findIndex((x) => x.id === a.id);
     const suivante = items[i + 1] ?? items[i - 1] ?? null;
     setSelectionId(suivante?.id ?? null);
-    if (!large) setMobileOuvert(false);
+    if (!large) fermerFicheMobile();
   }
 
   const actions: ActionsAnnonce = {
@@ -2232,12 +2175,22 @@ function VeillePage() {
         onValider={(a, motif, note) => actions.confirmerIgnore(a, motif, note)}
       />
       {!large ? (
-        <Sheet open={mobileOuvert && courante != null} onOpenChange={setMobileOuvert}>
-          <SheetContent className="w-full overflow-y-auto overflow-x-hidden p-0 sm:max-w-xl">
+        <Sheet
+          open={mobileOuvert && courante != null}
+          onOpenChange={(o) => (o ? setMobileOuvert(true) : fermerFicheMobile())}
+        >
+          <SheetContent className="w-full overflow-y-auto overflow-x-hidden p-0 sm:max-w-xl [&>button.absolute]:hidden">
             <SheetHeader className="sr-only">
               <SheetTitle>{courante?.intitule}</SheetTitle>
             </SheetHeader>
-            {courante ? <PanneauAnnonce a={courante} canEdit={canEdit} actions={actions} /> : null}
+            {courante ? (
+              <PanneauAnnonce
+                a={courante}
+                canEdit={canEdit}
+                actions={actions}
+                onRetour={fermerFicheMobile}
+              />
+            ) : null}
           </SheetContent>
         </Sheet>
       ) : null}

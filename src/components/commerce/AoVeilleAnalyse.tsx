@@ -4,14 +4,14 @@ import { ExternalLink, Radar, ScanSearch, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { VeilleAnalysePanel } from "@/components/commerce/VeilleAnalysePanel";
+import { VeilleAvisDetail } from "@/components/commerce/VeilleAvisDetail";
 import { VeilleDepotDce } from "@/components/commerce/VeilleDepotDce";
 import { useDemanderAnalyseDce } from "@/hooks/useVeille";
 import { cn } from "@/lib/utils";
 import { VEILLE_ANNONCE_COLONNES, type VeilleAnnonceRow } from "@/lib/veille";
 import { VEILLE_DECISION_LABELS } from "@/lib/veilleQualif";
-import type { AvisResume } from "@/lib/veilleResume";
 
-type AnnonceVeille = VeilleAnnonceRow & { avis_resume: AvisResume | null };
+type AnnonceVeille = VeilleAnnonceRow;
 
 const DECISION_STYLES = {
   prioritaire: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
@@ -37,7 +37,7 @@ function Liste({ titre, items }: { titre: string; items: string[] | undefined })
 
 /**
  * Tout ce que la veille sait de l'AO (qualification IA, analyse du DCE et ses
- * pièces, résumé de l'avis), lu en direct sur l'annonce liée : une analyse qui
+ * pièces, détail de l'avis au clic), lu en direct sur l'annonce liée : une analyse qui
  * se termine après l'envoi vers les AO apparaît ici aussi.
  */
 export function AoVeilleAnalyse({ aoId, canEdit }: { aoId: string; canEdit: boolean }) {
@@ -61,7 +61,7 @@ export function AoVeilleAnalyse({ aoId, canEdit }: { aoId: string; canEdit: bool
     queryFn: async (): Promise<AnnonceVeille | null> => {
       const { data, error } = await supabase
         .from("veille_annonces")
-        .select(`${VEILLE_ANNONCE_COLONNES}, avis_resume`)
+        .select(VEILLE_ANNONCE_COLONNES)
         .eq("ao_id", aoId)
         .order("updated_at", { ascending: false })
         .limit(1)
@@ -130,7 +130,7 @@ export function AoVeilleAnalyse({ aoId, canEdit }: { aoId: string; canEdit: bool
       {/* Qualification IA */}
       <section className="space-y-2 rounded-xl border p-3.5">
         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <Sparkles className="h-3.5 w-3.5" /> Qualification IA
+          <Sparkles className="h-3.5 w-3.5" /> Analyse IA de l&apos;avis
         </p>
         {a.qualif_statut === "qualifie" && a.decision ? (
           <>
@@ -167,6 +167,7 @@ export function AoVeilleAnalyse({ aoId, canEdit }: { aoId: string; canEdit: bool
         ) : (
           <p className="text-sm text-muted-foreground">Annonce non qualifiée.</p>
         )}
+        <VeilleAvisDetail id={a.id} />
       </section>
 
       {/* Analyse du DCE et pièces lues */}
@@ -177,26 +178,6 @@ export function AoVeilleAnalyse({ aoId, canEdit }: { aoId: string; canEdit: bool
         <VeilleAnalysePanel annonce={a} canEdit={canEdit} defaultOpen />
         {canEdit ? <VeilleDepotDce a={a} aoId={aoId} onAnalyser={analyser} /> : null}
       </section>
-
-      {/* Résumé IA de l'avis */}
-      {a.avis_resume ? (
-        <section className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-sm">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Résumé IA de l&apos;avis
-          </p>
-          <p className="font-medium leading-relaxed">{a.avis_resume.en_bref}</p>
-          {a.avis_resume.sections.map((s) => (
-            <div key={s.titre}>
-              <p className="mb-1 text-xs font-semibold text-muted-foreground">{s.titre}</p>
-              <ul className="list-disc space-y-0.5 pl-5 leading-relaxed">
-                {s.points.map((p, i) => (
-                  <li key={i}>{p}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
-      ) : null}
     </div>
   );
 }
