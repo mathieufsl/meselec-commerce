@@ -1836,19 +1836,26 @@ function VeillePage() {
       actions={
         <div className="flex items-center gap-2">
           {canEdit ? (
-            <Button size="sm" variant="outline" onClick={() => setAjoutOuvert(true)}>
-              <Link2 className="mr-1.5 h-4 w-4" />
-              Ajouter par lien
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAjoutOuvert(true)}
+              aria-label="Ajouter par lien"
+              title="Ajouter par lien"
+            >
+              <Link2 className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Ajouter par lien</span>
             </Button>
           ) : null}
           {canEdit ? (
             <Button size="sm" onClick={() => setVeilleOuverte(true)} disabled={refresh.isPending}>
               {refresh.isPending ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin sm:mr-1.5" />
               ) : (
-                <RefreshCw className="mr-1.5 h-4 w-4" />
+                <RefreshCw className="h-4 w-4 sm:mr-1.5" />
               )}
-              Lancer la veille
+              <span className="hidden sm:inline">Lancer la veille</span>
+              <span className="sm:hidden">Veille</span>
             </Button>
           ) : null}
           <DropdownMenu>
@@ -2145,8 +2152,8 @@ function VeillePage() {
             <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
           </div>
         ) : (
-          <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(340px,440px)_minmax(0,1fr)]">
-            <div className="flex min-h-0 flex-col gap-2 lg:overflow-y-auto lg:pr-1">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(340px,440px)_minmax(0,1fr)]">
+            <div className="flex min-h-0 min-w-0 flex-col gap-2 lg:overflow-y-auto lg:pr-1">
               {listeVide}
               {pagination}
               {itemsPage.map((a) => (
