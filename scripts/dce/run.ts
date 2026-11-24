@@ -381,12 +381,12 @@ async function main() {
         console.error(`Collecte AWS en échec : ${(e as Error).message}`);
       }
     }
-    // Qualification IA tout de suite : annonces ajoutées, et celles des plateformes
-    // encore en attente (ajoutées avant que le robot ne qualifie lui-même).
+    // Qualification IA tout de suite : annonces ajoutées, et toutes celles encore
+    // en attente (tri du matin en échec faute de crédits, plateformes…).
     const { data: enAttente } = await supabase
       .from("veille_annonces")
       .select("id")
-      .in("source", ["MAXIMILIEN", "PLACE", "AWS"])
+      .eq("statut", "nouveau")
       .eq("qualif_statut", "a_qualifier")
       .limit(500);
     const aQualifier = [...new Set([...ajoutees, ...(enAttente ?? []).map((r) => r.id as string)])];
