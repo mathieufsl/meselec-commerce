@@ -9,6 +9,8 @@ import {
 import { AoDetailSheetDocuments } from "@/components/commerce/AoDetailSheetDocuments";
 import { AoDetailSheetSecteurs } from "@/components/commerce/AoDetailSheetSecteurs";
 import { AoDocumentFullscreenViewer } from "@/components/commerce/AoDocumentFullscreenViewer";
+import { AoVeilleAnalyse } from "@/components/commerce/AoVeilleAnalyse";
+import { useCommerceAuth } from "@/hooks/useCommerceAuth";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -21,11 +23,7 @@ import {
   useUpsertAppelOffre,
 } from "@/hooks/useCommerceData";
 import { isFormDirty, toForm, toPayload, type AoDetailFormState } from "@/lib/aoDetailForm";
-import {
-  emptySecteurDraft,
-  patchBailSecteurFields,
-  type AoSecteurDraft,
-} from "@/lib/aoCreateForm";
+import { emptySecteurDraft, patchBailSecteurFields, type AoSecteurDraft } from "@/lib/aoCreateForm";
 import {
   AO_SECTEURS,
   AO_STATUT_LABELS,
@@ -64,6 +62,8 @@ export function AoDetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const navigate = useNavigate();
+  const { hasEditorAccess } = useCommerceAuth();
+  const canEdit = hasEditorAccess("appels_offres");
   const { data: ao } = useAppelOffre(aoId ?? "");
   const { data: allAos = [] } = useAppelsOffres();
   const { data: clients = [] } = useClients();
@@ -155,7 +155,8 @@ export function AoDetailSheet({
 
   function openFullPage() {
     if (!aoId) return;
-    if (isDirty && !window.confirm("Des modifications ne sont pas enregistrées. Continuer ?")) return;
+    if (isDirty && !window.confirm("Des modifications ne sont pas enregistrées. Continuer ?"))
+      return;
     onOpenChange(false);
     void navigate({ to: "/appels-offres/$aoId", params: { aoId } });
   }
@@ -257,7 +258,9 @@ export function AoDetailSheet({
                 <p
                   className={cn(
                     "rounded-lg px-3 py-2 text-center text-xs",
-                    msg.startsWith("Échec") ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary",
+                    msg.startsWith("Échec")
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-primary/10 text-primary",
                   )}
                 >
                   {msg}
@@ -372,7 +375,11 @@ export function AoDetailSheet({
                     }
                   />
                 </ReminderRow>
-                <ReminderRow icon={FileText} label="Pluriannuel" last={!showMarcheDates || !marcheDates}>
+                <ReminderRow
+                  icon={FileText}
+                  label="Pluriannuel"
+                  last={!showMarcheDates || !marcheDates}
+                >
                   <Checkbox
                     checked={form.marche_pluriannuel}
                     onCheckedChange={(v) =>
@@ -433,8 +440,14 @@ export function AoDetailSheet({
               />
 
               {aoId ? (
-                <AoDetailSheetDocuments aoId={aoId} onOpenDocument={setPreviewDoc} />
+                <ReminderSheetSection title="Analyse IA">
+                  <div className="p-3">
+                    <AoVeilleAnalyse aoId={aoId} canEdit={canEdit} />
+                  </div>
+                </ReminderSheetSection>
               ) : null}
+
+              {aoId ? <AoDetailSheetDocuments aoId={aoId} onOpenDocument={setPreviewDoc} /> : null}
 
               <button
                 type="button"

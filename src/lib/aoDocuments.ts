@@ -267,7 +267,27 @@ export function blobWithMime(blob: Blob, doc: AoDocument): Blob {
   return new Blob([blob], { type: mime });
 }
 
+/** Téléphone / tablette : écran tactile sans souris. */
+function estAppareilTactile(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
 export async function downloadAoDocument(doc: AoDocument): Promise<void> {
+  // Sur mobile (Safari iOS surtout), un lien blob cliqué après un `await` est ignoré :
+  // on ouvre une URL signée servie en pièce jointe, que le navigateur télécharge.
+  if (doc.storage_path && estAppareilTactile()) {
+    const { data, error } = await supabase.storage
+      .from(AO_DOCUMENTS_BUCKET)
+      .createSignedUrl(doc.storage_path, 300, { download: doc.nom_fichier || true });
+    if (!error && data?.signedUrl) {
+      window.location.assign(data.signedUrl);
+      return;
+    }
+  }
   const blob = blobWithMime(await downloadAoDocumentBlob(doc), doc);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
