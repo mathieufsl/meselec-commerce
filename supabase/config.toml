@@ -24,3 +24,6 @@ verify_jwt = true
 
 [functions.veille-resume-avis]
 verify_jwt = true
+
+[functions.ao-sharepoint-dossier]
+verify_jwt = true

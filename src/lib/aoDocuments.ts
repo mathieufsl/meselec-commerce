@@ -181,6 +181,9 @@ export async function uploadAoDocument(params: {
     throw error;
   }
 
+  // Copie dans le dossier SharePoint de l'AO s'il en a un (sans en créer).
+  void import("@/lib/aoSharepointSync").then((m) => m.synchroniserDossierSharepoint(aoId));
+
   return data as AoDocument;
 }
 

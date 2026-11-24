@@ -20,6 +20,7 @@ import {
 } from "@/lib/veille";
 import { resumeAnalyseLignes } from "@/lib/veilleAnalyse";
 import { copierDepotVeilleVersAo } from "@/lib/aoDocuments";
+import { synchroniserDossierSharepoint } from "@/lib/aoSharepointSync";
 import { toast } from "sonner";
 import type { AoNatureMarche, AoSecteurCode } from "@/lib/commerceTypes";
 
@@ -200,6 +201,9 @@ export function useImportVeilleToAo() {
       if (depot.echecs.length > 0) {
         toast.error(`Documents non copiés vers l'AO : ${depot.echecs.join(" · ")}`);
       }
+
+      // Dossier SharePoint « 1_Non traité » avec ces documents (en arrière-plan).
+      void synchroniserDossierSharepoint(ao.id as string, { creer: true });
 
       return ao.id as string;
     },

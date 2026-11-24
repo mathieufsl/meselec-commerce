@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { synchroniserDossierSharepoint } from "@/lib/aoSharepointSync";
 import type {
   AppelOffre,
   AoLot,
@@ -268,6 +269,7 @@ export function useUpsertAppelOffre() {
           .select()
           .single();
         if (error) throw error;
+        if (rest.statut === "non_traite") void synchroniserDossierSharepoint(id, { creer: true });
         return data;
       }
       const { clients, societes_exploitation, ao_secteurs, ...insert } = payload;
@@ -277,6 +279,9 @@ export function useUpsertAppelOffre() {
         .select()
         .single();
       if (error) throw error;
+      if ((data as AppelOffre).statut === "non_traite") {
+        void synchroniserDossierSharepoint((data as AppelOffre).id, { creer: true });
+      }
       return data;
     },
     onSuccess: invalidate,
@@ -313,6 +318,11 @@ export function useCreateAppelOffreWithSecteurs() {
         const rows = secteurs.map((s) => ({ ...s, ao_id: created.id }));
         const { error: sectErr } = await supabase.from("ao_secteurs").insert(rows as never);
         if (sectErr) throw sectErr;
+      }
+
+      // Après les secteurs : ils entrent dans le nom du dossier (VILLE_EP_VRD…).
+      if ((created as AppelOffre).statut === "non_traite") {
+        void synchroniserDossierSharepoint(created.id, { creer: true });
       }
 
       return created as AppelOffre;
